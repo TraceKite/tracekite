@@ -1,0 +1,29 @@
+# Which package coordinates are *ours* (design §12).
+#
+# R3 links a consumed library to its Library rendezvous only when the
+# coordinate is internal — matched here — or when some ingested repo publishes
+# it (publish-side identity beats this file). Everything else is an external
+# dependency: counted (`r3.external_skipped`), never linked, because a graph
+# where every repo depends on `lodash` answers no blast-radius question.
+#
+# Registries are informational: they qualify where internal
+# artifacts live so operators can audit the boundary; image_registries gate
+# image-identity claims (R0-R2).
+version: 1
+ecosystems:
+  maven:
+    namespaces: []          # e.g. [org.acme, com.acme]
+  npm:
+    scopes: []              # e.g. ["@acme"]
+  golang:
+    module_prefixes: []     # e.g. [github.com/acme/]
+  pypi:
+    prefixes: []            # e.g. [acme-]
+  nuget:
+    prefixes: []            # e.g. [Acme.]
+  gem:
+    prefixes: []
+  cargo:
+    prefixes: []
+registries: []              # e.g. [artifactory.acme.io, npm.pkg.github.com]
+image_registries: []

@@ -1,0 +1,67 @@
+# Ground truth for the golden corpus.
+#
+# Three tiny repositories that reproduce the join this tool exists for: a
+# Python call site whose host arrives from a compose env var, a Go route in
+# another repository, and a Kubernetes manifest naming the workload. No file
+# names another — the edge exists only because three artifacts agree on a
+# rendezvous key.
+#
+# Labelled by hand and versioned here so a precision/recall gate can run
+# without a database, a network, or an ingested estate. Source rather than a
+# captured artifact on purpose: the gate must notice when an *extractor*
+# change moves precision, and an artifact freezes the extractor's output.
+version: 1
+
+repos:
+  orders-service: corpus/orders-service
+  billing-service: corpus/billing-service
+  deploy: corpus/deploy
+
+# The total active-edge count, so a change that silently stops producing a
+# whole class of edge is caught even though every labelled edge still passes.
+# Measured, not guessed. Raise it when recall genuinely improves.
+min_active_edges: 20
+
+# Every edge here must be produced, at or above `min_confidence`, with the
+# evidence path named. Missing one is a recall regression; an active edge
+# outside this list is a precision regression.
+expect:
+  - type: CALLS_SERVICE
+    source_name: orders-service
+    target_name: billing-service
+    min_confidence: 0.9
+    evidence: src/billing_client.py
+    why: >
+      The flagship join. BILLING_URL is a compose env var, the path template
+      is in Python, the route is in Go. No AST spans it.
+
+  - type: EXPOSES
+    target_contains: /v1/invoices
+    min_confidence: 0.95
+    evidence: internal/routes.go
+    why: The provider side, declared by the route registration itself.
+
+  - type: DEPLOYED_AS
+    source_name: billing-service
+    target_contains: deployment/billing-service
+    min_confidence: 0.95
+    evidence: k8s.yaml
+    why: Which workload would have to be rolled back to change the service.
+
+  - type: BUILT_FROM
+    source_name: orders-service
+    target_name: orders-service
+    min_confidence: 0.9
+    evidence: docker-compose.yml
+    why: The build context ties the service to the repository that builds it.
+
+# Known gaps, recorded rather than left implicit. A corpus that only lists
+# what works cannot show a recall improvement when one lands.
+known_gaps:
+  - what: >
+      The k8s workload and the compose service mint two Service nodes rather
+      than clustering into one, despite sharing a ServiceName rendezvous.
+    seen: prod/billing-service and billing-service/billing-service
+    why_it_matters: >
+      An estate that declares a service in both compose and k8s counts it
+      twice, which inflates service counts and splits its edges.

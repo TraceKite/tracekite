@@ -1,0 +1,104 @@
+# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+
+# Environment variables — never commit real credentials
+# Every .env variant is secret-bearing. Backups like `.env.bak-19k` were
+# NOT matched by the old three-pattern list and would have been committed.
+.env*
+!.env.example
+
+# compiled output
+dist
+tmp
+out-tsc
+*.tsbuildinfo
+.expo
+.expo-shared
+
+# dependencies
+node_modules
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Test coverage
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# misc
+/.sass-cache
+/connect.lock
+/coverage
+/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+testem.log
+/typings
+
+# System Files
+.DS_Store
+Thumbs.db
+
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md
+
+# Local Neo4j instance (data + binaries)
+.neo4j/
+neo4j_data/
+neo4j_logs/
+
+# Runtime state — data, not source. Cloned repos land in $WORKSPACE_DIR,
+# which defaults to /tmp outside the tree and is a Docker named volume
+# in compose (docker-compose.yml), never a path under the repo.
+var/
+*.pid
+
+# Working artifacts of building this, not part of what is published.
+# The roadmap CSVs are a closed task list (89/89) and a capability matrix
+# kept alongside it; `.agents/memory` is an agent's notes between sessions.
+# Nothing in the tree may read them — `test_source_hygiene.py` carries its
+# own frozen copy of the ids for exactly that reason.
+docs/design/*-roadmap.csv
+.agents/
+
+# Pasted conversation fragments. They arrive with a `Pasted-...` name, carry
+# whatever was on the clipboard — another project's tracker ids, findings
+# about a running system — and are nobody's source.
+attached_assets/
+
+# Scaffolding assistants and their plugins drop into a checkout. None of it
+# is here today; these are listed so it cannot arrive in a commit later,
+# when it would read as part of the project. `AGENTS.md` and `CLAUDE.md` are
+# deliberately NOT ignored — they are the written rules, not tool state.
+.claude/
+.superpowers/
+.cursor/
+.windsurf/
+.aider*
+.github/copilot-instructions.md
+**/skills/*/SKILL.md
+.mcp.json

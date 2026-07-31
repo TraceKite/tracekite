@@ -1,0 +1,74 @@
+# The library distribution: the engine, and nothing that serves it.
+#
+# `dependencies` below is not hand-maintained guesswork — it is the measured
+# import closure of the core and parsers layers, and
+# `backend/tests/test_packaging.py` fails if the two drift apart. A dependency
+# list that is merely aspirational is how "no heavy deps" quietly stops being
+# true.
+#
+# Deliberately absent: neo4j, fastapi, starlette, uvicorn, pydantic-settings.
+# A host that already runs a graph database must not be made to install a
+# second one, and a host with no web server must not acquire one.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "adduce-core"
+version = "0.1.0"
+description = "Establish what is connected across repositories, and how you know."
+requires-python = ">=3.13"
+license = { text = "Apache-2.0" }
+
+dependencies = [
+    "pydantic>=2.13.4",
+    "pyyaml>=6.0.3",
+    "tree-sitter>=0.26.0",
+    "tree-sitter-c==0.23.6",
+    "tree-sitter-c-sharp==0.23.1",
+    "tree-sitter-cpp==0.23.4",
+    "tree-sitter-go>=0.25.0",
+    "tree-sitter-java>=0.23.5",
+    "tree-sitter-javascript>=0.25.0",
+    "tree-sitter-json==0.24.8",
+    "tree-sitter-kotlin==1.1.0",
+    "tree-sitter-php==0.23.11",
+    "tree-sitter-python>=0.25.0",
+    "tree-sitter-ruby==0.23.1",
+    "tree-sitter-rust>=0.24.2",
+    "tree-sitter-scala==0.24.0",
+    "tree-sitter-typescript>=0.23.2",
+    "tree-sitter-yaml==0.7.2",
+]
+
+# The application's extras, so one repository serves both surfaces without a
+# second copy of the engine (the "no duplicate code" rule, at package level).
+[project.optional-dependencies]
+# Grammars whose imports are guarded: parsing degrades with a log line when
+# they are absent, so they are opt-in rather than a cost every host pays.
+languages = ["tree-sitter-html>=0.23.2", "tree-sitter-css>=0.23.2"]
+neo4j = ["neo4j>=6.2.0"]
+server = ["fastapi>=0.140.0", "uvicorn[standard]>=0.51.0",
+          "pydantic-settings>=2.14.2", "python-multipart>=0.0.32",
+          "gitpython>=3.1.57", "httpx>=0.28.1"]
+
+[project.scripts]
+adduce = "adduce.cli:main"
+
+[tool.hatch.build.targets.wheel]
+bypass-selection = true
+
+# `force-include` rather than `packages` because the source still lives under
+# `backend/app`: A1 declared the layer boundaries but deferred moving files.
+# Until that move lands, this mapping is what makes the distribution real;
+# afterwards this block collapses to a normal `packages` entry.
+#
+# The whole tree ships. `adduce-core`'s dependencies support the core and
+# parsers layers; the server modules will not import without the `server`
+# extra, which is the correct failure and a loud one.
+[tool.hatch.build.targets.wheel.force-include]
+"../../backend/adduce" = "adduce"
+# The control plane ships with the engine: confidence values are
+# calibrated measurements, and `link()` refuses to run without them
+# rather than invent defaults. A wheel without it can scan but not link.
+"../../config" = "adduce/_control_plane"

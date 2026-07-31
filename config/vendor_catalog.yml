@@ -1,0 +1,57 @@
+# Third-party services an estate calls but does not own (roadmap C2).
+#
+# A call to `api.stripe.com` is qualified — the code names a host — but no
+# internal service answers it, so the join declines and the call vanishes
+# into `r7.unmatched_qualified`. That is indistinguishable from a broken
+# internal call, and it hides a real dependency: an outage at a vendor breaks
+# the same consumers an outage at an internal service would.
+#
+# Classifying is not linking. Nothing here creates an edge; it turns an
+# anonymous decline into a named one, so "we call Stripe from three services"
+# becomes a countable fact rather than an absence.
+#
+# `suffixes` match the end of a host, case-insensitively. Keep them specific:
+# a suffix that matches too broadly would classify an internal host as a
+# vendor and hide a genuine missing edge behind a plausible label.
+version: 1
+
+vendors:
+  stripe:
+    category: payments
+    suffixes: [api.stripe.com, files.stripe.com]
+  twilio:
+    category: messaging
+    suffixes: [api.twilio.com, lookups.twilio.com, verify.twilio.com]
+  sendgrid:
+    category: messaging
+    suffixes: [api.sendgrid.com]
+  segment:
+    category: analytics
+    suffixes: [api.segment.io, cdn.segment.com]
+  aws_s3:
+    category: storage
+    suffixes: [s3.amazonaws.com, .s3.amazonaws.com]
+  aws_sqs:
+    category: queue
+    suffixes: [sqs.amazonaws.com, .queue.amazonaws.com]
+  github:
+    category: vcs
+    suffixes: [api.github.com]
+  slack:
+    category: messaging
+    suffixes: [slack.com/api, hooks.slack.com, api.slack.com]
+  datadog:
+    category: observability
+    suffixes: [api.datadoghq.com, http-intake.logs.datadoghq.com]
+  openai:
+    category: ai
+    suffixes: [api.openai.com]
+  anthropic:
+    category: ai
+    suffixes: [api.anthropic.com]
+  auth0:
+    category: identity
+    suffixes: [.auth0.com]
+  google_maps:
+    category: geo
+    suffixes: [maps.googleapis.com]

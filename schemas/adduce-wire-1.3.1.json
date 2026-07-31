@@ -1,0 +1,360 @@
+{
+  "schemas": {
+    "ConsumerHistoryReport": {
+      "description": "Who depended on one target, per commit.\n\n`found: false` carries `candidates` instead of an empty history: an\nunknown target must not read as \"nobody depends on it\".",
+      "properties": {
+        "candidates": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "commits": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Commits",
+          "type": "array"
+        },
+        "current_consumers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Current Consumers",
+          "type": "array"
+        },
+        "former_consumers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Former Consumers",
+          "type": "array"
+        },
+        "found": {
+          "title": "Found",
+          "type": "boolean"
+        },
+        "history": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "History",
+          "type": "array"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "wire_version": {
+          "default": "1.3.1",
+          "title": "Wire Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target",
+        "found",
+        "commits"
+      ],
+      "title": "ConsumerHistoryReport",
+      "type": "object"
+    },
+    "DeprecationReport": {
+      "description": "Every deprecated contract and who still calls it.\n\nAn empty `live_consumers` inside an entry is data \u2014 measured, none\nfound, safe to remove \u2014 which is why entries are present even when\nempty rather than omitted.",
+      "properties": {
+        "contracts": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Contracts",
+          "type": "array"
+        },
+        "wire_version": {
+          "default": "1.3.1",
+          "title": "Wire Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contracts"
+      ],
+      "title": "DeprecationReport",
+      "type": "object"
+    },
+    "EdgeRecord": {
+      "description": "One connection, and how it is known.\n\n`evidence` is not decoration. An edge without a `file:line` on both sides\nis precisely what this tool refuses to emit, so the field is required and\nthe contract says so.",
+      "properties": {
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "source",
+        "target",
+        "confidence",
+        "status",
+        "evidence"
+      ],
+      "title": "EdgeRecord",
+      "type": "object"
+    },
+    "ExplainReport": {
+      "description": "Why one edge exists \u2014 or an explicit statement that it does not.",
+      "properties": {
+        "candidates": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "edges": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Edges",
+          "type": "array"
+        },
+        "found": {
+          "title": "Found",
+          "type": "boolean"
+        },
+        "source": {
+          "default": "",
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "default": "",
+          "title": "Target",
+          "type": "string"
+        },
+        "wire_version": {
+          "default": "1.3.1",
+          "title": "Wire Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "found"
+      ],
+      "title": "ExplainReport",
+      "type": "object"
+    },
+    "HistoryReport": {
+      "description": "When each edge existed, across an ordered commit series.\n\nThe range is *derived* from the artifacts, never stored on an edge \u2014\narchitecture \u00a73.4. `commits` is echoed back so a reader can tell which\nseries produced these ranges: the same edge over a different series is a\ndifferent answer, and a report that omitted the input would look\nauthoritative about a graph nobody specified.",
+      "properties": {
+        "commits": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Commits",
+          "type": "array"
+        },
+        "edges": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Edges",
+          "type": "array"
+        },
+        "wire_version": {
+          "default": "1.3.1",
+          "title": "Wire Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "commits",
+        "edges"
+      ],
+      "title": "HistoryReport",
+      "type": "object"
+    },
+    "LinkReport": {
+      "$defs": {
+        "EdgeRecord": {
+          "description": "One connection, and how it is known.\n\n`evidence` is not decoration. An edge without a `file:line` on both sides\nis precisely what this tool refuses to emit, so the field is required and\nthe contract says so.",
+          "properties": {
+            "confidence": {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "title": "Confidence",
+              "type": "number"
+            },
+            "evidence": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Evidence",
+              "type": "array"
+            },
+            "source": {
+              "title": "Source",
+              "type": "string"
+            },
+            "status": {
+              "title": "Status",
+              "type": "string"
+            },
+            "target": {
+              "title": "Target",
+              "type": "string"
+            },
+            "type": {
+              "title": "Type",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "source",
+            "target",
+            "confidence",
+            "status",
+            "evidence"
+          ],
+          "title": "EdgeRecord",
+          "type": "object"
+        }
+      },
+      "description": "What one link run produced, including what it declined to answer.\n\n`counters` is required and may not be omitted when empty: a report\ncarrying edges but no counters has hidden every decline, which is the one\nfailure mode this project treats as worse than being wrong out loud.",
+      "properties": {
+        "claims_loaded": {
+          "title": "Claims Loaded",
+          "type": "integer"
+        },
+        "counters": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Counters",
+          "type": "object"
+        },
+        "edges": {
+          "items": {
+            "$ref": "#/$defs/EdgeRecord"
+          },
+          "title": "Edges",
+          "type": "array"
+        },
+        "repos": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Repos",
+          "type": "array"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "services": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Services",
+          "type": "array"
+        },
+        "wire_version": {
+          "default": "1.3.1",
+          "title": "Wire Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "repos",
+        "claims_loaded",
+        "services",
+        "edges",
+        "counters"
+      ],
+      "title": "LinkReport",
+      "type": "object"
+    },
+    "ScanReport": {
+      "description": "What one repository yielded. No edges \u2014 scanning cannot know them.",
+      "properties": {
+        "absence": {
+          "additionalProperties": true,
+          "title": "Absence",
+          "type": "object"
+        },
+        "claims": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Claims",
+          "type": "object"
+        },
+        "coverage": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Coverage",
+          "type": "object"
+        },
+        "edges": {
+          "title": "Edges",
+          "type": "integer"
+        },
+        "nodes": {
+          "title": "Nodes",
+          "type": "integer"
+        },
+        "repo_id": {
+          "title": "Repo Id",
+          "type": "string"
+        },
+        "wire_version": {
+          "default": "1.3.1",
+          "title": "Wire Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repo_id",
+        "nodes",
+        "edges",
+        "claims",
+        "coverage"
+      ],
+      "title": "ScanReport",
+      "type": "object"
+    }
+  },
+  "wire_version": "1.3.1"
+}

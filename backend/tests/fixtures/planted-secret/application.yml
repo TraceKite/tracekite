@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://db.internal:5432/appdb
+    username: app_user
+    password: PLANTEDSECRETPASSWORDXYZ123456789
+api:
+  key: PLANTEDSECRETAPIKEY0987654321ABCDEF
+  timeout: 30
+server:
+  port: 8080
+features:
+  mode: production

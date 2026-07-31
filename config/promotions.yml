@@ -1,0 +1,10 @@
+# Append-only ledger of D6 human promotions, replayed by link_full so the
+# graph stays disposable (design §12, invariant 12). Entries are appended by
+# the review-queue UI (M3); never edit past entries.
+promotions: []
+# Entry shape:
+# promotions:
+#   - claim_key: "http:GET /billing/{}"
+#     target: "global:HttpContract:GET /billing/{}"
+#     promoted_by: "user@example.com"
+#     at: "2026-07-26T00:00:00Z"

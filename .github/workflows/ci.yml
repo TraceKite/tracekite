@@ -1,0 +1,212 @@
+# Two questions on every pull request: does it still pass, and what did it do
+# to the graph?
+#
+# The second is the one code review cannot answer. A resolver diff says what
+# the code now does; only running it says which edges appeared and vanished.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+
+      # Includes the layering check and the invariant tests, so a
+      # violating import or a broken invariant fails here rather than in
+      # review.
+      - name: test
+        run: .venv/bin/python -m pytest backend/tests -q
+
+      - name: layering
+        run: .venv/bin/python backend/tools/check_layers.py
+
+      # Q1: the two invariants only static analysis can catch. Both fail
+      # silently at runtime — a second canonicaliser mints keys that never
+      # meet, and a cross-shard read loses edges in whichever shard lacks the
+      # writer's key. Neither raises, so neither has a fixture.
+      - name: invariants
+        run: .venv/bin/python backend/tools/check_invariants.py
+
+      # requires-python is >=3.13, and 3.13 evaluates annotations at import
+      # while 3.14 (what CI and the image run) defers them under PEP 649. An
+      # annotation naming an unimported type is therefore invisible here and
+      # fatal to anyone running the declared floor. Static half of that gap;
+      # the `container` job below is the ground truth.
+      - name: annotations resolve on the deploy runtime
+        run: .venv/bin/python backend/tools/check_annotations.py
+
+      # The wire contract is frozen: this fails if the published schema and
+      # the code disagree, forcing a deliberate SemVer decision.
+      - name: wire contract
+        run: .venv/bin/python -m pytest backend/tests/test_wire_contract.py -q
+
+      # lib/api-spec/openapi.yaml is generated from the app. It was previously
+      # a stub declaring one route the backend does not serve, which read as a
+      # contract and answered wrongly; the only way it can be wrong now is by
+      # being stale, so staleness fails here.
+      - name: openapi spec matches the routes
+        run: .venv/bin/python backend/tools/export_openapi.py --check
+
+      # Recall gate: the golden corpus must still produce every labelled
+      # edge, at its confidence, citing the expected file — and the active
+      # total must not fall. A drop is a recall regression even when nothing
+      # raised.
+      - name: recall gate
+        run: .venv/bin/python -m pytest backend/tests/test_golden_corpus.py -q
+
+      # Precision gate: every served tier is measured against its
+      # recorded row. A resolver that starts emitting a wrong edge fails
+      # here — this is the check that keeps 0 FP from being a claim about
+      # the past.
+      - name: precision gate
+        run: GRAPH_HMAC_KEY=ci-fixed-key .venv/bin/python -m tools.calibrate --dry-run
+        working-directory: backend
+
+  container:
+    # Does the thing we actually ship still boot?
+    #
+    # The image now installs the same uv.lock the tests resolve, so this is no
+    # longer covering a version gap — it covers the build. A COPY that misses a
+    # directory, a stale lock, a rename that left an import behind: none of
+    # those fail a test run, and all of them fail `import adduce.main` inside
+    # the artifact that ships. Two green suites once said yes while the
+    # container would not boot.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build the deployment image
+        run: docker build -f backend/Dockerfile -t adduce-backend:ci .
+      - name: every module imports on the deploy runtime
+        run: |
+          docker run --rm adduce-backend:ci python - <<'PY'
+          import importlib, pathlib, sys
+          root = pathlib.Path("/app/adduce")
+          mods = sorted(
+              "adduce." + str(p.relative_to(root)).replace("/", ".")[:-3]
+              for p in root.rglob("*.py") if "__pycache__" not in str(p))
+          mods = [m[:-9] if m.endswith(".__init__") else m for m in mods]
+          failed = []
+          for name in mods:
+              try:
+                  importlib.import_module(name)
+              except Exception as exc:
+                  failed.append(f"{name}: {type(exc).__name__}: {exc}")
+          print(f"imported {len(mods)} modules on {sys.version.split()[0]}")
+          for line in failed:
+              print("FAIL", line)
+          sys.exit(1 if failed else 0)
+          PY
+
+  graph-diff:
+    # What did this change do to the graph?
+    #
+    # The same fixture corpus is scanned by the base commit and by the head
+    # commit, and the two artifacts are compared. Byte-reproducible artifacts
+    # are what make this readable: unchanged code produces an identical file,
+    # so anything the diff reports is a real change.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: artifact from the base commit
+        run: |
+          git checkout --detach ${{ github.event.pull_request.base.sha }}
+          uv sync --frozen
+          GRAPH_HMAC_KEY=ci-fixed-key .venv/bin/python - <<'PY'
+          import sys; sys.path.insert(0, "backend")
+          from adduce import engine_config
+          from adduce.db.artifact import write_artifact
+          from adduce.services.scan import scan
+          engine_config.configure(graph_hmac_key="ci-fixed-key")
+          write_artifact(scan("backend/tests/fixtures/callgraph-sample",
+                              "corpus"), "corpus", "/tmp/base")
+          PY
+
+      - name: artifact from this pull request
+        run: |
+          git checkout --detach ${{ github.event.pull_request.head.sha }}
+          uv sync --frozen
+          GRAPH_HMAC_KEY=ci-fixed-key .venv/bin/python - <<'PY'
+          import sys; sys.path.insert(0, "backend")
+          from adduce import engine_config
+          from adduce.db.artifact import write_artifact
+          from adduce.services.scan import scan
+          engine_config.configure(graph_hmac_key="ci-fixed-key")
+          write_artifact(scan("backend/tests/fixtures/callgraph-sample",
+                              "corpus"), "corpus", "/tmp/head")
+          PY
+
+      # Reported, never gated. A change to the graph is often the point of
+      # the pull request; failing on it would train people to ignore it.
+      # What must not happen is a change nobody noticed.
+      - name: what changed
+        run: |
+          BASE=$(ls /tmp/base/*.adduce | head -1)
+          HEAD=$(ls /tmp/head/*.adduce | head -1)
+          .venv/bin/python -m adduce.cli diff "$BASE" "$HEAD" \
+            > /tmp/graph-diff.json || true
+          echo '### What this changed in the graph' >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat /tmp/graph-diff.json >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        working-directory: backend
+
+      # PR mode: not what changed in the graph, but who it breaks.
+      #
+      # Written to the step summary rather than posted as a comment: posting
+      # needs a token with write access, and a check that silently does
+      # nothing when the token is missing is worse than one that always
+      # writes somewhere. `|| true` because the command exits non-zero on
+      # breakage by design — this repo's own PRs are not gated on it yet.
+      - name: who this breaks
+        run: |
+          echo '### Who this change breaks' >> $GITHUB_STEP_SUMMARY
+          .venv/bin/python -m adduce.cli pr \
+            --base /tmp/base/*.adduce --head /tmp/head/*.adduce \
+            --changed-repo corpus --comment >> $GITHUB_STEP_SUMMARY || true
+        working-directory: backend
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: graph-diff
+          path: /tmp/graph-diff.json
+
+  benchmark:
+    # H5: wall-clock and peak memory per 100k LOC, one row per commit.
+    # Never gates — a slow runner is not a regression — but every commit
+    # leaves a comparable number behind.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: benchmark
+        run: |
+          .venv/bin/python backend/tools/benchmark.py --repos 40 \
+            --out benchmarks.json
+          echo '### Benchmarks (per 100k LOC)' >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat benchmarks.json >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks-${{ github.sha }}
+          path: benchmarks.json

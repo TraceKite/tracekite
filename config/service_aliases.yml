@@ -1,0 +1,9 @@
+# Manual alias overrides — always win over resolver output (design §12, R0).
+# Unused or conflicting entries are reported by the linker, never silently
+# dropped. Alias keys are scope-qualified: "{scope}:{name}".
+services: {}
+# Example:
+# services:
+#   payments:
+#     aliases: ["compose-project-a:payment", "prod:payment-svc", "discovery:PAYMENT-SERVICE"]
+#     repo: myorg_payment-service

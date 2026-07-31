@@ -1,0 +1,26 @@
+{
+  "name": "workspace",
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "//packageManager": "Pinned so corepack in CI/Docker uses the pnpm that wrote pnpm-lock.yaml. Unpinned, containers pulled pnpm 11 against a v10 lockfile and install failed.",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./frontend\" --filter \"./scripts\" --if-present run typecheck"
+  },
+  "private": true,
+  "//pnpm": "Overrides pull transitive build-tool dependencies past their advisories. None of these reach the shipped bundle — orval and typedoc generate the API client, esbuild builds the artifact server — but a build tool that can be made to read arbitrary files or exhaust memory still runs on a developer's machine and in CI.",
+  "pnpm": {
+    "overrides": {
+      "js-yaml@<4.3.0": ">=4.3.0",
+      "brace-expansion@<=5.0.7": ">=5.0.8",
+      "esbuild@<0.28.1": ">=0.28.1"
+    }
+  },
+  "devDependencies": {
+    "prettier": "^3.9.5",
+    "typescript": "~5.9.3"
+  }
+}

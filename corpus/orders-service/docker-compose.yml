@@ -1,0 +1,7 @@
+services:
+  orders-service:
+    build: .
+    environment:
+      BILLING_URL: http://billing-service:8080
+    depends_on:
+      - billing-service

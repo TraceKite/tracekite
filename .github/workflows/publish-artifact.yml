@@ -1,0 +1,55 @@
+# One artifact per repository per push.
+#
+# An estate repo adds a five-line caller workflow:
+#
+#   jobs:
+#     artifact:
+#       uses: <adduce-repo>/.github/workflows/publish-artifact.yml@main
+#       with: { repo-id: my-service }
+#
+# and every merge to its default branch publishes a content-addressed
+# .adduce file carrying the commit it represents ($GITHUB_SHA -> head_sha,
+# which is what anchors temporal queries). Content addressing is what makes
+# publication idempotent: an unchanged tree republishes the identical file.
+name: publish-artifact
+
+on:
+  workflow_call:
+    inputs:
+      repo-id:
+        description: repository id in the estate (defaults to the repo name)
+        type: string
+        default: ""
+      retention-days:
+        type: number
+        default: 90
+  push:
+    branches: [main]
+
+jobs:
+  artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+
+      - name: scan into a content-addressed artifact
+        id: scan
+        run: |
+          REPO_ID="${{ inputs.repo-id }}"
+          REPO_ID="${REPO_ID:-${GITHUB_REPOSITORY##*/}}"
+          PATH_OUT=$(cd backend && GRAPH_HMAC_KEY="${GRAPH_HMAC_KEY:-ci-fixed-key}" \
+            ../.venv/bin/python -m adduce.cli artifact "$GITHUB_WORKSPACE" \
+              --out /tmp/adduce-artifacts \
+              --repo-id "$REPO_ID" \
+              --head-sha "$GITHUB_SHA")
+          echo "path=$PATH_OUT" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: adduce-artifact
+          path: ${{ steps.scan.outputs.path }}
+          retention-days: ${{ inputs.retention-days }}

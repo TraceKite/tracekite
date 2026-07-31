@@ -1,0 +1,9 @@
+# The roster: which repositories belong in the graph (design §12, D11).
+# The census tool can generate a first draft. auto_refresh opts a repo into
+# the M2 heartbeat (git ls-remote drift detection, 6h jittered cycle).
+repos: []
+# Example:
+# repos:
+#   - url: https://github.com/myorg/payment-service
+#     branch: main            # optional, defaults to the remote default branch
+#     auto_refresh: true      # D11 heartbeat opt-in

@@ -1,0 +1,259 @@
+# Confidence registry: every resolver tier's served confidence plus its
+# measured P/R row (design §8). Invariant 7: no resolver tier serves
+# `active` edges at or above the floor to an org-facing deployment without a
+# measured row. `measured: null` marks provisional values awaiting the
+# microSecEnD + adversarial-fixture calibration run (M2).
+#
+# This is the single copy. Loaded by adduce/services/linker/base.py:load_confidence();
+# override the directory with KG_CONFIG_DIR.
+version: 1
+floor: 0.6
+fusion_cap: 0.99
+# Most contracts one call site may match before the match is declined
+# outright. A call site matching everything has matched nothing, so past this
+# the resolver counts `fanout_exceeded` and emits nothing — never a truncated
+# slice, which would read as a resolved match while hiding the ambiguity.
+fanout_cap: 32
+will_break_threshold: null   # derived from the measured table (M2), never a constant
+# Multiplier applied to an edge whose cited evidence no longer says what it
+# said (F5 re-verification). Rot ages an assertion, it does not refute it:
+# the edge is downgraded — below the floor it becomes `candidate` — and
+# never deleted.
+stale_evidence_factor: 0.7
+# Most route-table applications a single call may chain through (edge
+# gateway -> mesh -> service) before NORMALIZE declines it as unresolved.
+# Deeper chains are counted, never truncated to a partial hop.
+gateway_chain_max_hops: 3
+
+# --- R0 alias ---------------------------------------------------------------
+# built_from_config was removed with the config-filename BUILT_FROM exclusion:
+# a Spring Cloud Config repo holding customers-service.yml must never claim to
+# build that service, so no edge is ever priced at that tier.
+r0:
+  resolved_to: 0.98
+  has_alias: 0.9
+  built_from_build_context: 0.95   # descriptor points at a directory in this repo
+  built_from_app_name: 0.85        # in-code application name
+  built_from_descriptor: 0.75     # compose/k8s names it; image may build elsewhere
+  belongs_to: 0.95                 # module read off the evidence path
+
+# --- R1 compose topology (benchmark-proven 0.98-0.99) -----------------------
+# `links` entries fold into depends_on at emission (compose v1 legacy), so
+# there is no separate links tier — a priced-but-unreachable tier is exactly
+# the schema fiction Invariant 7 forbids (calibration finding).
+r1:
+  depends_on: 0.96
+  env_host: 0.95
+  # `DB_HOST=${DB_HOST:-platform-db}`: the default that runs unless an
+  # operator overrides it. Authored and citable, but strictly weaker than a
+  # literal — an override changes the answer and nothing in the repo says
+  # whether one is set — so it prices below env_host, the same way route_dev
+  # sits below route_declared.
+  env_host_default: 0.85
+
+# --- R2 kubernetes (benchmark P 0.97 / R 0.56) ------------------------------
+# DNS aliases register into R0's alias table and are priced there
+# (r0.has_alias); no edge is emitted at a dns_alias tier (calibration finding).
+r2:
+  selector_match: 0.97       # Service selector matches workload pod labels
+  env_host: 0.95             # literal env value naming an in-cluster service
+  built_from_gitops: 0.97    # ArgoCD/Flux declares the source repo
+  deployed_as: 0.97          # the manifest itself names the workload
+  policy: 0.9               # mesh/network policy joined by selector
+
+# --- R9 environment indirection ---------------------------------------------
+# Multi-environment conflicts DECLINE (r9.ambiguous_across_envs) rather than
+# emit at a lower tier — decline-don't-guess won (calibration finding).
+r9:
+  env_resolved: 0.85         # code reads VAR; a manifest defines VAR's host
+
+# --- R4 gateway route tables ------------------------------------------------
+r4:
+  route_declared: 0.98
+  route_dev: 0.7        # vite/webpack devServer proxies: real wiring, dev-only
+
+# --- R5 gRPC (globally unique proto keys; no service hint needed) -----------
+r5:
+  declared: 0.98        # the .proto itself declares the operation
+  exact: 0.95           # stub names the fully-qualified package.Service
+  service_name: 0.9     # stub names only the service; package inferred
+  calls_service: 0.9
+
+# --- R3 libraries (version-free purl keys; internal boundary gates joins) ---
+r3:
+  publishes: 0.98           # the repo's own manifest names the coordinate
+  lockfile_resolved: 0.95   # consumer pin from a lockfile/SBOM
+  manifest_declared: 0.9    # consumer range from a manifest
+
+# --- R11 agent contracts (MCP server name plays the role of a proto package) -
+r11:
+  registration: 0.95    # @mcp.tool / server.tool in the implementing repo
+  config: 0.85          # an mcp.json entry naming the server
+  card: 0.95            # .well-known/agent.json declares the skill
+  url_resolved: 0.9     # a call site's URL matches a card's URL
+
+# --- R10 datasets (identity strength varies by namespace) -------------------
+r10:
+  declared: 0.95        # a migration/ORM entity/dbt schema declares the table
+  literal: 0.9          # a distinctive-namespace name at a call site
+  inferred: 0.75        # ORM entity without an explicit table name
+
+# --- R12 ownership ----------------------------------------------------------
+r13:
+  registered: 0.85          # callback joined to the receiver's own route
+
+r12:
+  catalog: 0.95         # Backstage names owner + entity in one authored place
+  codeowners: 0.9       # path-pattern ownership; repo-level is exact
+  observability: 0.8    # a DD_TAGS team is operational, not organizational
+
+# --- R14 cross-protocol operations ------------------------------------------
+r14:
+  http_binding: 0.97    # the proto's own google.api.http declares it
+  event_schema: 0.85    # avro record name equals the rpc's qualified output
+
+# --- R6 topics (no service hint exists or is needed; the name is the key) ---
+r6:
+  declared: 0.98        # AsyncAPI/Terraform/Avro declares the destination
+  literal: 0.9          # a literal destination at a producer/consumer site
+  env_resolved: 0.85    # destination via env/config indirection (hmac join)
+  fanout: 0.95          # SNS->SQS subscription declared in IaC
+
+# --- R8 GraphQL (Type.field carries no package, so weaker than R5) ----------
+r8:
+  declared: 0.98        # the SDL declares the root field
+  federated: 0.95       # federation names the owning subgraph
+  field_name: 0.8       # field name only; no package, no federation
+
+# --- R7 http contract matching ----------------------------------------------
+r7:
+  hint_exact: 0.95      # qualified service hint + exact path template
+  hint_template: 0.85   # qualified service hint + positional template
+  # Callee named by a gateway's route table rather than by the call site.
+  # Strictly weaker than a direct hint: it assumes the route in force at link
+  # time is the one that served the call, so a stale or overridden route table
+  # would mislead. Rated below the direct tiers to keep that honest.
+  gateway_exact: 0.88
+  gateway_template: 0.80
+  exposes: 0.98         # provider-side declaration
+
+# --- Intra-repo call graph (pre-linker) -------------------------------------
+resolvers:
+  call_graph_resolver:
+    unique_match:
+      confidence: 0.9
+      measured: null          # provisional — calibration lands in M2
+    ambiguous_match:
+      confidence: 0.7
+      measured: null          # provisional — calibration lands in M2
+  # SCIP references are compiler-grade resolution; rated above the
+  # name-resolution heuristic but never 1.0 — the index can lag the tree.
+  scip_import:
+    reference:
+      confidence: 0.95
+      measured: null          # provisional — labelled index corpus pending
+
+# Resolvers not yet landed (R2 k8s, R3 library, R5 grpc, R6 topic, R9 env) add
+# their tiers here as they ship. Design §6.2 targets: r2 0.97, r3 0.6-1.0 by
+# tier, r5 high (globally unique keys), r6 0.85-0.95 literals.
+
+# --- MEASURED (generated by tools/calibrate.py; do not edit) ---
+measured:
+  corpus: fixtures-v1
+  at: '2026-07-29T22:46:58+00:00'
+  rows:
+    r0.belongs_to: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r0.built_from_app_name: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r0.built_from_build_context: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r0.built_from_descriptor: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r0.has_alias: {precision: 1.0, precision_lo: 0.4385, precision_hi: 1.0, recall: 1.0, support: 3, fp: 0}
+    r0.resolved_to: {precision: 1.0, precision_lo: 0.3424, precision_hi: 1.0, recall: 1.0, support: 2, fp: 0}
+    r1.depends_on: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r1.env_host: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r10.declared: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r10.inferred: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r10.literal: {precision: 1.0, precision_lo: 0.3424, precision_hi: 1.0, recall: 1.0, support: 2, fp: 0}
+    r11.card: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r11.config: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r11.registration: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r11.url_resolved: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r12.catalog: {precision: 1.0, precision_lo: 0.3424, precision_hi: 1.0, recall: 1.0, support: 2, fp: 0}
+    r12.codeowners: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r12.observability: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r13.registered: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r2.built_from_gitops: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r2.deployed_as: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r2.env_host: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r2.policy: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r2.selector_match: {precision: 1.0, precision_lo: 0.3424, precision_hi: 1.0, recall: 1.0, support: 2, fp: 0}
+    r3.lockfile_resolved: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r3.manifest_declared: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r3.publishes: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r4.route_declared: {precision: 1.0, precision_lo: 0.3424, precision_hi: 1.0, recall: 1.0, support: 2, fp: 0}
+    r4.route_dev: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r5.calls_service: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r5.declared: {precision: 1.0, precision_lo: 0.3424, precision_hi: 1.0, recall: 1.0, support: 2, fp: 0}
+    r5.exact: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r5.service_name: {precision: 1.0, precision_lo: 0.3424, precision_hi: 1.0, recall: 1.0, support: 2, fp: 0}
+    r6.declared: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r6.env_resolved: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r6.fanout: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r6.literal: {precision: 1.0, precision_lo: 0.3424, precision_hi: 1.0, recall: 1.0, support: 2, fp: 0}
+    r7.exposes: {precision: 1.0, precision_lo: 0.3424, precision_hi: 1.0, recall: 1.0, support: 2, fp: 0}
+    r7.gateway_exact: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r7.gateway_template: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r7.hint_exact: {precision: 1.0, precision_lo: 0.4385, precision_hi: 1.0, recall: 1.0, support: 3, fp: 0}
+    r7.hint_template: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r8.declared: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r8.federated: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r8.field_name: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+    r9.env_resolved: {precision: 1.0, precision_lo: 0.2065, precision_hi: 1.0, recall: 1.0, support: 1, fp: 0}
+derived:
+  unattributed_labels: {tp: 0, fp: 0}
+  rows:
+    r0.belongs_to: {served: 0.95, derived: 0.95, basis: prior, tp: 1, fp: 0}
+    r0.built_from_app_name: {served: 0.85, derived: 0.85, basis: prior, tp: 1, fp: 0}
+    r0.built_from_build_context: {served: 0.95, derived: 0.95, basis: prior, tp: 1, fp: 0}
+    r0.built_from_descriptor: {served: 0.75, derived: 0.75, basis: prior, tp: 1, fp: 0}
+    r0.has_alias: {served: 0.9, derived: 0.9, basis: prior, tp: 3, fp: 0}
+    r0.resolved_to: {served: 0.98, derived: 0.98, basis: prior, tp: 2, fp: 0}
+    r1.depends_on: {served: 0.96, derived: 0.96, basis: prior, tp: 1, fp: 0}
+    r1.env_host: {served: 0.95, derived: 0.95, basis: prior, tp: 1, fp: 0}
+    r10.declared: {served: 0.95, derived: 0.95, basis: prior, tp: 1, fp: 0}
+    r10.inferred: {served: 0.75, derived: 0.75, basis: prior, tp: 1, fp: 0}
+    r10.literal: {served: 0.9, derived: 0.9, basis: prior, tp: 2, fp: 0}
+    r11.card: {served: 0.95, derived: 0.95, basis: prior, tp: 1, fp: 0}
+    r11.config: {served: 0.85, derived: 0.85, basis: prior, tp: 1, fp: 0}
+    r11.registration: {served: 0.95, derived: 0.95, basis: prior, tp: 1, fp: 0}
+    r11.url_resolved: {served: 0.9, derived: 0.9, basis: prior, tp: 1, fp: 0}
+    r12.catalog: {served: 0.95, derived: 0.95, basis: prior, tp: 2, fp: 0}
+    r12.codeowners: {served: 0.9, derived: 0.9, basis: prior, tp: 1, fp: 0}
+    r12.observability: {served: 0.8, derived: 0.8, basis: prior, tp: 1, fp: 0}
+    r13.registered: {served: 0.85, derived: 0.85, basis: prior, tp: 1, fp: 0}
+    r2.built_from_gitops: {served: 0.97, derived: 0.97, basis: prior, tp: 1, fp: 0}
+    r2.deployed_as: {served: 0.97, derived: 0.97, basis: prior, tp: 1, fp: 0}
+    r2.env_host: {served: 0.95, derived: 0.95, basis: prior, tp: 1, fp: 0}
+    r2.policy: {served: 0.9, derived: 0.9, basis: prior, tp: 1, fp: 0}
+    r2.selector_match: {served: 0.97, derived: 0.97, basis: prior, tp: 2, fp: 0}
+    r3.lockfile_resolved: {served: 0.95, derived: 0.95, basis: prior, tp: 1, fp: 0}
+    r3.manifest_declared: {served: 0.9, derived: 0.9, basis: prior, tp: 1, fp: 0}
+    r3.publishes: {served: 0.98, derived: 0.98, basis: prior, tp: 1, fp: 0}
+    r4.route_declared: {served: 0.98, derived: 0.98, basis: prior, tp: 2, fp: 0}
+    r4.route_dev: {served: 0.7, derived: 0.7, basis: prior, tp: 1, fp: 0}
+    r5.calls_service: {served: 0.9, derived: 0.9, basis: prior, tp: 1, fp: 0}
+    r5.declared: {served: 0.98, derived: 0.98, basis: prior, tp: 2, fp: 0}
+    r5.exact: {served: 0.95, derived: 0.95, basis: prior, tp: 1, fp: 0}
+    r5.service_name: {served: 0.9, derived: 0.9, basis: prior, tp: 2, fp: 0}
+    r6.declared: {served: 0.98, derived: 0.98, basis: prior, tp: 1, fp: 0}
+    r6.env_resolved: {served: 0.85, derived: 0.85, basis: prior, tp: 1, fp: 0}
+    r6.fanout: {served: 0.95, derived: 0.95, basis: prior, tp: 1, fp: 0}
+    r6.literal: {served: 0.9, derived: 0.9, basis: prior, tp: 2, fp: 0}
+    r7.exposes: {served: 0.98, derived: 0.98, basis: prior, tp: 2, fp: 0}
+    r7.gateway_exact: {served: 0.88, derived: 0.88, basis: prior, tp: 1, fp: 0}
+    r7.gateway_template: {served: 0.8, derived: 0.8, basis: prior, tp: 1, fp: 0}
+    r7.hint_exact: {served: 0.95, derived: 0.95, basis: prior, tp: 3, fp: 0}
+    r7.hint_template: {served: 0.85, derived: 0.85, basis: prior, tp: 1, fp: 0}
+    r8.declared: {served: 0.98, derived: 0.98, basis: prior, tp: 1, fp: 0}
+    r8.federated: {served: 0.95, derived: 0.95, basis: prior, tp: 1, fp: 0}
+    r8.field_name: {served: 0.8, derived: 0.8, basis: prior, tp: 1, fp: 0}
+    r9.env_resolved: {served: 0.85, derived: 0.85, basis: prior, tp: 1, fp: 0}
