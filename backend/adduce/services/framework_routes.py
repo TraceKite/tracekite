@@ -74,4 +74,7 @@ def framework_routes(file_info, content: str) -> tuple[list, int]:
     if language == "php" or path.endswith(".php"):
         from adduce.services.php_route_extractor import extract_php_routes
         return extract_php_routes(path, content), 0
+    if language in ("c#", "csharp") or path.endswith(".cs"):
+        from adduce.services.csharp_route_extractor import extract_csharp_routes
+        return extract_csharp_routes(path, content), 0
     return [], 0

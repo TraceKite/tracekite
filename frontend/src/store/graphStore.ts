@@ -114,6 +114,7 @@ interface GraphState {
     resetCamera?: () => void;
     fitGraph?: () => void;
     togglePhysics?: () => void;
+    rotateGraph?: () => void;
     physicsEnabled?: boolean;
   };
   setGraphControlCallbacks: (callbacks: GraphState["graphControlCallbacks"]) => void;

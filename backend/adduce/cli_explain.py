@@ -29,9 +29,16 @@ def cmd_explain(args) -> int:
     if not matches:
         # Declining to explain is an answer. Saying nothing is not.
         print(f"no edge {source} -> {target} in this run", file=sys.stderr)
+        raw_candidates = sorted({e.source_id for e in result.edges})
+        # Format candidates into readable strings: "id (repo/kind)"
+        formatted = [
+            f"{c} [{getattr(e, 'detected_by', '') or e.type}]"
+            for c in raw_candidates[:50]
+            for e in result.edges if e.source_id == c
+        ] or raw_candidates[:50]
         return emit(ExplainReport, {
             "found": False, "source": source, "target": target,
-            "candidates": sorted({e.source_id for e in result.edges})})
+            "candidates": sorted(set(formatted))[:50]})
     return emit(ExplainReport, {"found": True,
                                  "edges": [_derivation(e) for e in matches]})
 

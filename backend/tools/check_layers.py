@@ -101,6 +101,7 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("services.http_call_url", "parsers"),
     ("services.rb_route_extractor", "parsers"),
     ("services.php_route_extractor", "parsers"),
+    ("services.csharp_route_extractor", "parsers"),
     ("services.extraction_coverage", "parsers"),
     ("services.flag_guards", "parsers"),
     ("services.scip_import", "parsers"),

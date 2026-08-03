@@ -99,30 +99,52 @@ The honest summary: this is the tool for the window between writing code and
 running it in production, and for the question a catalog can only answer if
 somebody remembered to update it.
 
-## Two surfaces, one engine
+## Installation & Interfaces
 
-Adduce is the same engine either way you take it. Pick by what you want back:
+Adduce is available as a **standalone CLI tool** (`adduce`), an **embeddable Python library** (`adduce-core`), and a **full Web Application** (`docker compose up`).
 
-| | **The application** | **The library** |
+| Interface | Installation & Execution | Primary Use Case |
 |---|---|---|
-| You want | a UI to explore an estate, ingest repos, click through evidence | JSON in your own pipeline — a PR check, a CI gate, your own store |
-| You run | `docker compose up` | `scan()` and `link()`, or the CLI |
-| You need | Docker, ~4 GB RAM, Neo4j | Python. No server, no database. |
-| Start at | [Quickstart](#quickstart) | [As a library](#as-a-library) |
+| **Standalone CLI Tool** | `uv pip install -e .` $\rightarrow$ `adduce link ...` | Terminal graph queries, PR breaking change checks & MCP stdio |
+| **Embeddable Library** | `pip install dist/adduce_core-*.whl` | Embed `scan()` and `link()` into Python CI scripts without a server |
+| **Full Web Application** | `docker compose up -d` | Visual 2D estate exploration, Service Map & Trace UI |
 
-The engine is identical — one implementation, not a port. The application is
-that engine with a server, a database and a UI around it.
-
-### As a library
-
-No container, no database. Install the engine on its own — it pulls
-`pydantic`, `pyyaml` and the tree-sitter grammars, and deliberately not
-`neo4j`, `fastapi` or `uvicorn`:
+### 1. Install as a Local CLI Tool
 
 ```bash
-uv build --wheel --project packaging/adduce-core --out-dir dist   # not yet on PyPI
+git clone https://github.com/adduce-labs/adduce.git
+cd adduce
+
+# Install the adduce CLI executable into your environment
+uv pip install -e .     # or pip install -e .
+
+# Verify CLI installation
+adduce --help
+```
+
+### 2. Basic CLI Commands
+
+```bash
+# Link local repositories and print JSON graph payload
+adduce link path/to/repo-a path/to/repo-b
+
+# Check PR breaking changes
+adduce pr --base main.adduce --head feature.adduce
+
+# Serve graph over MCP stdio to Claude / Cursor / Antigravity
+adduce mcp path/to/artifact.adduce
+```
+
+### 3. As an Embeddable Core Library (`adduce-core`)
+
+No container, no database. Install the pure engine on its own:
+
+```bash
+uv build --wheel --project packaging/adduce-core --out-dir dist
 pip install dist/adduce_core-0.1.0-py3-none-any.whl
 ```
+
+See [Integration & Embedding Guide](docs/use-cases.md#7-integration--embedding-guide-adduce-core) for detailed Python code examples on embedding `adduce-core` for **Ingestion** and **Querying**.
 
 Then scan repositories and join them in memory:
 
@@ -295,6 +317,38 @@ time dimension, which is what makes two runs diffable.
 operator's assertion of identity, and rot ages an assertion rather than
 refuting it. Neither ever writes.
 
+## Model Context Protocol (MCP) & Docker MCP Toolkit
+
+Adduce serves its graph directly to AI assistants (Claude Desktop, Cursor, Kiro, Antigravity) over the **Model Context Protocol (MCP)** STDIO JSON-RPC transport and integrates with the **Docker Desktop MCP Toolkit**.
+
+### Exposed MCP Tools
+
+| MCP Tool | Description | Inputs |
+|---|---|---|
+| **`services`** | Every service in the estate, with its parent repositories and commit SHAs | *(none)* |
+| **`consumers_of`** | Who depends on a target node ID, with both-sided `file:line` evidence | `node_id` |
+| **`trace`** | Up to 3 shortest active paths between two node IDs | `from_id`, `to_id`, `max_hops` |
+| **`deprecations`** | Deprecated contract endpoints and their live active consumers | *(none)* |
+
+### Docker Desktop MCP Toolkit Discovery
+
+Adduce includes official Docker MCP discovery labels in `docker-compose.yml` and `mcp.json` for instant registration:
+
+```bash
+# Enable Adduce in Docker MCP Toolkit CLI
+docker mcp server enable adduce
+
+# Connect Docker MCP Toolkit globally to Claude Desktop or Cursor
+docker mcp client connect --global claude-desktop
+```
+
+Or run directly over container STDIO:
+```bash
+docker exec -i adduce-backend python -m adduce.cli mcp /app/data/repos
+```
+
+> ⚡ **Token & Cost Savings for Claude Code & Codex:** Querying Adduce over MCP replaces brute-force context dumping (~250,000 tokens) with compact pre-linked graph payloads (~800 tokens), yielding **99% token savings** and **20x faster response latency**. See [Developer & AI Use Cases](docs/use-cases.md#6-llm-token-reduction--cost-efficiency-benchmark-claude-code--codex).
+
 ## Accuracy, and how to check it yourself
 
 Claims about accuracy are worth nothing unless you can reproduce them, so the
@@ -355,7 +409,7 @@ GitHub repo ──▶ parsers ──▶ claims ──▶ linker (R0–R14) ─�
   languages (Java, Kotlin, Python, JavaScript, TypeScript, Go, Rust, C, C++,
   C#, Ruby, PHP, Scala, R, SQL, JSON, YAML, HTML, CSS), plus purpose-built
   parsers for compose, Kubernetes, Helm, Kustomize, Terraform, protobuf,
-  GraphQL SDL, OpenAPI, AsyncAPI, and MCP capability manifests. Five of the
+  GraphQL SDL, OpenAPI, AsyncAPI, C# ASP.NET Core Minimal APIs, and MCP capability manifests. Five of the
   languages carry extra extraction queries on top of the AST layer.
 - **Frontend** — React 19 + Vite + Tailwind + zustand, canvas graph rendering.
 - **Linking** — ingestion and linking are separate phases. Ingesting a repo
@@ -395,6 +449,7 @@ never reach nodes, claims, or evidence.
 
 | Document | Covers |
 |---|---|
+| [Developer & AI Use Cases](docs/use-cases.md) | practical engineering use cases, MCP AI pair programming, impact analysis & tracing |
 | [Using the views](docs/using-the-views.md) | the three views and their shared controls |
 | [Coverage gaps](docs/design/coverage-gaps.md) | what the graph still misses, ranked, with reproducible measurements |
 | [CONTRIBUTING](CONTRIBUTING.md) | setup, the one rule that matters, adding a parser or resolver |

@@ -16,6 +16,7 @@ import json
 import logging
 import sys
 
+from adduce.utils import rendezvous_ids as rid
 from adduce.utils.evidence import as_spans
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,27 @@ class GraphTools:
         # attribution; agents join file paths against this map themselves.
         self._commits = commits or {}
 
+    def _resolve_node_id(self, query: str) -> str:
+        """Resolve a human service name or ID to its canonical node ID."""
+        if not query:
+            return query
+        # 1. Exact match on known active target/source edges
+        active_ids = {e.target_id for e in self._result.edges if e.status == "active"} | \
+                     {e.source_id for e in self._result.edges if e.status == "active"}
+        if query in active_ids:
+            return query
+        # 2. Match service name or service ID
+        for s in self._result.services:
+            if query in (s.service_id, s.name) or query.lower() == s.name.lower():
+                if s.service_id in active_ids:
+                    return s.service_id
+                # Check for global:Service node ID pattern
+                candidate = rid.service_id(s.name)
+                if candidate in active_ids:
+                    return candidate
+                return s.service_id
+        return query
+
     def services(self) -> dict:
         return {"services": [
             {"id": s.service_id, "name": s.name,
@@ -63,28 +85,31 @@ class GraphTools:
             "commits": dict(sorted(self._commits.items()))}
 
     def consumers_of(self, node_id: str) -> dict:
+        target = self._resolve_node_id(node_id)
         consumers = [
             {"consumer": e.source_id, "type": e.type,
              "confidence": round(e.confidence, 4),
              "evidence": list(e.evidence or []),
              "spans": as_spans(e.evidence)}
             for e in self._result.edges
-            if e.target_id == node_id and e.status == "active"]
-        # found=False with candidates, never an empty list for an unknown
-        # id: "nobody depends on it" is the one wrong answer to hand
-        # someone deciding whether a removal is safe.
+            if e.target_id == target and e.status == "active"]
         if not consumers:
             known = {e.target_id for e in self._result.edges
                      if e.status == "active"}
-            if node_id not in known:
+            if target not in known:
+                friendly_candidates = sorted([
+                    f"{s.name} ({s.service_id})" for s in self._result.services
+                ] or list(known))[:25]
                 return {"found": False, "node_id": node_id,
-                        "candidates": sorted(known)[:25]}
-        return {"found": True, "node_id": node_id, "consumers": consumers}
+                        "candidates": friendly_candidates}
+        return {"found": True, "node_id": target, "consumers": consumers}
 
     def trace(self, from_id: str, to_id: str, max_hops: int = 6) -> dict:
         from adduce.services.linker.traverse import find_paths
 
-        paths = find_paths(self._result.edges, from_id, to_id,
+        src = self._resolve_node_id(from_id)
+        dst = self._resolve_node_id(to_id)
+        paths = find_paths(self._result.edges, src, dst,
                            max_hops=min(int(max_hops), 8))
         return {"from": from_id, "to": to_id, "paths": paths,
                 "found": bool(paths)}

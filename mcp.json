@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "adduce": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "adduce-backend",
+        "python",
+        "-m",
+        "adduce.cli",
+        "mcp",
+        "/app/data/repos"
+      ],
+      "description": "Adduce Codebase Architecture & Microservice Dependency Graph MCP Server"
+    }
+  }
+}

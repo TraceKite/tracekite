@@ -32,3 +32,9 @@ dependencies = [
     "tree-sitter-yaml==0.7.2",
     "uvicorn[standard]>=0.52.0",
 ]
+
+[project.scripts]
+adduce = "adduce.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["backend"]

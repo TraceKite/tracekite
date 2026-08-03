@@ -36,6 +36,16 @@ class ArtifactDiff:
     edges: EdgeDelta = field(default_factory=EdgeDelta)
     by_type: dict = field(default_factory=dict)
 
+    @property
+    def has_breaking_changes(self) -> bool:
+        """True when contract edges or nodes were removed."""
+        return bool(self.edges.removed or self.nodes_removed)
+
+    @property
+    def breaking_edges(self) -> list[list]:
+        """Edge removals that break existing consumer contracts."""
+        return [list(t) for t in self.edges.removed]
+
     def summary(self) -> str:
         """One line a reviewer can read without opening anything.
 
@@ -50,18 +60,20 @@ class ArtifactDiff:
         if e.added:
             parts.append(f"+{len(e.added)} edges")
         if e.removed:
-            parts.append(f"-{len(e.removed)} edges")
+            parts.append(f"-{len(e.removed)} edges (BREAKING)")
         if e.reconfidenced:
             parts.append(f"~{len(e.reconfidenced)} reconfidenced")
         if self.nodes_added:
             parts.append(f"+{self.nodes_added} nodes")
         if self.nodes_removed:
-            parts.append(f"-{self.nodes_removed} nodes")
+            parts.append(f"-{self.nodes_removed} nodes (BREAKING)")
         return ", ".join(parts)
 
     def as_dict(self) -> dict:
         return {
             "summary": self.summary(),
+            "has_breaking_changes": self.has_breaking_changes,
+            "breaking_edges": self.breaking_edges,
             "nodes_added": self.nodes_added,
             "nodes_removed": self.nodes_removed,
             "edges_added": [list(t) for t in self.edges.added],

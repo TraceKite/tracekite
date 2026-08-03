@@ -501,23 +501,22 @@ export default function GraphCanvas2D() {
       ctx.globalAlpha = alpha * confStyle.opacity;
 
       ctx.strokeStyle = color;
-      ctx.lineWidth = width * 1.6;
+      ctx.lineWidth = width * 0.9;
       ctx.lineCap = "round";
-      ctx.shadowBlur = 6;
-      ctx.shadowColor = color;
+      const needsGlow = emphasised || (hoverNode && isIncident);
+      if (needsGlow) {
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = color;
+        ctx.lineWidth = width * 1.8;
+      } else {
+        ctx.shadowBlur = 0;
+      }
       ctx.setLineDash(confStyle.dash);
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.lineTo(ex, ey);
       ctx.stroke();
       ctx.shadowBlur = 0;
-
-      ctx.globalAlpha = alpha * 0.75 * confStyle.opacity;
-      ctx.lineWidth = Math.max(0.8, width * 0.75);
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(ex, ey);
-      ctx.stroke();
       ctx.setLineDash([]);
 
       const angle = Math.atan2(dy, dx);
@@ -586,8 +585,11 @@ export default function GraphCanvas2D() {
   }, [childCount]);
 
   const handleNodeClick = useCallback((node: any) => {
-    if (node) setSelectedNode(node as GraphNode);
-  }, [setSelectedNode]);
+    if (node) {
+      setSelectedNode(node as GraphNode);
+      setSelectedEdge(null);
+    }
+  }, [setSelectedNode, setSelectedEdge]);
 
   const handleLinkClick = useCallback((link: any) => {
     setSelectedEdge(link);
@@ -674,9 +676,22 @@ export default function GraphCanvas2D() {
     });
   }, []);
 
+  const handleRotateGraph = useCallback(() => {
+    visibleNodes.forEach((n: any) => {
+      if (n.x != null && n.y != null) {
+        const oldX = n.x;
+        n.x = -n.y;
+        n.y = oldX;
+        n.vx = 0;
+        n.vy = 0;
+      }
+    });
+    fgRef.current?.d3ReheatSimulation();
+  }, [visibleNodes]);
+
   useEffect(() => {
-    setGraphControlCallbacks({ resetCamera: handleResetCamera, fitGraph: handleFitGraph, togglePhysics: handleTogglePhysics, physicsEnabled });
-  }, [handleResetCamera, handleFitGraph, handleTogglePhysics, physicsEnabled, setGraphControlCallbacks]);
+    setGraphControlCallbacks({ resetCamera: handleResetCamera, fitGraph: handleFitGraph, togglePhysics: handleTogglePhysics, rotateGraph: handleRotateGraph, physicsEnabled });
+  }, [handleResetCamera, handleFitGraph, handleTogglePhysics, handleRotateGraph, physicsEnabled, setGraphControlCallbacks]);
 
   // The graph component is dynamically imported, so fgRef is still null the
   // first time this runs. The old version bailed on that and — with only

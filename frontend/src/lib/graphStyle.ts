@@ -42,8 +42,9 @@ export const EDGE_COLORS: Record<string, string> = {
   // show a boundary being crossed were drawn duller than CONTAINS. One
   // reserved colour, used by nothing else, so "does a connection exist?"
   // is answerable at a glance rather than by reading labels.
-  INVOKES: "#ff5cf0",
-  EXPOSES: "#ff5cf0",
+  // Cross-repository crossings.
+  INVOKES: "#e879f9",
+  EXPOSES: "#e879f9",
 };
 
 /** Edge types that cross a repository boundary. */
@@ -124,9 +125,7 @@ export function getEdgeColor(edgeType: string): string {
 }
 
 export function getEdgeWidth(edgeType: string): number {
-  // A crossing is the rarest and most consequential edge on a multi-repo
-  // canvas; width reinforces the reserved colour so it survives zooming out.
-  if (isCrossingEdge(edgeType)) return 2.5;
+  if (isCrossingEdge(edgeType)) return 1.1;
   return EDGE_WIDTHS[edgeType] || 0.5;
 }
 

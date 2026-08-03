@@ -45,13 +45,8 @@ MATRIX: dict[str, dict] = {
     "python": {"routes": ["fastapi", "flask"],
                "clients": ["requests", "httpx", "aiohttp", "urllib3"]},
     "rust": {"routes": ["actix", "rocket", "axum"], "clients": ["reqwest"]},
-    "c#": {"routes": ["aspnetcore-attributes"],
-           "clients": ["httpclient", "restsharp", "refit"],
-           # Minimal APIs (app.MapGet) are NOT extracted: the C# tree-sitter
-           # pass yields no method calls, so the adapter's MapGet branch
-           # never fires. Recorded here because a gap that looks covered is
-           # the exact failure this report exists to remove.
-           "gaps": ["aspnetcore-minimal-apis"]},
+    "c#": {"routes": ["aspnetcore-attributes", "aspnetcore-minimal-apis"],
+           "clients": ["httpclient", "restsharp", "refit"]},
     "ruby": {"routes": ["rails", "sinatra"],
              "clients": ["net_http", "faraday", "httparty", "restclient"]},
     "php": {"routes": ["laravel", "slim", "symfony"],

@@ -1,5 +1,5 @@
 import {
-  RotateCcw, Maximize, Minimize, Type,
+  RotateCcw, RotateCw, Maximize, Minimize, Type,
   Sparkles, Pause, Play,
 } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
@@ -63,6 +63,15 @@ export default function GraphControls() {
         >
           <Maximize className="w-3 h-3" />
           <span>Fit</span>
+        </button>
+
+        <button
+          onClick={graphControlCallbacks?.rotateGraph}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-[#8c949e] hover:text-[#e9ecef] hover:bg-white/5 transition-colors"
+          title="Rotate layout 90 degrees"
+        >
+          <RotateCw className="w-3 h-3" />
+          <span>Rotate</span>
         </button>
 
         <button
