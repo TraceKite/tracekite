@@ -105,7 +105,7 @@ Adduce is available as a **standalone CLI tool** (`adduce`), an **embeddable Pyt
 
 | Interface | Installation & Execution | Primary Use Case |
 |---|---|---|
-| **Standalone CLI Tool** | `uv pip install -e .` $\rightarrow$ `adduce link ...` | Terminal graph queries, PR breaking change checks & MCP stdio |
+| **Standalone CLI Tool** | `uv tool install .` $\rightarrow$ `adduce link ...` | Terminal graph queries, PR impact checks, and MCP stdio |
 | **Embeddable Library** | `pip install dist/adduce_core-*.whl` | Embed `scan()` and `link()` into Python CI scripts without a server |
 | **Full Web Application** | `docker compose up -d` | Visual 2D estate exploration, Service Map & Trace UI |
 
@@ -115,8 +115,8 @@ Adduce is available as a **standalone CLI tool** (`adduce`), an **embeddable Pyt
 git clone https://github.com/adduce-labs/adduce.git
 cd adduce
 
-# Install the adduce CLI executable into your environment
-uv pip install -e .     # or pip install -e .
+# Install the adduce CLI as an isolated tool
+uv tool install .
 
 # Verify CLI installation
 adduce --help
@@ -128,11 +128,12 @@ adduce --help
 # Link local repositories and print JSON graph payload
 adduce link path/to/repo-a path/to/repo-b
 
-# Check PR breaking changes
-adduce pr --base main.adduce --head feature.adduce
+# Compare complete base and head artifact sets
+adduce pr --base base/orders-<digest>.adduce \
+  --head head/orders-<digest>.adduce --changed-repo orders
 
-# Serve graph over MCP stdio to Claude / Cursor / Antigravity
-adduce mcp path/to/artifact.adduce
+# Serve source repositories over MCP stdio
+adduce mcp /absolute/path/repo-a /absolute/path/repo-b
 ```
 
 ### 3. As an Embeddable Core Library (`adduce-core`)
@@ -144,7 +145,8 @@ uv build --wheel --project packaging/adduce-core --out-dir dist
 pip install dist/adduce_core-0.1.0-py3-none-any.whl
 ```
 
-See [Integration & Embedding Guide](docs/use-cases.md#7-integration--embedding-guide-adduce-core) for detailed Python code examples on embedding `adduce-core` for **Ingestion** and **Querying**.
+See [Developer use cases](docs/use-cases.md#embed-the-engine) for a direct
+embedding example.
 
 Then scan repositories and join them in memory:
 
@@ -283,13 +285,14 @@ time dimension, which is what makes two runs diffable.
 | `adduce scan <path>` | what claims one repository emits |
 | `adduce link <path>...` | the edges several repositories produce together |
 | `adduce artifact <path> --out DIR` | scan into a content-addressed `.adduce` file, the unit CI publishes |
-| `adduce explain --edge SRC DST` | why one edge exists — the resolver, the tier, the receipts |
+| `adduce explain <path>... --edge SRC DST` | why one edge exists — the resolver, the tier, the receipts |
 
 **Ask the graph questions**
 
 | Command | Answers |
 |---|---|
 | `adduce mcp <artifact>...` | serve the graph to an agent over MCP stdio |
+| `adduce install-skill [--client CLIENT]` | install a supported global agent skill without changing MCP configuration |
 | `adduce coverage` | what each language's extractors cover, and what they miss |
 | `adduce resolvers` | the declared resolver order |
 | `adduce schema` | the published JSON Schema the payloads validate against |
@@ -317,37 +320,24 @@ time dimension, which is what makes two runs diffable.
 operator's assertion of identity, and rot ages an assertion rather than
 refuting it. Neither ever writes.
 
-## Model Context Protocol (MCP) & Docker MCP Toolkit
+## Model Context Protocol (MCP)
 
-Adduce serves its graph directly to AI assistants (Claude Desktop, Cursor, Kiro, Antigravity) over the **Model Context Protocol (MCP)** STDIO JSON-RPC transport and integrates with the **Docker Desktop MCP Toolkit**.
+Adduce serves source repositories or portable artifacts to AI clients over
+MCP stdio. It scans or loads every input once at startup, then answers from
+the linked in-memory graph.
 
 ### Exposed MCP Tools
 
 | MCP Tool | Description | Inputs |
 |---|---|---|
-| **`services`** | Every service in the estate, with its parent repositories and commit SHAs | *(none)* |
-| **`consumers_of`** | Who depends on a target node ID, with both-sided `file:line` evidence | `node_id` |
+| **`services`** | Repository-backed services, plus artifact commit metadata | *(none)* |
+| **`consumers_of`** | Active incoming edges with `file:line` evidence | `node_id` |
 | **`trace`** | Up to 3 shortest active paths between two node IDs | `from_id`, `to_id`, `max_hops` |
 | **`deprecations`** | Deprecated contract endpoints and their live active consumers | *(none)* |
 
-### Docker Desktop MCP Toolkit Discovery
-
-Adduce includes official Docker MCP discovery labels in `docker-compose.yml` and `mcp.json` for instant registration:
-
-```bash
-# Enable Adduce in Docker MCP Toolkit CLI
-docker mcp server enable adduce
-
-# Connect Docker MCP Toolkit globally to Claude Desktop or Cursor
-docker mcp client connect --global claude-desktop
-```
-
-Or run directly over container STDIO:
-```bash
-docker exec -i adduce-backend python -m adduce.cli mcp /app/data/repos
-```
-
-> ⚡ **Token & Cost Savings for Claude Code & Codex:** Querying Adduce over MCP replaces brute-force context dumping (~250,000 tokens) with compact pre-linked graph payloads (~800 tokens), yielding **99% token savings** and **20x faster response latency**. See [Developer & AI Use Cases](docs/use-cases.md#6-llm-token-reduction--cost-efficiency-benchmark-claude-code--codex).
+MCP client configuration is deliberately not rewritten by the installer.
+See [Agent and MCP integration](docs/plugins-and-mcp-guide.md) for the
+client-specific commands, supported global skill paths, and input semantics.
 
 ## Accuracy, and how to check it yourself
 
@@ -409,8 +399,9 @@ GitHub repo ──▶ parsers ──▶ claims ──▶ linker (R0–R14) ─�
   languages (Java, Kotlin, Python, JavaScript, TypeScript, Go, Rust, C, C++,
   C#, Ruby, PHP, Scala, R, SQL, JSON, YAML, HTML, CSS), plus purpose-built
   parsers for compose, Kubernetes, Helm, Kustomize, Terraform, protobuf,
-  GraphQL SDL, OpenAPI, AsyncAPI, C# ASP.NET Core Minimal APIs, and MCP capability manifests. Five of the
-  languages carry extra extraction queries on top of the AST layer.
+  GraphQL SDL, OpenAPI, AsyncAPI, C# ASP.NET Core Minimal APIs, and MCP
+  capability manifests. Several languages carry extra extraction queries on
+  top of the AST layer.
 - **Frontend** — React 19 + Vite + Tailwind + zustand, canvas graph rendering.
 - **Linking** — ingestion and linking are separate phases. Ingesting a repo
   never rewrites another repo's nodes; `POST /api/v2/links/rebuild` reconciles.
@@ -449,7 +440,8 @@ never reach nodes, claims, or evidence.
 
 | Document | Covers |
 |---|---|
-| [Developer & AI Use Cases](docs/use-cases.md) | practical engineering use cases, MCP AI pair programming, impact analysis & tracing |
+| [Developer use cases](docs/use-cases.md) | valid CLI, artifact, CI, MCP, and embedding examples |
+| [Agent and MCP integration](docs/plugins-and-mcp-guide.md) | client registration, skill installation, and MCP input semantics |
 | [Using the views](docs/using-the-views.md) | the three views and their shared controls |
 | [Coverage gaps](docs/design/coverage-gaps.md) | what the graph still misses, ranked, with reproducible measurements |
 | [CONTRIBUTING](CONTRIBUTING.md) | setup, the one rule that matters, adding a parser or resolver |

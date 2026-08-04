@@ -612,25 +612,22 @@ function ServiceMapCanvasComponent() {
                     className="shrink-0 text-[#8c949e] hover:text-white px-1"
                     aria-label="Clear selection">×</button>
           </div>
-          {/* The map answers "what talks to what". The moment you care about a
-              particular service, the next question is "how does it reach X" —
-              which is Trace. Handing the service straight over makes Trace the
-              second step of one flow rather than a rival view you have to set
-              up again from scratch. */}
-          <div className="flex gap-1.5 px-3 py-2 border-b border-white/10">
+          {focusNode.kind === "service" && (
+            <div className="flex gap-1.5 px-3 py-2 border-b border-white/10">
             <button
-              onClick={() => { setTraceEndpoints(focusNode.name, traceTo); setAppMode("trace"); }}
+              onClick={() => { setTraceEndpoints(focusNode.id, traceTo); setAppMode("trace"); }}
               className="flex-1 text-2xs px-2 py-1.5 rounded-md bg-violet-500/15
                          text-violet-300 hover:bg-violet-500/25 transition-colors">
               Trace from here
             </button>
             <button
-              onClick={() => { setTraceEndpoints(traceFrom, focusNode.name); setAppMode("trace"); }}
+              onClick={() => { setTraceEndpoints(traceFrom, focusNode.id); setAppMode("trace"); }}
               className="flex-1 text-2xs px-2 py-1.5 rounded-md bg-violet-500/15
                          text-violet-300 hover:bg-violet-500/25 transition-colors">
               Trace to here
             </button>
-          </div>
+            </div>
+          )}
           {([["Called by", focus.inbound, "source"],
              ["Calls", focus.outbound, "target"]] as const).map(([label, list, end]) => (
             <div key={label} className="p-3 border-b border-white/5 last:border-0">

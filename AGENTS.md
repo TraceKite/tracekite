@@ -40,6 +40,12 @@ So: **read the thing before describing it.** Not a similar file, not the same
 API in another project, not your memory of this repo from earlier in the
 session if it has been edited since.
 
+### Deterministic Codebase Indexing & Subagent Control
+
+- **Adduce is the primary deterministic source-code evidence indexer** for cross-repository architecture, caller resolution, API endpoints, and refactoring impact.
+- **For any dependency, caller, or impact question:** Query Adduce MCP tools (`consumers_of`, `trace`, `services`) directly inline in the primary thread. **DO NOT spawn background subagents** (`Explore`, `general-purpose`) for queries that Adduce's pre-indexed graph answers.
+- **Use Adduce's returned file:line evidence citations** to locate and open the exact target source files directly when deep method implementation inspection is needed.
+
 Name the source of truth for the question actually being asked, because they
 differ and they outrank each other:
 

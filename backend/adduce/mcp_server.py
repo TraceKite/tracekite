@@ -14,6 +14,7 @@ first bad message punishes the wrong party.
 
 import json
 import logging
+import os
 import sys
 
 from adduce.utils import rendezvous_ids as rid
@@ -25,19 +26,21 @@ PROTOCOL_VERSION = "2024-11-05"
 
 TOOLS = [
     {"name": "services",
-     "description": "Every service in the estate, with its repositories.",
+     "description": "Every service backed by a scanned repository.",
      "inputSchema": {"type": "object", "properties": {}}},
     {"name": "consumers_of",
-     "description": "Who depends on this node id, with file:line evidence.",
+     "description": "Who depends on this node id, with file:line evidence citations across repositories.",
      "inputSchema": {"type": "object", "required": ["node_id"],
                      "properties": {"node_id": {"type": "string"}}}},
     {"name": "trace",
-     "description": "Up to 3 shortest active paths between two node ids.",
+     "description": "Up to 3 shortest active call paths between two node ids.",
      "inputSchema": {"type": "object",
                      "required": ["from_id", "to_id"],
                      "properties": {"from_id": {"type": "string"},
-                                    "to_id": {"type": "string"},
-                                    "max_hops": {"type": "integer"}}}},
+                                     "to_id": {"type": "string"},
+                                    "max_hops": {"type": "integer",
+                                                 "minimum": 1,
+                                                 "maximum": 8}}}},
     {"name": "deprecations",
      "description": "Deprecated contracts and their live consumers.",
      "inputSchema": {"type": "object", "properties": {}}},
@@ -55,37 +58,56 @@ class GraphTools:
         # attribution; agents join file paths against this map themselves.
         self._commits = commits or {}
 
-    def _resolve_node_id(self, query: str) -> str:
-        """Resolve a human service name or ID to its canonical node ID."""
+    def _known_node_ids(self) -> set[str]:
+        active = {
+            node_id
+            for edge in self._result.edges if edge.status == "active"
+            for node_id in (edge.source_id, edge.target_id)
+        }
+        backed_services = {
+            service.service_id for service in self._result.services
+            if service.repo_ids
+        }
+        return active | backed_services
+
+    def _resolve_node_id(self, query: str) -> tuple[str | None, list[str]]:
+        """Resolve one unambiguous service name or exact known node ID."""
+        if not isinstance(query, str):
+            raise ValueError("node id must be a string")
         if not query:
-            return query
-        # 1. Exact match on known active target/source edges
-        active_ids = {e.target_id for e in self._result.edges if e.status == "active"} | \
-                     {e.source_id for e in self._result.edges if e.status == "active"}
-        if query in active_ids:
-            return query
-        # 2. Match service name or service ID
+            return query, []
+        known_ids = self._known_node_ids()
+        if query in known_ids:
+            return query, []
+
+        candidates = set()
         for s in self._result.services:
-            if query in (s.service_id, s.name) or query.lower() == s.name.lower():
-                if s.service_id in active_ids:
-                    return s.service_id
-                # Check for global:Service node ID pattern
-                candidate = rid.service_id(s.name)
-                if candidate in active_ids:
-                    return candidate
-                return s.service_id
-        return query
+            if query != s.service_id and query.lower() != s.name.lower():
+                continue
+            candidates.update(candidate for candidate in (
+                s.service_id, rid.service_id(s.name)) if candidate in known_ids)
+        ordered = sorted(candidates)
+        if len(ordered) == 1:
+            return ordered[0], []
+        if len(ordered) > 1:
+            return None, ordered
+        return query, []
 
     def services(self) -> dict:
         return {"services": [
             {"id": s.service_id, "name": s.name,
              "repos": sorted(s.repo_ids or [])}
             for s in sorted(self._result.services,
-                            key=lambda s: s.service_id)],
+                            key=lambda s: s.service_id)
+            if s.repo_ids],
             "commits": dict(sorted(self._commits.items()))}
 
     def consumers_of(self, node_id: str) -> dict:
-        target = self._resolve_node_id(node_id)
+        target, ambiguous = self._resolve_node_id(node_id)
+        if ambiguous:
+            return {"found": False, "node_id": node_id,
+                    "reason": "ambiguous service name",
+                    "candidates": ambiguous}
         consumers = [
             {"consumer": e.source_id, "type": e.type,
              "confidence": round(e.confidence, 4),
@@ -94,11 +116,11 @@ class GraphTools:
             for e in self._result.edges
             if e.target_id == target and e.status == "active"]
         if not consumers:
-            known = {e.target_id for e in self._result.edges
-                     if e.status == "active"}
+            known = self._known_node_ids()
             if target not in known:
                 friendly_candidates = sorted([
                     f"{s.name} ({s.service_id})" for s in self._result.services
+                    if s.repo_ids
                 ] or list(known))[:25]
                 return {"found": False, "node_id": node_id,
                         "candidates": friendly_candidates}
@@ -107,10 +129,17 @@ class GraphTools:
     def trace(self, from_id: str, to_id: str, max_hops: int = 6) -> dict:
         from adduce.services.linker.traverse import find_paths
 
-        src = self._resolve_node_id(from_id)
-        dst = self._resolve_node_id(to_id)
-        paths = find_paths(self._result.edges, src, dst,
-                           max_hops=min(int(max_hops), 8))
+        src, from_candidates = self._resolve_node_id(from_id)
+        dst, to_candidates = self._resolve_node_id(to_id)
+        if from_candidates or to_candidates:
+            return {"from": from_id, "to": to_id, "paths": [],
+                    "found": False, "reason": "ambiguous service name",
+                    "candidates": {"from": from_candidates,
+                                   "to": to_candidates}}
+        hops = int(max_hops)
+        if not 1 <= hops <= 8:
+            raise ValueError("max_hops must be between 1 and 8")
+        paths = find_paths(self._result.edges, src, dst, max_hops=hops)
         return {"from": from_id, "to": to_id, "paths": paths,
                 "found": bool(paths)}
 
@@ -127,8 +156,11 @@ def _response(request_id, result=None, error=None) -> dict:
     return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
 
-def handle(message: dict, tools: GraphTools) -> dict | None:
+def handle(message: object, tools: GraphTools) -> dict | None:
     """One JSON-RPC message in, one response out (None for notifications)."""
+    if not isinstance(message, dict):
+        return _response(None, error={
+            "code": -32600, "message": "invalid request"})
     method = message.get("method", "")
     request_id = message.get("id")
     if request_id is None:
@@ -142,6 +174,9 @@ def handle(message: dict, tools: GraphTools) -> dict | None:
         return _response(request_id, {"tools": TOOLS})
     if method == "tools/call":
         params = message.get("params") or {}
+        if not isinstance(params, dict):
+            return _response(request_id, error={
+                "code": -32602, "message": "params must be an object"})
         name = params.get("name", "")
         handler = getattr(tools, name, None)
         if name not in {t["name"] for t in TOOLS} or handler is None:
@@ -149,7 +184,7 @@ def handle(message: dict, tools: GraphTools) -> dict | None:
                 "code": -32602, "message": f"unknown tool {name!r}"})
         try:
             answer = handler(**(params.get("arguments") or {}))
-        except TypeError as exc:
+        except (TypeError, ValueError) as exc:
             return _response(request_id, error={
                 "code": -32602, "message": str(exc)})
         return _response(request_id, {
@@ -159,20 +194,53 @@ def handle(message: dict, tools: GraphTools) -> dict | None:
         "code": -32601, "message": f"unknown method {method!r}"})
 
 
-def serve(artifact_paths: list[str], stdin=None, stdout=None) -> int:
-    """Load, link once, answer until EOF."""
+def _register_repos(repo_ids: list[str], commits: dict,
+                    head_sha: str = "") -> None:
+    duplicates = sorted(set(repo_ids) & set(commits))
+    if duplicates:
+        raise ValueError(f"duplicate repository inputs: {duplicates}")
+    commits.update((repo_id, head_sha) for repo_id in repo_ids)
+
+
+def _collect_claims(path: str, claims: list, commits: dict) -> None:
     from adduce.db.artifact import read_meta
     from adduce.db.artifact_reader import read_claims
+    from adduce.db.memory_store import claims_from_scan
+    from adduce.services.scan import scan
+
+    if os.path.isfile(path) and path.endswith(".adduce"):
+        meta = read_meta(path)
+        repo_ids = ([meta["repo_id"]] if meta.get("repo_id") else
+                    list(meta.get("repos") or []))
+        if not repo_ids:
+            raise ValueError(f"artifact has no repository identity: {path}")
+        _register_repos(repo_ids, commits, meta.get("head_sha", ""))
+        claims.extend(read_claims(path))
+        return
+    if os.path.isdir(path):
+        repo_id = os.path.basename(os.path.abspath(path))
+        _register_repos([repo_id], commits)
+        claims.extend(claims_from_scan(scan(path, repo_id=repo_id)))
+        return
+    if os.path.exists(path):
+        raise ValueError(f"unsupported MCP input (expected .adduce): {path}")
+    raise FileNotFoundError(path)
+
+
+def serve(paths: list[str] | None = None, stdin=None, stdout=None) -> int:
+    """Load artifacts or scan directories, link once, answer until EOF."""
+    logging.basicConfig(level=logging.ERROR, stream=sys.stderr, force=True)
+
     from adduce.services.linker.engine import link
 
-    claims = [c for p in artifact_paths for c in read_claims(p)]
+    paths = paths or ["."]
+    claims = []
+    commits = {}
+    for path in paths:
+        _collect_claims(path, claims, commits)
+
     result = link(claims, run_id="linkrun_mcp",
                   now="2026-01-01T00:00:00+00:00")
-    commits = {}
-    for path in artifact_paths:
-        meta = read_meta(path)
-        if meta.get("repo_id"):
-            commits[meta["repo_id"]] = meta.get("head_sha", "")
     tools = GraphTools(result, commits)
 
     stdin = stdin or sys.stdin

@@ -17,6 +17,7 @@ import argparse
 import os
 import sys
 
+from adduce.agent_setup import SUPPORTED_CLIENTS, cmd_install_skill
 from adduce.cli_emit import emit as _emit
 from adduce.cli_explain import cmd_explain
 from adduce.cli_inspect import (
@@ -157,8 +158,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     mcp_p = sub.add_parser(
         "mcp", help="serve the graph to an agent over MCP stdio")
-    mcp_p.add_argument("artifacts", nargs="+")
+    mcp_p.add_argument("artifacts", nargs="+",
+                       help=".adduce artifacts or source directories")
     mcp_p.set_defaults(func=cmd_mcp)
+
+    install_p = sub.add_parser(
+        "install-skill", help="install the global Adduce agent skill")
+    install_p.add_argument("--client", "-c", action="append",
+                           choices=["all", *sorted(SUPPORTED_CLIENTS)])
+    install_p.set_defaults(func=cmd_install_skill)
 
     sub.add_parser("schema", help="print the published JSON Schema"
                    ).set_defaults(func=cmd_schema)

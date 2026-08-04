@@ -79,17 +79,10 @@ fn app() -> Router {
     Router::new().route("/owners", get(list_owners))
 }
 '''),
-    # Attribute routing — the form the extractor actually supports.
-    # Minimal APIs are a recorded gap (MATRIX["c#"]["gaps"]), and pinning
-    # them here would either fail forever or force a false claim.
-    "c#": ("src/OwnersController.cs", '''
-using Microsoft.AspNetCore.Mvc;
-[ApiController]
-[Route("owners")]
-public class OwnersController : ControllerBase {
-    [HttpGet]
-    public IActionResult Index() => Ok();
-}
+    "c#": ("src/Program.cs", '''
+var app = WebApplication.Create();
+var api = app.MapGroup("/api");
+api.MapGet("/owners", () => "owners");
 '''),
     "ruby": ("config/routes.rb", '''
 Rails.application.routes.draw do

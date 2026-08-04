@@ -24,10 +24,8 @@ import pathlib
 import sys
 
 APP = pathlib.Path(__file__).resolve().parent.parent / "adduce"
-
 # Bottom-up. Equal rank means sibling: siblings may not import each other.
 RANK = {"core": 0, "parsers": 1, "store": 1, "server": 2}
-
 # First match wins, so longer prefixes are listed before the packages that
 # contain them. A module absent from this table is an error, not a default:
 # silently ranking new code as `server` would let it import anything.
@@ -43,6 +41,7 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("main", "server"),
     # Composes scan + link + a store; imports downward only.
     ("cli", "server"),
+    ("agent_setup", "server"),
     ("cli_emit", "server"),
     ("cli_explain", "server"),
     # MCP stdio transport over the library: a surface, like cli.

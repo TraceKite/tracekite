@@ -11,7 +11,6 @@ from adduce.db.neo4j_client import get_session
 from adduce.services.job_queue import job_queue
 from adduce.services.link_writer import list_link_runs
 from adduce.utils import rendezvous_ids as rid
-from adduce.services.linker.crossings import assemble_crossings
 from adduce.services.linker.map_view import assemble_service_map
 
 logger = logging.getLogger(__name__)

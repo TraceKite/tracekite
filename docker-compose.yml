@@ -59,11 +59,6 @@ services:
       ADDUCE_CORS_ORIGINS: "${ADDUCE_CORS_ORIGINS:-}"
       INGEST_WORKERS: "${INGEST_WORKERS:-2}"
       MAX_SCOPE_REPOS: "${MAX_SCOPE_REPOS:-10}"
-    labels:
-      com.docker.mcp.server: "true"
-      com.docker.mcp.title: "Adduce Graph Engine"
-      com.docker.mcp.description: "Codebase Architecture & Microservice Dependency Graph MCP Server"
-      com.docker.mcp.command: "python -m adduce.cli mcp /app/data/repos"
     volumes:
       - repo_workspace:/app/data/repos
       - backend_var:/app/var

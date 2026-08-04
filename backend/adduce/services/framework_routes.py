@@ -12,10 +12,10 @@ gorilla/mux routes against a `baseUrl` prefix, and the repository reported
 all. Invariant I5 is that a decline is data: the number a reader needs is
 "thirteen routes declined because their paths are computed", not silence.
 
-Only the Go half is modelled, because that is where the behaviour was
-observed and confirmed against source. The tuple return is the seam for the
-rest; an extractor that has not been checked reports zero rather than a
-guess, which is the same discipline applied to the counter itself.
+Go and C# computed paths are modelled because their literal extractors have
+matching, verified registration shapes. An extractor that has not been
+checked reports zero rather than a guess, which is the same discipline
+applied to the counter itself.
 """
 
 import re
@@ -75,6 +75,8 @@ def framework_routes(file_info, content: str) -> tuple[list, int]:
         from adduce.services.php_route_extractor import extract_php_routes
         return extract_php_routes(path, content), 0
     if language in ("c#", "csharp") or path.endswith(".cs"):
-        from adduce.services.csharp_route_extractor import extract_csharp_routes
-        return extract_csharp_routes(path, content), 0
+        from adduce.services.csharp_route_extractor import (
+            extract_csharp_routes_with_declines,
+        )
+        return extract_csharp_routes_with_declines(path, content)
     return [], 0

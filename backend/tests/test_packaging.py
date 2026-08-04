@@ -20,6 +20,7 @@ import check_layers  # noqa: E402
 
 PYPROJECT = (Path(__file__).resolve().parent.parent.parent
              / "packaging" / "adduce-core" / "pyproject.toml")
+CLI_PYPROJECT = Path(__file__).resolve().parent.parent.parent / "pyproject.toml"
 
 # Never in the core distribution. A host already running a graph database must
 # not be made to install a second one; a host with no web server must not
@@ -121,3 +122,12 @@ class TestCoreDistribution:
         invent defaults, so a wheel without `config/` can scan but never
         link — which is a broken library, loudly."""
         assert '"../../config" = "adduce/_control_plane"' in PYPROJECT.read_text()
+
+
+class TestCliDistribution:
+    def test_cli_wheel_ships_code_and_control_plane(self):
+        text = CLI_PYPROJECT.read_text()
+
+        assert 'adduce = "adduce.cli:main"' in text
+        assert 'packages = ["backend/adduce"]' in text
+        assert '"config" = "adduce/_control_plane"' in text

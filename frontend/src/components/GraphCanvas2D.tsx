@@ -14,19 +14,10 @@ import {
 } from "@/lib/graphStyle";
 import { forceX, forceY } from "d3-force";
 import type { GraphNode } from "@/lib/types";
-
-// Only methods force-graph actually exposes. `refresh` used to be declared
-// here, which is why calling it type-checked and then threw at runtime.
-interface ForceGraph2DMethods {
-  zoomToFit: (ms?: number, padding?: number) => void;
-  centerAt: (x?: number, y?: number, ms?: number) => void;
-  zoom: (k?: number, ms?: number) => void;
-  pauseAnimation: () => void;
-  resumeAnimation: () => void;
-  d3Force(name: string): any;
-  d3Force(name: string, force: any | null): ForceGraph2DMethods;
-  d3ReheatSimulation: () => void;
-}
+import {
+  useGraphControls,
+  type ForceGraph2DMethods,
+} from "@/hooks/useGraphControls";
 
 const ALWAYS_LABEL_TYPES = new Set(["Repo", "Folder", "Package", "File"]);
 
@@ -76,7 +67,6 @@ export default function GraphCanvas2D() {
     loadingGraph,
     setLoadingGraph,
     setError,
-    setGraphControlCallbacks,
     filteredNodeTypes,
     filteredEdgeTypes,
   } = useGraphStore();
@@ -84,7 +74,6 @@ export default function GraphCanvas2D() {
   const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
   const fgRef = useRef<ForceGraph2DMethods | null>(null);
   const [ForceGraphComponent, setForceGraphComponent] = useState<any>(null);
-  const [physicsEnabled, setPhysicsEnabled] = useState(true);
   const [hoverNode, setHoverNode] = useState<GraphNode | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -274,6 +263,7 @@ export default function GraphCanvas2D() {
     }
     return typed.filter((n) => touched.has(n.id));
   }, [nodes, links, filteredNodeTypes, connectionsOnly]);
+  const physicsEnabled = useGraphControls(fgRef, visibleNodes);
 
   const visibleLinks = useMemo(() => {
     const nodeIdSet = new Set(visibleNodes.map((n) => n.id));
@@ -585,11 +575,8 @@ export default function GraphCanvas2D() {
   }, [childCount]);
 
   const handleNodeClick = useCallback((node: any) => {
-    if (node) {
-      setSelectedNode(node as GraphNode);
-      setSelectedEdge(null);
-    }
-  }, [setSelectedNode, setSelectedEdge]);
+    if (node) setSelectedNode(node as GraphNode);
+  }, [setSelectedNode]);
 
   const handleLinkClick = useCallback((link: any) => {
     setSelectedEdge(link);
@@ -600,16 +587,6 @@ export default function GraphCanvas2D() {
     setHoverNode((node as GraphNode) || null);
     if (typeof document !== "undefined") document.body.style.cursor = node ? "pointer" : "default";
   }, []);
-
-  const handleResetCamera = useCallback(() => {
-    fgRef.current?.centerAt(0, 0, 800);
-    fgRef.current?.zoom(1, 800);
-  }, []);
-
-  // zoomToFit measures NODE COORDINATES, but every node draws a label beside
-  // it, so the visual bounds are wider than what it fits. At 40px padding the
-  // outermost labels were clipped to 0-1px margins. Pad for the label extent.
-  const handleFitGraph = useCallback(() => fgRef.current?.zoomToFit(800, 90), []);
 
   // Forces MUST be applied through the ref. Passing `d3Force` as a prop looks
   // right and does nothing: react-kapsule omits method-named props, so every
@@ -663,35 +640,6 @@ export default function GraphCanvas2D() {
     apply();
     return () => { cancelled = true; };
   }, [linkDistance, graphData, showLabels, ForceGraphComponent, dimensions.width, dimensions.height]);
-
-  const handleTogglePhysics = useCallback(() => {
-    setPhysicsEnabled((prev) => {
-      const next = !prev;
-      // `refresh()` does not exist on force-graph — it was invented in a
-      // hand-written interface, so this threw a TypeError inside a setState
-      // updater and the ErrorBoundary replaced the whole app.
-      if (next) fgRef.current?.resumeAnimation();
-      else fgRef.current?.pauseAnimation();
-      return next;
-    });
-  }, []);
-
-  const handleRotateGraph = useCallback(() => {
-    visibleNodes.forEach((n: any) => {
-      if (n.x != null && n.y != null) {
-        const oldX = n.x;
-        n.x = -n.y;
-        n.y = oldX;
-        n.vx = 0;
-        n.vy = 0;
-      }
-    });
-    fgRef.current?.d3ReheatSimulation();
-  }, [visibleNodes]);
-
-  useEffect(() => {
-    setGraphControlCallbacks({ resetCamera: handleResetCamera, fitGraph: handleFitGraph, togglePhysics: handleTogglePhysics, rotateGraph: handleRotateGraph, physicsEnabled });
-  }, [handleResetCamera, handleFitGraph, handleTogglePhysics, handleRotateGraph, physicsEnabled, setGraphControlCallbacks]);
 
   // The graph component is dynamically imported, so fgRef is still null the
   // first time this runs. The old version bailed on that and — with only

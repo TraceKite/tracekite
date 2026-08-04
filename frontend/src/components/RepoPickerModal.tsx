@@ -172,23 +172,10 @@ export default function RepoPickerModal({ mode, onClose }: Props) {
                   : `${scopeRepoIds.length} of ${maxRepos} selected`}
                 {cost && ` · ${cost.services} services · ${cost.links} links`}
               </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setScopeRepos([])}
-                  className="text-[#8c949e] hover:text-emerald-400 font-medium transition-colors"
-                  title="Include all repositories in multi-repo scope"
-                >
-                  Select All
-                </button>
-                <span className="text-white/20">·</span>
-                <button
-                  onClick={() => setScopeRepos(repos.length > 0 ? [repos[0].id] : [])}
-                  className="text-[#8c949e] hover:text-red-400 font-medium transition-colors"
-                  title="Clear scope to primary repository"
-                >
-                  Clear Selection
-                </button>
-              </div>
+              {scopeRepoIds.length > 0 && (
+                <button onClick={() => setScopeRepos([])}
+                        className="text-[#8c949e] hover:text-[#e9ecef]">Select all</button>
+              )}
             </div>
             {cost && cost.links >= edgeLimit && (
               <p className="flex items-start gap-1.5 text-2xs text-amber-300">

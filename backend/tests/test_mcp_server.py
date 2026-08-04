@@ -11,10 +11,14 @@ import json
 import os
 import subprocess
 import sys
+from io import StringIO
+from types import SimpleNamespace
+
+import pytest
 
 from adduce import engine_config
 from adduce.db.memory_store import InMemoryLinkerStore
-from adduce.mcp_server import GraphTools, handle
+from adduce.mcp_server import GraphTools, _collect_claims, handle, serve
 from adduce.services.linker.engine import link
 from adduce.services.linker.traverse import find_paths
 from adduce.services.scan import scan
@@ -67,6 +71,93 @@ class TestProtocol:
         assert answer["found"] is False
         assert answer["candidates"], (
             '"nobody depends on it" is the one wrong answer for a typo')
+
+    def test_non_object_request_is_a_protocol_error(self):
+        answer = handle([], GraphTools(linked()))
+
+        assert answer["error"] == {
+            "code": -32600, "message": "invalid request"}
+
+    def test_non_string_node_id_is_an_argument_error(self):
+        answer = handle({
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "consumers_of", "arguments": {"node_id": 4}},
+        }, GraphTools(linked()))
+
+        assert answer["error"] == {
+            "code": -32602, "message": "node id must be a string"}
+
+    def test_ambiguous_friendly_name_is_declined(self):
+        services = [
+            SimpleNamespace(service_id="service:a", name="Payments",
+                            repo_ids=["repo-a"]),
+            SimpleNamespace(service_id="service:b", name="payments",
+                            repo_ids=["repo-b"]),
+        ]
+        edges = [
+            SimpleNamespace(source_id="caller", target_id=service.service_id,
+                            status="active", type="INVOKES", confidence=0.9,
+                            evidence=["caller.py:1"])
+            for service in services
+        ]
+        tools = GraphTools(SimpleNamespace(
+            services=services, edges=edges, rendezvous=[]))
+
+        consumers = tools.consumers_of("payments")
+        traced = tools.trace("payments", "caller")
+
+        assert consumers["found"] is False
+        assert consumers["reason"] == "ambiguous service name"
+        assert consumers["candidates"] == ["service:a", "service:b"]
+        assert traced["found"] is False
+        assert traced["candidates"]["from"] == ["service:a", "service:b"]
+
+    def test_services_exclude_unbacked_virtual_names(self):
+        result = SimpleNamespace(
+            services=[
+                SimpleNamespace(service_id="service:a", name="A",
+                                repo_ids=["repo-a"]),
+                SimpleNamespace(service_id="service:virtual", name="Virtual",
+                                repo_ids=[]),
+            ],
+            edges=[],
+            rendezvous=[],
+        )
+
+        assert GraphTools(result).services()["services"] == [
+            {"id": "service:a", "name": "A", "repos": ["repo-a"]}]
+
+    def test_known_node_with_no_consumers_is_not_reported_unknown(self):
+        result = SimpleNamespace(
+            services=[],
+            edges=[SimpleNamespace(
+                source_id="source-only", target_id="target",
+                status="active", type="INVOKES", confidence=0.9,
+                evidence=["caller.py:1"])],
+            rendezvous=[],
+        )
+
+        answer = GraphTools(result).consumers_of("source-only")
+
+        assert answer == {
+            "found": True, "node_id": "source-only", "consumers": []}
+
+    def test_repository_backed_service_without_edges_is_known(self):
+        result = SimpleNamespace(
+            services=[SimpleNamespace(
+                service_id="service:idle", name="Idle", repo_ids=["repo-a"])],
+            edges=[],
+            rendezvous=[],
+        )
+
+        answer = GraphTools(result).consumers_of("Idle")
+
+        assert answer == {
+            "found": True, "node_id": "service:idle", "consumers": []}
+
+    def test_trace_rejects_out_of_contract_hop_limit(self):
+        with pytest.raises(ValueError, match="between 1 and 8"):
+            GraphTools(linked()).trace("a", "b", max_hops=9)
 
     def test_consumers_carry_derived_spans_and_services_carry_commits(self):
         # F4 at the boundary: strings stay the record (§3.1); structure is
@@ -124,3 +215,38 @@ class TestEndToEnd:
         # The notification produced no reply — three frames had ids,
         # three replies came back.
         assert len(replies) == 3
+
+    def test_source_directory_is_scanned_before_serving(self):
+        stdin = StringIO(
+            json.dumps({"jsonrpc": "2.0", "id": 1,
+                        "method": "tools/list"}) + "\n")
+        stdout = StringIO()
+
+        assert serve([os.path.join(CORPUS, "orders-service")],
+                     stdin=stdin, stdout=stdout) == 0
+        reply = json.loads(stdout.getvalue())
+        assert reply["id"] == 1
+        assert reply["result"]["tools"]
+
+
+class TestInputs:
+    def test_source_claims_use_the_scan_adapter(self):
+        claims, commits = [], {}
+
+        _collect_claims(os.path.join(CORPUS, "orders-service"),
+                        claims, commits)
+
+        assert claims
+        assert commits == {"orders-service": ""}
+
+    def test_duplicate_repository_inputs_are_rejected(self):
+        path = os.path.join(CORPUS, "orders-service")
+        claims, commits = [], {}
+        _collect_claims(path, claims, commits)
+
+        with pytest.raises(ValueError, match="duplicate repository"):
+            _collect_claims(path, claims, commits)
+
+    def test_missing_input_is_rejected(self, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            _collect_claims(str(tmp_path / "missing"), [], {})

@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+auto_confirm=false
+client_flags=()
+
+usage() {
+  printf '%s\n' "Usage: scripts/install.sh [--yes] [--client CLIENT]" \
+    "       scripts/install.sh [--claude] [--codex] [--kimi] [--antigravity]" \
+    "" \
+    "Installs the adduce CLI and selected global skill files." \
+    "MCP server registration remains an explicit per-client step."
+}
+
+add_client() {
+  case "$1" in
+    all|claude|codex|kimi|antigravity)
+      client_flags+=("--client" "$1")
+      ;;
+    *)
+      printf 'Unsupported client: %s\n' "$1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -y|--yes)
+      auto_confirm=true
+      shift
+      ;;
+    --claude|--codex|--kimi|--antigravity)
+      add_client "${1#--}"
+      shift
+      ;;
+    --gemini)
+      add_client "antigravity"
+      shift
+      ;;
+    -c|--client)
+      if [[ $# -lt 2 ]]; then
+        printf '%s requires a value\n' "$1" >&2
+        exit 2
+      fi
+      add_client "$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      printf 'Unknown argument: %s\n' "$1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/.." && pwd)"
+
+if ! command -v uv >/dev/null 2>&1; then
+  printf '%s\n' "uv is required. Install uv, then rerun this script." >&2
+  exit 1
+fi
+
+printf '%s\n' \
+  "Adduce setup will:" \
+  "  1. Install the adduce CLI as a uv tool." \
+  "  2. Install the selected global Adduce skill files." \
+  "  3. Leave existing skill files and all MCP client configuration untouched."
+
+if [[ "$auto_confirm" == false ]]; then
+  read -r -p "Proceed? [Y/n] " response
+  case "$response" in
+    ""|y|Y|yes|YES|Yes) ;;
+    *) printf '%s\n' "Installation cancelled."; exit 0 ;;
+  esac
+fi
+
+cd "$repo_root"
+uv tool install --no-cache --force .
+
+if command -v adduce >/dev/null 2>&1; then
+  adduce install-skill "${client_flags[@]}"
+else
+  uv tool run --from "$repo_root" adduce install-skill "${client_flags[@]}"
+fi
+
+printf '%s\n' \
+  "" \
+  "Adduce CLI and skills are ready." \
+  "Register the MCP server for each client using the commands in:" \
+  "  docs/plugins-and-mcp-guide.md" \
+  "" \
+  "Verify: adduce --help" \
+  "Serve:  adduce mcp /absolute/path/to/repo-a /absolute/path/to/repo-b"

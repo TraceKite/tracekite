@@ -49,6 +49,18 @@ class TestComputedPathsAreCounted:
         routes, declined = framework_routes(_go(), FRONTEND)
         assert len(routes) == 1 and declined == 2
 
+    def test_csharp_dispatch_reports_literal_and_computed_paths(self):
+        content = (
+            'var app = WebApplication.Create();\n'
+            'app.MapGet("/health", () => "ok");\n'
+            'app.MapGet(routePath, () => "computed");\n')
+        routes, declined = framework_routes(
+            SimpleNamespace(path="Program.cs", language="C#"), content)
+
+        assert [(route.method, route.path) for route in routes] == [
+            ("GET", "/health")]
+        assert declined == 1
+
 
 class TestTheCounterDoesNotOvercount:
     def test_a_file_with_no_router_counts_nothing(self):
