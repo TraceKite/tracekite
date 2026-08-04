@@ -68,7 +68,7 @@ jobs:
       # here — this is the check that keeps 0 FP from being a claim about
       # the past.
       - name: precision gate
-        run: GRAPH_HMAC_KEY=ci-fixed-key .venv/bin/python -m tools.calibrate --dry-run
+        run: GRAPH_HMAC_KEY=ci-fixed-key "$GITHUB_WORKSPACE/.venv/bin/python" -m tools.calibrate --dry-run
         working-directory: backend
 
   container:
