@@ -1,4 +1,4 @@
-"""The publishing Action stays wired to the real CLI.
+"""Publishing Actions stay wired to real artifacts and installed behavior.
 
 A workflow cannot run inside the test suite, but its lies can be caught
 before CI ever sees them: a step invoking a command that no longer
@@ -15,11 +15,25 @@ import yaml
 
 WORKFLOW = os.path.join(os.path.dirname(__file__), "..", "..",
                         ".github", "workflows", "publish-artifact.yml")
+PYPI_WORKFLOW = os.path.join(os.path.dirname(__file__), "..", "..",
+                             ".github", "workflows", "publish-pypi.yml")
+CI_WORKFLOW = os.path.join(os.path.dirname(__file__), "..", "..",
+                           ".github", "workflows", "ci.yml")
 BACKEND = os.path.join(os.path.dirname(__file__), "..")
 
 
 def _workflow() -> dict:
     with open(WORKFLOW, encoding="utf-8") as fh:
+        return yaml.safe_load(fh)
+
+
+def _pypi_workflow() -> dict:
+    with open(PYPI_WORKFLOW, encoding="utf-8") as fh:
+        return yaml.safe_load(fh)
+
+
+def _ci_workflow() -> dict:
+    with open(CI_WORKFLOW, encoding="utf-8") as fh:
         return yaml.safe_load(fh)
 
 
@@ -62,3 +76,38 @@ class TestTheCommandItInvokes:
         assert first.stdout == second.stdout
         assert "reused" in second.stderr
         assert os.path.exists(first.stdout.strip())
+
+
+class TestPyPIWorkflow:
+    def test_only_an_intentional_release_triggers_publication(self):
+        doc = _pypi_workflow()
+        triggers = doc.get("on") or doc.get(True)
+
+        assert triggers == {"release": {"types": ["published"]}}
+
+    def test_build_validates_version_metadata_and_installed_behavior(self):
+        steps = _pypi_workflow()["jobs"]["build"]["steps"]
+        commands = "\n".join(str(step.get("run", "")) for step in steps)
+
+        assert "GITHUB_REF_NAME" in commands
+        assert "uv build --project packaging/adduce-core" in commands
+        assert "twine check dist/*" in commands
+        assert ".test-env/bin/adduce link" in commands
+        assert '".test-env/bin/adduce", "mcp"' in commands
+
+    def test_oidc_permission_is_scoped_to_the_protected_publish_job(self):
+        doc = _pypi_workflow()
+        publish = doc["jobs"]["publish"]
+
+        assert doc["permissions"] == {"contents": "read"}
+        assert "permissions" not in doc["jobs"]["build"]
+        assert publish["permissions"] == {"id-token": "write"}
+        assert publish["environment"] == {
+            "name": "pypi", "url": "https://pypi.org/p/adduce-core"}
+
+
+def test_container_import_gate_attaches_the_python_script_to_stdin():
+    steps = _ci_workflow()["jobs"]["container"]["steps"]
+    commands = "\n".join(str(step.get("run", "")) for step in steps)
+
+    assert "docker run --rm -i adduce-backend:ci python -" in commands

@@ -18,11 +18,11 @@ import re
 
 from fastapi.routing import APIRoute
 
-from adduce.routes import graph, health, jobs, links, repos, rollup, trace
+from adduce.routes import graph, health, impact, jobs, links, repos, rollup, trace
 
-# The same seven routers main.py includes — the published surface.
+# The same routers main.py includes — the published surface.
 ROUTERS = (health.router, repos.router, jobs.router, graph.router,
-           links.router, trace.router, rollup.router)
+           links.router, impact.router, trace.router, rollup.router)
 
 FRONTEND = os.path.join(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))), "frontend", "src")

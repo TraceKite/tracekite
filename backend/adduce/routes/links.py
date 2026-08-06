@@ -1,4 +1,4 @@
-"""Linker control plane: rebuild, status, service map, review queue,
+"""Linker control plane: rebuild, status, review queue,
 impact queries (design §7)."""
 
 import logging
@@ -11,7 +11,7 @@ from adduce.db.neo4j_client import get_session
 from adduce.services.job_queue import job_queue
 from adduce.services.link_writer import list_link_runs
 from adduce.utils import rendezvous_ids as rid
-from adduce.services.linker.map_view import assemble_service_map
+
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +32,6 @@ _DECLINE_COUNTER = re.compile(
     r"|calls_self")
 
 LINKER_REPO_ID = "__linker__"
-MAP_EDGE_TYPES = ("CALLS_SERVICE", "ROUTES_TO", "BUILT_FROM",
-                  "PUBLISHES_TO", "CONSUMES_FROM", "FANS_OUT_TO")
 
 
 @router.post("/api/v2/links/rebuild", status_code=202)
@@ -237,91 +235,3 @@ async def repo_impact(repo_id: str):
     return {"repo_id": repo_id, "publishes": libraries,
             "blast_radius": sorted({d["repo_id"] for row in libraries
                                     for d in row["dependents"]})}
-
-
-@router.get("/api/v2/service-map")
-async def service_map(min_confidence: float = Query(0.6, ge=0.0, le=1.0),
-                      limit: int = Query(500, ge=1, le=500)):
-    edge_filter = "|".join(MAP_EDGE_TYPES)
-    with get_session() as session:
-        node_rows = session.run(
-            "MATCH (s:Service) RETURN s.id AS id, s.name AS name, "
-            "s.repo_ids AS repo_ids, 'Gateway' IN labels(s) AS is_gateway",
-        ).data()
-        edge_result = session.run(
-            f"MATCH (a)-[r:{edge_filter}]->(b) "
-            "WHERE r.created_by = 'linker' "
-            # Sub-floor matches are stored as `candidate` and stay out of
-            # default answers; they remain queryable for the review queue.
-            "AND coalesce(r.status, 'active') = 'active' "
-            "AND coalesce(r.min_confidence, r.confidence, 0) >= $minc "
-            "RETURN a.id AS source, labels(a) AS source_labels, "
-            "coalesce(a.name, a.id) AS source_name, a.scope AS source_scope, "
-            "b.id AS target, labels(b) AS target_labels, "
-            "coalesce(b.name, b.id) AS target_name, b.scope AS target_scope, "
-            "type(r) AS type, "
-            "r.confidence AS confidence, r.min_confidence AS min_confidence, "
-            "r.max_confidence AS max_confidence, r.via AS via, "
-            "r.weight AS weight, r.path_prefix AS path_prefix, "
-            # Lets the UI scope the map by repository. Without it, edges
-            # between two repo-less rendezvous nodes (File -> Topic) survive
-            # every filter, so selecting one repo still drew another's nodes.
-            "r.source_repo_id AS source_repo_id, "
-            "r.evidence AS evidence "
-            # LIMIT in Cypher, not a Python slice: without it every linker
-            # edge in the estate crosses the driver boundary before being
-            # thrown away (~29k edges at 100 repos) on every map render.
-            "ORDER BY r.confidence DESC LIMIT $limit",
-            minc=min_confidence, limit=limit,
-        ).data()
-        # Counted separately so `truncated` and `totals` stay honest about
-        # what was left out rather than reporting the page size as the total.
-        total_edges = session.run(
-            f"MATCH ()-[r:{edge_filter}]->() WHERE r.created_by = 'linker' "
-            "AND coalesce(r.status, 'active') = 'active' "
-            "AND coalesce(r.min_confidence, r.confidence, 0) >= $minc "
-            "RETURN count(r) AS c", minc=min_confidence).single()["c"]
-
-    # Assembly lives in core so a library host drawing its own map
-    # agrees with the app about node kinds and dead ends.
-    return assemble_service_map(node_rows, edge_result, total_edges)
-
-
-@router.get("/api/v2/code-bridges")
-async def code_bridges(repos: str = Query(..., description="Comma-separated repo ids"),
-                       limit: int = Query(200, ge=1, le=500)):
-    """Where the selected repositories actually touch, at code altitude.
-
-    The per-repo graph is deliberately intra-repo: files, classes, endpoints of
-    ONE codebase. Drawing several of those together produces disconnected
-    islands, because nothing in that response crosses a repository boundary.
-
-    What crosses is a rendezvous: a call site INVOKES a contract that another
-    repo's endpoint EXPOSES. The contract is the join, so it is returned as a
-    node and both halves as edges.
-
-    The two endpoint nodes come back as well. They are the whole point of the
-    query, and the caller's per-repo sample is capped -- a bridge whose call
-    site fell outside that sample would otherwise dangle.
-    """
-    repo_ids = [r.strip() for r in repos.split(",") if r.strip()]
-    if not repo_ids:
-        return {"nodes": [], "links": [], "repos": repo_ids}
-
-    with get_session() as session:
-        rows = session.run(
-            "MATCH (a:GraphNode)-[i:INVOKES]->(c)<-[e:EXPOSES]-(b:GraphNode) "
-            "WHERE a.repo_id IN $repos AND b.repo_id IN $repos "
-            "RETURN a.id AS a_id, a.name AS a_name, a.type AS a_type, "
-            "       a.path AS a_path, a.repo_id AS a_repo, "
-            "       b.id AS b_id, b.name AS b_name, b.type AS b_type, "
-            "       b.path AS b_path, b.repo_id AS b_repo, "
-            "       c.id AS c_id, labels(c)[0] AS c_label, "
-            "       coalesce(c.method + ' ' + c.path_template, c.rpc, c.name, c.id) AS c_name, "
-            "       i.confidence AS in_conf, i.evidence AS in_ev, "
-            "       e.confidence AS ex_conf, e.evidence AS ex_ev "
-            "LIMIT $limit",
-            repos=repo_ids, limit=limit).data()
-
-    view = assemble_crossings(rows)
-    return {**view, "repos": repo_ids}

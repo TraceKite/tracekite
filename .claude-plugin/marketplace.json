@@ -1,0 +1,14 @@
+{
+  "name": "adduce-labs",
+  "description": "Evidence-backed code intelligence from Adduce Labs.",
+  "owner": {
+    "name": "Adduce Labs"
+  },
+  "plugins": [
+    {
+      "name": "adduce",
+      "source": "./plugins/adduce",
+      "description": "Trace repository-backed dependencies with file and line evidence."
+    }
+  ]
+}

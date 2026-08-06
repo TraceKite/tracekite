@@ -10,7 +10,7 @@ from adduce.config import settings
 from adduce.db.constraints import create_constraints
 from adduce.db.neo4j_client import close_driver
 from adduce.middleware.auth import BearerAuthMiddleware
-from adduce.routes import graph, health, jobs, links, repos, rollup, trace
+from adduce.routes import graph, health, impact, jobs, links, repos, rollup, trace
 from adduce.services.job_handlers import register_all
 from adduce.services.job_queue import job_queue, reap_stale_jobs
 
@@ -59,7 +59,7 @@ app.add_middleware(
 )
 
 for router in (health.router, repos.router, jobs.router, graph.router,
-               links.router, trace.router, rollup.router):
+               links.router, impact.router, trace.router, rollup.router):
     app.include_router(router)
 
 

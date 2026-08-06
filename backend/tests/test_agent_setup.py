@@ -1,5 +1,7 @@
-"""Global skill installation is explicit and never overwrites user data."""
+"""Agent installation is explicit, complete, and never overwrites user data."""
 
+import json
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -9,6 +11,9 @@ from adduce.agent_setup import (
     SkillConflictError,
     install_skills,
 )
+
+REPO = Path(__file__).resolve().parents[2]
+PLUGIN = REPO / "plugins" / "adduce"
 
 
 def test_codex_and_kimi_use_their_published_skill_locations(tmp_path):
@@ -55,3 +60,35 @@ def test_only_published_client_locations_are_selected(tmp_path):
         Path(".kimi/skills/adduce/SKILL.md"),
         Path(".gemini/config/skills/adduce/SKILL.md"),
     }
+
+
+def test_cross_client_plugin_contains_the_published_skill_and_mcp_server():
+    codex = json.loads(
+        (PLUGIN / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+    claude = json.loads(
+        (PLUGIN / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+    kimi = json.loads(
+        (PLUGIN / "kimi.plugin.json").read_text(encoding="utf-8"))
+
+    assert (PLUGIN / "skills/adduce/SKILL.md").read_text(
+        encoding="utf-8") == SKILL_CONTENT
+    assert codex["mcpServers"]["adduce"]["args"] == ["mcp"]
+    assert claude["mcpServers"]["adduce"]["args"] == ["mcp"]
+    assert kimi["mcpServers"]["adduce"]["args"] == ["mcp"]
+
+
+def test_plugin_and_package_versions_are_released_together():
+    application = tomllib.loads((REPO / "pyproject.toml").read_text())
+    core = tomllib.loads(
+        (REPO / "packaging/adduce-core/pyproject.toml").read_text())
+    versions = {
+        json.loads(path.read_text(encoding="utf-8"))["version"]
+        for path in (
+            PLUGIN / ".codex-plugin/plugin.json",
+            PLUGIN / ".claude-plugin/plugin.json",
+            PLUGIN / "kimi.plugin.json",
+        )
+    }
+
+    assert versions == {
+        application["project"]["version"], core["project"]["version"]}

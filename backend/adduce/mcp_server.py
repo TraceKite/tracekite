@@ -3,9 +3,9 @@
 Implements the MCP stdio transport directly — newline-delimited JSON-RPC
 with `initialize`, `tools/list` and `tools/call` — rather than adopting an
 SDK: `pip install adduce-core` promises a light dependency set, and three
-methods over stdin do not justify a framework. The server loads artifacts
-once at startup and links them in memory; every tool answers from that one
-result, so an agent's ten questions cost one link.
+methods over stdin do not justify a framework. The server completes its
+handshake before loading artifacts, then links them in memory on the first
+valid tool call; every later tool answers from that one result.
 
 Errors are JSON-RPC errors, never crashes: an agent sending a malformed
 frame gets told so and the loop continues — a server that dies on the
@@ -156,7 +156,7 @@ def _response(request_id, result=None, error=None) -> dict:
     return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
 
-def handle(message: object, tools: GraphTools) -> dict | None:
+def handle(message: object, tools: GraphTools | None) -> dict | None:
     """One JSON-RPC message in, one response out (None for notifications)."""
     if not isinstance(message, dict):
         return _response(None, error={
@@ -178,10 +178,13 @@ def handle(message: object, tools: GraphTools) -> dict | None:
             return _response(request_id, error={
                 "code": -32602, "message": "params must be an object"})
         name = params.get("name", "")
-        handler = getattr(tools, name, None)
-        if name not in {t["name"] for t in TOOLS} or handler is None:
+        if name not in {t["name"] for t in TOOLS}:
             return _response(request_id, error={
                 "code": -32602, "message": f"unknown tool {name!r}"})
+        if tools is None:
+            return _response(request_id, error={
+                "code": -32603, "message": "graph is not loaded"})
+        handler = getattr(tools, name)
         try:
             answer = handler(**(params.get("arguments") or {}))
         except (TypeError, ValueError) as exc:
@@ -227,24 +230,36 @@ def _collect_claims(path: str, claims: list, commits: dict) -> None:
     raise FileNotFoundError(path)
 
 
-def serve(paths: list[str] | None = None, stdin=None, stdout=None) -> int:
-    """Load artifacts or scan directories, link once, answer until EOF."""
-    logging.basicConfig(level=logging.ERROR, stream=sys.stderr, force=True)
-
+def _load_tools(paths: list[str]) -> GraphTools:
+    """Scan or load each input once, when the first graph query arrives."""
     from adduce.services.linker.engine import link
 
-    paths = paths or ["."]
     claims = []
     commits = {}
     for path in paths:
         _collect_claims(path, claims, commits)
-
     result = link(claims, run_id="linkrun_mcp",
                   now="2026-01-01T00:00:00+00:00")
-    tools = GraphTools(result, commits)
+    return GraphTools(result, commits)
 
+
+def _valid_tool_call(message: object) -> bool:
+    if not isinstance(message, dict) or message.get("id") is None:
+        return False
+    params = message.get("params")
+    return (message.get("method") == "tools/call"
+            and isinstance(params, dict)
+            and params.get("name") in {tool["name"] for tool in TOOLS})
+
+
+def serve(paths: list[str] | None = None, stdin=None, stdout=None) -> int:
+    """Answer the handshake immediately; load the graph on first tool use."""
+    logging.basicConfig(level=logging.ERROR, stream=sys.stderr, force=True)
     stdin = stdin or sys.stdin
     stdout = stdout or sys.stdout
+    paths = paths or ["."]
+    graph_tools = None
+
     for line in stdin:
         line = line.strip()
         if not line:
@@ -256,7 +271,19 @@ def serve(paths: list[str] | None = None, stdin=None, stdout=None) -> int:
                 "code": -32700, "message": "parse error"})), file=stdout,
                 flush=True)
             continue
-        reply = handle(message, tools)
+        if graph_tools is None and _valid_tool_call(message):
+            try:
+                graph_tools = _load_tools(paths)
+            except Exception as exc:
+                logger.exception("failed to load MCP graph")
+                reply = _response(message["id"], error={
+                    "code": -32603,
+                    "message": f"graph load failed: {type(exc).__name__}",
+                })
+                print(json.dumps(reply, sort_keys=True), file=stdout,
+                      flush=True)
+                continue
+        reply = handle(message, graph_tools)
         if reply is not None:
             print(json.dumps(reply, sort_keys=True), file=stdout, flush=True)
     return 0

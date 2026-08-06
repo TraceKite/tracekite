@@ -33,6 +33,17 @@ The installer writes only published global skill locations:
 An existing, different file is never overwritten. MCP configuration is never
 changed by this command.
 
+## Or install the agent plugin
+
+The repository's [`plugins/adduce/`](../plugins/adduce/) directory is one
+cross-client plugin source. It carries separate Claude Code, Codex, and Kimi
+manifests around the same skill. Its default MCP command is `adduce mcp`, which
+scans the client's current repository on the first graph query.
+
+For multiple repositories, register a separate MCP server with every absolute
+path instead of editing an installed plugin cache. The plugin README contains
+the current client-specific marketplace and registration commands.
+
 ## Choose MCP inputs
 
 Pass each repository as its own source directory:

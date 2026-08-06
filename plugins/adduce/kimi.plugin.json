@@ -1,0 +1,24 @@
+{
+  "name": "adduce",
+  "version": "0.1.0",
+  "description": "Evidence-backed dependency tracing across source repositories.",
+  "author": {
+    "name": "Adduce Labs"
+  },
+  "homepage": "https://github.com/adduce-labs/adduce",
+  "license": "Apache-2.0",
+  "skills": "./skills/",
+  "mcpServers": {
+    "adduce": {
+      "command": "adduce",
+      "args": ["mcp"]
+    }
+  },
+  "interface": {
+    "displayName": "Adduce",
+    "shortDescription": "Trace dependencies with source evidence",
+    "longDescription": "Query repository-backed service dependencies and active call paths with file and line evidence.",
+    "developerName": "Adduce Labs",
+    "websiteURL": "https://github.com/adduce-labs/adduce"
+  }
+}

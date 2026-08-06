@@ -121,7 +121,18 @@ class TestCoreDistribution:
         """`link()` refuses to run without calibrated confidences rather than
         invent defaults, so a wheel without `config/` can scan but never
         link — which is a broken library, loudly."""
-        assert '"../../config" = "adduce/_control_plane"' in PYPROJECT.read_text()
+        text = PYPROJECT.read_text()
+        hook = (PYPROJECT.parent / "hatch_build.py").read_text()
+
+        assert 'path = "hatch_build.py"' in text
+        assert 'package = "adduce"' in text
+        assert '_control_plane' in hook
+
+    def test_distribution_carries_the_repository_license_verbatim(self):
+        packaged = (PYPROJECT.parent / "LICENSE").read_text()
+        repository = (PYPROJECT.parents[2] / "LICENSE").read_text()
+
+        assert packaged == repository
 
 
 class TestCliDistribution:

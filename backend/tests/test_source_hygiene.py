@@ -54,7 +54,8 @@ ROADMAP_IDS = frozenset({
 # accuracy README, architecture.md twice.
 _SCAN_ROOTS = ("backend", "backend/adduce", "backend/tools", "backend/tests",
                "frontend/src", "lib", "docs", "scripts", "config", "corpus",
-               "packaging", "schemas", ".github")
+               "packaging", "plugins", "schemas", ".github",
+               ".agents/plugins", ".claude-plugin")
 # The rules and the front page are prose that describes this repository, so
 # they are held to the same standard as the code they describe.
 _SCAN_ROOT_FILES = ("README.md", "AGENTS.md", "CONTRIBUTING.md", "CLAUDE.md")

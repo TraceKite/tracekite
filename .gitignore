@@ -84,17 +84,16 @@ var/
 # Nothing in the tree may read them — `test_source_hygiene.py` carries its
 # own frozen copy of the ids for exactly that reason.
 docs/design/*-roadmap.csv
-.agents/
 
 # Pasted conversation fragments. They arrive with a `Pasted-...` name, carry
 # whatever was on the clipboard — another project's tracker ids, findings
 # about a running system — and are nobody's source.
 attached_assets/
 
-# Scaffolding assistants and their plugins drop into a checkout. None of it
-# is here today; these are listed so it cannot arrive in a commit later,
-# when it would read as part of the project. `AGENTS.md` and `CLAUDE.md` are
-# deliberately NOT ignored — they are the written rules, not tool state.
+# Assistant runtime state is not project source. The release-owned Adduce
+# plugin and its two marketplace manifests are narrow exceptions below.
+# `AGENTS.md` and `CLAUDE.md` are deliberately not ignored: they are written
+# repository rules, not runtime state.
 .claude/
 .superpowers/
 .cursor/
@@ -103,3 +102,10 @@ attached_assets/
 .github/copilot-instructions.md
 **/skills/*/SKILL.md
 .mcp.json
+.agents/
+!.agents/
+.agents/*
+!.agents/plugins/
+.agents/plugins/*
+!.agents/plugins/marketplace.json
+!plugins/adduce/skills/adduce/SKILL.md
