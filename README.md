@@ -109,18 +109,35 @@ Adduce is available as a **standalone CLI tool** (`adduce`), an **embeddable Pyt
 | **Embeddable Library** | `pip install dist/adduce_core-*.whl` | Embed `scan()` and `link()` into Python CI scripts without a server |
 | **Full Web Application** | `docker compose up -d` | Visual 2D estate exploration, Service Map & Trace UI |
 
-### 1. Install as a Local CLI Tool
+### 1. One-Line Setup
+
+The interactive installer builds the CLI tool, provisions global AI agent
+skills, and leaves MCP client configuration untouched:
 
 ```bash
 git clone https://github.com/adduce-labs/adduce.git
 cd adduce
+./scripts/install.sh            # shows plan, asks Y/n, then installs
+```
 
-# Install the adduce CLI as an isolated tool
+Pass `--yes` to skip the prompt (CI), or target a single client:
+
+```bash
+./scripts/install.sh --claude    # Claude Code only
+./scripts/install.sh --codex     # OpenAI Codex only
+```
+
+Or install manually without the script:
+
+```bash
 uv tool install .
-
-# Verify CLI installation
+adduce install-skill             # all clients, or --client claude
 adduce --help
 ```
+
+> **Agent plugin** — The cross-client [Adduce plugin](plugins/adduce/)
+> bundles the skill and MCP server declarations for Claude Code, Codex, and
+> Kimi Code. Its README has verified setup commands for each client.
 
 ### 2. Basic CLI Commands
 
@@ -323,8 +340,27 @@ refuting it. Neither ever writes.
 ## Model Context Protocol (MCP)
 
 Adduce serves source repositories or portable artifacts to AI clients over
-MCP stdio. It scans or loads every input once at startup, then answers from
+MCP stdio. It completes the MCP handshake immediately, then scans or loads
+every input once on the first graph query and answers subsequent calls from
 the linked in-memory graph.
+
+### Automatic indexing
+
+On the first graph query, `adduce mcp` scans each input directory once.
+Subsequent queries answer from the in-memory graph with no re-scan. To pick up
+source changes, restart the MCP server or create fresh artifacts.
+
+### Multi-repository workspaces
+
+Pass every repository as its own argument:
+
+```bash
+adduce mcp /path/to/order-service /path/to/billing-service /path/to/gateway
+```
+
+Adduce parses all inputs, links their claims, and answers cross-repository
+questions from the unified graph — a query from inside `order-service` can
+cite callers in `billing-service` and routes in `gateway`.
 
 ### Exposed MCP Tools
 
@@ -443,9 +479,10 @@ never reach nodes, claims, or evidence.
 | [Developer use cases](docs/use-cases.md) | valid CLI, artifact, CI, MCP, and embedding examples |
 | [Agent and MCP integration](docs/plugins-and-mcp-guide.md) | client registration, skill installation, and MCP input semantics |
 | [Using the views](docs/using-the-views.md) | the three views and their shared controls |
+| [Agent plugin](plugins/adduce/) | one validated plugin source for Claude Code, Codex, and Kimi Code |
 | [Coverage gaps](docs/design/coverage-gaps.md) | what the graph still misses, ranked, with reproducible measurements |
+| [Comparison](docs/comparison.md) | against code-graph tools, catalogs and runtime maps, with measured numbers |
 | [CONTRIBUTING](CONTRIBUTING.md) | setup, the one rule that matters, adding a parser or resolver |
-- [Comparison, including where Adduce loses](docs/comparison.md) — against code-graph tools, catalogs and runtime maps, with the measured numbers
 
 
 ## Contributing

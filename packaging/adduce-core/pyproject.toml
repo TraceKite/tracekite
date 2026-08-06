@@ -17,8 +17,19 @@ build-backend = "hatchling.build"
 name = "adduce-core"
 version = "0.1.0"
 description = "Establish what is connected across repositories, and how you know."
+readme = "README.md"
 requires-python = ">=3.13"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Adduce Labs" }]
+keywords = ["code-intelligence", "dependencies", "graph", "mcp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
 
 dependencies = [
     "pydantic>=2.13.4",
@@ -41,6 +52,11 @@ dependencies = [
     "tree-sitter-yaml==0.7.2",
 ]
 
+[project.urls]
+Homepage = "https://github.com/adduce-labs/adduce"
+Repository = "https://github.com/adduce-labs/adduce"
+Issues = "https://github.com/adduce-labs/adduce/issues"
+
 # The application's extras, so one repository serves both surfaces without a
 # second copy of the engine (the "no duplicate code" rule, at package level).
 [project.optional-dependencies]
@@ -58,17 +74,10 @@ adduce = "adduce.cli:main"
 [tool.hatch.build.targets.wheel]
 bypass-selection = true
 
-# `force-include` rather than `packages` because the source still lives under
-# `backend/app`: A1 declared the layer boundaries but deferred moving files.
-# Until that move lands, this mapping is what makes the distribution real;
-# afterwards this block collapses to a normal `packages` entry.
-#
-# The whole tree ships. `adduce-core`'s dependencies support the core and
-# parsers layers; the server modules will not import without the `server`
-# extra, which is the correct failure and a loud one.
-[tool.hatch.build.targets.wheel.force-include]
-"../../backend/adduce" = "adduce"
-# The control plane ships with the engine: confidence values are
-# calibrated measurements, and `link()` refuses to run without them
-# rather than invent defaults. A wheel without it can scan but not link.
-"../../config" = "adduce/_control_plane"
+# Source still lives under `backend/adduce`. The build hook maps that tree and
+# the calibrated control plane into both the wheel and the sdist. For a wheel
+# rebuilt from the sdist, it uses the sdist's own `src/adduce` copy instead of
+# reaching outside the extracted archive.
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
+package = "adduce"

@@ -102,7 +102,7 @@ class TestServiceMap:
         edge_result.data.return_value = edge_rows
         session.run.side_effect = [node_result, edge_result,
                                    _count_result(len(edge_rows))]
-        with patch("adduce.routes.links.get_session",
+        with patch("adduce.db.impact_reader.get_session",
                    return_value=_session_ctx(session)):
             body = client.get("/api/v2/service-map?min_confidence=0.5",
                               headers=auth_headers).json()
@@ -164,7 +164,7 @@ class TestServiceMap:
         edge_result.data.return_value = edge_rows[:1]
         session.run.side_effect = [node_result, edge_result,
                                    _count_result(len(edge_rows))]
-        with patch("adduce.routes.links.get_session",
+        with patch("adduce.db.impact_reader.get_session",
                    return_value=_session_ctx(session)):
             body = client.get("/api/v2/service-map?limit=1",
                               headers=auth_headers).json()
@@ -179,7 +179,7 @@ class TestServiceMap:
         edge_result = MagicMock()
         edge_result.data.return_value = []
         session.run.side_effect = [node_result, edge_result, _count_result(0)]
-        with patch("adduce.routes.links.get_session",
+        with patch("adduce.db.impact_reader.get_session",
                    return_value=_session_ctx(session)):
             body = client.get("/api/v2/service-map", headers=auth_headers).json()
         assert body["nodes"] == []

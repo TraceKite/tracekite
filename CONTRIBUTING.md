@@ -19,12 +19,10 @@ uv sync
 .venv/bin/python -m pytest backend/tests -q
 ```
 
-Use `uv`, not `pip install -r backend/requirements.txt`. That file pins
-`pydantic==2.5.3`, which has no wheel for Python 3.13+ and tries to compile
-`pydantic-core` from source — needing a Rust toolchain, and failing without
-one. `requirements.txt` exists for the container, which is on Python 3.12;
-`pyproject.toml` and `uv.lock` are what local development resolves against.
-The two are **not** the same versions — see the note at the end of this file.
+Use `uv`, not a requirements file. Local development, CI, and the container
+all resolve the checked-in `uv.lock`; `backend/requirements.txt` was removed
+after its older Python and dependency pins caused the environments to diverge.
+See the compatibility note at the end of this file.
 
 Frontend typecheck:
 

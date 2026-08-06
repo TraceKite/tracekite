@@ -87,7 +87,7 @@ jobs:
         run: docker build -f backend/Dockerfile -t adduce-backend:ci .
       - name: every module imports on the deploy runtime
         run: |
-          docker run --rm adduce-backend:ci python - <<'PY'
+          docker run --rm -i adduce-backend:ci python - <<'PY'
           import importlib, pathlib, sys
           root = pathlib.Path("/app/adduce")
           mods = sorted(

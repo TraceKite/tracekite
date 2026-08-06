@@ -1,0 +1,20 @@
+{
+  "name": "adduce-labs",
+  "interface": {
+    "displayName": "Adduce Labs"
+  },
+  "plugins": [
+    {
+      "name": "adduce",
+      "source": {
+        "source": "local",
+        "path": "./plugins/adduce"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

@@ -9,6 +9,8 @@ import os
 import subprocess
 import sys
 
+from adduce.cli import build_parser
+
 BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIXTURES = os.path.join(BACKEND, "tests", "fixtures")
 SAMPLE = os.path.join(FIXTURES, "callgraph-sample")
@@ -22,6 +24,12 @@ def run(*args):
         cwd=BACKEND, capture_output=True, text=True, timeout=300)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     return proc
+
+
+def test_mcp_defaults_to_the_current_repository():
+    args = build_parser().parse_args(["mcp"])
+
+    assert args.artifacts == ["."]
 
 
 class TestScan:

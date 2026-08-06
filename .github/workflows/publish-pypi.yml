@@ -1,0 +1,92 @@
+# Build and publish adduce-core when an intentional GitHub Release is made.
+# PyPI Trusted Publishing must match this repository, workflow, and the
+# protected `pypi` environment before the publish job can obtain a token.
+
+name: publish-pypi
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Match the release tag to the package version
+        run: |
+          PACKAGE_VERSION="$(python -c 'import tomllib; print(tomllib.load(open("packaging/adduce-core/pyproject.toml", "rb"))["project"]["version"])')"
+          if [ "v${PACKAGE_VERSION}" != "$GITHUB_REF_NAME" ]; then
+            echo "release tag $GITHUB_REF_NAME does not match adduce-core $PACKAGE_VERSION"
+            exit 1
+          fi
+
+      - name: Build source and wheel distributions
+        run: uv build --project packaging/adduce-core --out-dir dist
+
+      - name: Validate distribution metadata
+        run: uvx --from twine twine check dist/*
+
+      - name: Smoke-test the installed wheel
+        run: |
+          uv venv --python 3.13 .test-env
+          uv pip install --python .test-env/bin/python dist/adduce_core-*.whl
+          .test-env/bin/adduce --help
+          GRAPH_HMAC_KEY=release-smoke .test-env/bin/adduce link \
+            corpus/orders-service corpus/billing-service \
+            --now 2026-01-01T00:00:00+00:00 > /tmp/adduce-smoke.json
+          .test-env/bin/python -c 'import json; p=json.load(open("/tmp/adduce-smoke.json")); assert p["edges"] and all(e["evidence"] for e in p["edges"])'
+          GRAPH_HMAC_KEY=release-smoke .test-env/bin/python - <<'PY'
+          import json
+          import subprocess
+
+          frames = [
+              {"jsonrpc": "2.0", "id": 1, "method": "initialize"},
+              {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+               "params": {"name": "services", "arguments": {}}},
+          ]
+          result = subprocess.run(
+              [".test-env/bin/adduce", "mcp", "corpus/orders-service"],
+              input="\n".join(json.dumps(frame) for frame in frames) + "\n",
+              check=True, capture_output=True, text=True)
+          replies = [json.loads(line) for line in result.stdout.splitlines()]
+          services = json.loads(replies[1]["result"]["content"][0]["text"])
+          assert services["services"]
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: adduce-core-dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/adduce-core
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: adduce-core-dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/

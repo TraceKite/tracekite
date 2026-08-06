@@ -10,8 +10,8 @@ site-packages instead, one `__init__.py` overwriting the other.
 
 Nothing caught it because A9's exit criterion is about dependencies, not
 about the namespace. These tests are that missing criterion, asserted
-against the source layout rather than a built wheel so they run without a
-build step.
+against the source layout and the build hook's own package setting so they
+run without a build step.
 """
 
 import ast
@@ -34,9 +34,14 @@ def _spec() -> dict:
 
 def _shipped_packages() -> set[str]:
     """Top-level import packages the wheel would create."""
-    force = (_spec().get("tool", {}).get("hatch", {}).get("build", {})
-             .get("targets", {}).get("wheel", {}).get("force-include", {}))
-    return {str(dest).split("/")[0] for dest in force.values()}
+    build = (_spec().get("tool", {}).get("hatch", {}).get("build", {}))
+    force = build.get("targets", {}).get("wheel", {}).get(
+        "force-include", {})
+    packages = {str(dest).split("/")[0] for dest in force.values()}
+    custom = build.get("hooks", {}).get("custom", {})
+    if custom.get("package"):
+        packages.add(custom["package"])
+    return packages
 
 
 class TestNamespace:

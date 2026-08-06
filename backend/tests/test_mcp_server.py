@@ -13,6 +13,7 @@ import subprocess
 import sys
 from io import StringIO
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
 
@@ -216,17 +217,46 @@ class TestEndToEnd:
         # three replies came back.
         assert len(replies) == 3
 
-    def test_source_directory_is_scanned_before_serving(self):
+    def test_handshake_does_not_wait_for_a_repository_scan(self):
         stdin = StringIO(
             json.dumps({"jsonrpc": "2.0", "id": 1,
                         "method": "tools/list"}) + "\n")
         stdout = StringIO()
 
-        assert serve([os.path.join(CORPUS, "orders-service")],
-                     stdin=stdin, stdout=stdout) == 0
+        with patch("adduce.mcp_server._load_tools") as load_tools:
+            assert serve([os.path.join(CORPUS, "orders-service")],
+                         stdin=stdin, stdout=stdout) == 0
+        load_tools.assert_not_called()
         reply = json.loads(stdout.getvalue())
         assert reply["id"] == 1
         assert reply["result"]["tools"]
+
+    def test_invalid_tool_call_does_not_trigger_a_repository_scan(self):
+        stdin = StringIO(json.dumps({
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "drop_tables"},
+        }) + "\n")
+        stdout = StringIO()
+
+        with patch("adduce.mcp_server._load_tools") as load_tools:
+            assert serve(["."], stdin=stdin, stdout=stdout) == 0
+
+        load_tools.assert_not_called()
+        assert json.loads(stdout.getvalue())["error"]["code"] == -32602
+
+    def test_graph_load_failure_is_a_protocol_error_not_a_crash(self):
+        stdin = StringIO(json.dumps({
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "services", "arguments": {}},
+        }) + "\n")
+        stdout = StringIO()
+
+        with patch("adduce.mcp_server._load_tools",
+                   side_effect=FileNotFoundError("missing")):
+            assert serve(["missing"], stdin=stdin, stdout=stdout) == 0
+
+        assert json.loads(stdout.getvalue())["error"] == {
+            "code": -32603, "message": "graph load failed: FileNotFoundError"}
 
 
 class TestInputs:

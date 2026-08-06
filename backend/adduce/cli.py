@@ -158,8 +158,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     mcp_p = sub.add_parser(
         "mcp", help="serve the graph to an agent over MCP stdio")
-    mcp_p.add_argument("artifacts", nargs="+",
-                       help=".adduce artifacts or source directories")
+    mcp_p.add_argument(
+        "artifacts", nargs="*", default=["."],
+        help=".adduce artifacts or source directories (default: current directory)")
     mcp_p.set_defaults(func=cmd_mcp)
 
     install_p = sub.add_parser(
