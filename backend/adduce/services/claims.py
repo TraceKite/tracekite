@@ -4,7 +4,7 @@ A claim is an extraction-time statement: "this repo provides/consumes key K of
 kind KIND". Claims persist as :GraphNode:ContractClaim nodes with EVIDENCED_BY
 edges to the claiming code/config node; the linker joins them at rendezvous
 nodes. Adding a kind = one registry row + an emitting parser + a consuming
-resolver (CI admission test enforces all three).
+resolver; `__post_init__` and `test_claim_admission.py` enforce all three.
 """
 
 import hashlib
