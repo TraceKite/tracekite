@@ -70,14 +70,17 @@ def normalize_github_url(url: str) -> tuple[str, str, str]:
     # Anchored, not searched: `re.search` matched `evil.com/?x=github.com/o/r`
     # and then rebuilt a github.com URL from it, so the caller's host check was
     # validating a string this function had just invented.
-    pattern = (r"^(?:https?://)?(?:[^@/]+@)?"
-               r"(?P<host>[A-Za-z0-9.\-]+)"
-               r"(?::\d+)?/(?P<owner>[^/?#]+)/(?P<repo>[^/?#]+)$")
-    match = re.match(pattern, url)
+    std_pattern = (r"^(?:[a-z+]+://)?(?:[^@/]+@)?"
+                   r"(?P<host>[A-Za-z0-9.\-]+)"
+                   r"(?::\d+)?/(?P<owner>[^/?#]+)/(?P<repo>[^/?#]+)$")
+    scp_pattern = (r"^(?:[a-z+]+://)?(?:[^@/]+@)?"
+                   r"(?P<host>[A-Za-z0-9.\-]+):"
+                   r"(?P<owner>[^/?#]+)/(?P<repo>[^/?#]+)$")
+    match = re.match(std_pattern, url) or re.match(scp_pattern, url)
     if not match:
         raise ValueError(
             f"Invalid repository URL: {url}. "
-            f"Expected format: https://<host>/<owner>/<repo>"
+            f"Expected format: https://<host>/<owner>/<repo> or git@<host>:<owner>/<repo>"
         )
 
     host = match.group("host").lower()

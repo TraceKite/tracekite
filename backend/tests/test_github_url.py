@@ -22,6 +22,18 @@ class TestNormalizeGithubUrl:
         assert url == "https://github.com/torvalds/linux"
         assert owner == "torvalds"
         assert repo == "linux"
+
+    def test_scp_ssh_url(self):
+        url, owner, repo = normalize_github_url("git@github.com:adduce-labs/adduce")
+        assert url == "https://github.com/adduce-labs/adduce"
+        assert owner == "adduce-labs"
+        assert repo == "adduce"
+
+    def test_scp_ssh_url_with_git_suffix(self):
+        url, owner, repo = normalize_github_url("git@github.com:adduce-labs/adduce.git")
+        assert url == "https://github.com/adduce-labs/adduce"
+        assert owner == "adduce-labs"
+        assert repo == "adduce"
     
     def test_invalid_url(self):
         with pytest.raises(ValueError):
