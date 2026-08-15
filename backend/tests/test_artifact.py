@@ -259,6 +259,50 @@ class TestAbsenceIsRecorded:
         a = scan(SAMPLE, "repo_a").absence
         assert not (set(a["kinds_found"]) & set(a["kinds_absent"]))
 
+    def test_the_registry_is_the_only_vocabulary(self, tmp_path):
+        """Every registered kind is reported exactly once, as found or absent.
+
+        A second hand-maintained list drifted from `ACTIVE_KINDS` both ways:
+        it named kinds no emitter produces, which were then absent from every
+        repository forever, and omitted kinds that are emitted, which could
+        never be reported absent at all.
+        """
+        from adduce.services.claims import ACTIVE_KINDS
+
+        engine_config.configure(graph_hmac_key="artifact-test-key")
+        a = scan(SAMPLE, "repo_a").absence
+        assert set(a["kinds_found"]) | set(a["kinds_absent"]) == set(ACTIVE_KINDS)
+
+    def test_the_split_follows_the_claims_not_the_registry(self, tmp_path):
+        """One scan must sort a claimed kind and an unclaimed one correctly.
+
+        The partition test above passes for any split of the registry,
+        including one that reports everything found. This pins the direction:
+        `lib` is claimed by the manifest and `db` is not claimed at all — and
+        `db`, missing from the stale list, used to appear in neither half, so
+        "this repo touches no tables" had no answer.
+        """
+        engine_config.configure(graph_hmac_key="artifact-test-key")
+        (tmp_path / "package.json").write_text(
+            '{"name": "p", "version": "1.0.0", "dependencies": {"express": "^4"}}')
+        absence = scan(str(tmp_path), "p").absence
+
+        assert "lib" in absence["kinds_found"]
+        assert "db" in absence["kinds_absent"]
+
+    def test_a_decline_is_not_a_finding(self):
+        """`data_dynamic_site` counts a site the extractor refused to name.
+        Reading found kinds off the counter keys published that refusal as a
+        finding, which is a decline inverted into a claim."""
+        from adduce.services.absence import absence_report
+        from adduce.services.ingest_source import IngestSink
+
+        sink = IngestSink()
+        sink.count_claim("data_dynamic_site")
+        sink.count_claim("_test")
+
+        assert absence_report(sink).kinds_found == []
+
     def test_a_capped_scan_refuses_to_call_absence_evidence(self, tmp_path):
         """A truncated scan cannot claim anything about what it never
         reached — that is the implied absence C5 removes."""
