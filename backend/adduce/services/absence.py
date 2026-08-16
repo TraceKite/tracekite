@@ -12,15 +12,15 @@ to the scan instead of the join.
 
 from dataclasses import dataclass, field
 
-# Every kind a parser can emit. A kind missing from this list would be
-# reported as "never absent" — it would simply never appear, which is exactly
-# the implied absence this module exists to remove.
-KNOWN_CLAIM_KINDS = (
-    "svcname", "http", "route", "cfgdef", "cfgread", "grpcstub", "grpcsvc",
-    "topic", "owner", "image", "library", "dataset", "agent", "graphql",
-    "gateway", "env_host", "publish", "subscribe", "migration", "catalog",
-    "observability",
-)
+from adduce.services.claims import ACTIVE_KINDS
+
+# What a scan can speak about: exactly the registry, imported and never
+# copied. A hand-maintained second list drifted from `ACTIVE_KINDS` in both
+# directions at once — it named eleven kinds no emitter produces, each
+# reported absent from every repository forever, and omitted nine that are
+# emitted, which could therefore never be reported absent at all. Both halves
+# are the implied absence this module exists to remove, so the list has to be
+# derived rather than restated.
 
 
 @dataclass
@@ -80,9 +80,14 @@ def absence_report(sink) -> Absence:
     for path in sorted(getattr(sink, "unfetched_submodules", []) or []):
         reasons.append(f"submodule {path} was never fetched")
 
-    found = sorted(k for k, n in sink.claims.items()
-                   if n and not k.startswith("_"))
-    absent = sorted(k for k in KNOWN_CLAIM_KINDS if k not in found)
+    # Both halves are filtered from the registry, never from `sink.claims`.
+    # That dict also counts declines (`data_dynamic_site` is a site the
+    # extractor refused to name) and provenances (`_test`), and reading found
+    # kinds off its keys reported a refusal as a finding — the precise
+    # inversion of what a decline means. Partitioning the registry instead
+    # makes the two lists exhaustive and disjoint by construction.
+    found = sorted(k for k in ACTIVE_KINDS if sink.claims.get(k))
+    absent = sorted(k for k in ACTIVE_KINDS if not sink.claims.get(k))
 
     return Absence(complete=not reasons, incomplete_because=reasons,
                    kinds_found=found, kinds_absent=absent)
