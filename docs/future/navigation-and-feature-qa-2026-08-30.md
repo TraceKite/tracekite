@@ -3,10 +3,14 @@
 Date: 2026-08-30
 Runtime reviewed: `http://127.0.0.1:28080/`
 
-This is the acceptance record for the applied hybrid redesign. It tests the
-application as an investigation workflow, not as a collection of screens.
-All counts below are from the captured local graph and may change after a
-repository is re-ingested.
+This is the acceptance record for the applied hybrid redesign, as it stood on
+the date above. It tests the application as an investigation workflow, not as a
+collection of screens. All counts below are from the captured local graph and
+may change after a repository is re-ingested.
+
+**It is a record, not the live contract.** Behaviour has moved since — a canvas
+click now selects and a second click opens, the left panel collapses — so read
+[Using the views](../using-the-views.md) for what the app does today.
 
 ## Navigation contract
 

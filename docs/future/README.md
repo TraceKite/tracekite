@@ -6,8 +6,10 @@ multi-repository Repo 2D and 3D, search and selection, Service Map, and a
 successful distributed Trace.
 
 The [browser review](current-ui-browser-review.md) is the historical baseline
-that motivated both directions. For current behavior and proof, use the
-[interaction contract and QA matrix](navigation-and-feature-qa-2026-08-30.md).
+that motivated both directions, and the
+[QA matrix](navigation-and-feature-qa-2026-08-30.md) records the acceptance
+pass that followed. Both are dated records; current behaviour is documented in
+[Using the views](../using-the-views.md).
 
 The implemented hybrid decision and research are captured in the
 [five-lens graph UX review](graph-ux-five-lens-review.md).

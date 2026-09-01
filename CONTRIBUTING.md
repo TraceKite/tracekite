@@ -168,9 +168,10 @@ Note that the harness reads the **stored** graph. Re-ingest after changing an
 extractor, or you will be measuring the old code's output and chasing a bug
 that no longer exists.
 
-## Local and container dependencies currently differ
+## One environment, local and container
 
-One environment, so a green test run means something:
+They match, so a green test run means something. This is worth stating because
+it used not to be true:
 
 | | Python | fastapi | pydantic | neo4j driver |
 |---|---|---|---|---|

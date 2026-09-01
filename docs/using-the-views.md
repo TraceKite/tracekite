@@ -70,10 +70,11 @@ View Mode chooses the backend dataset; it does not disable the density rules:
 | **Dependencies** | manifests, dependencies and `DEPENDS_ON` relationships |
 | **Impact** | the selected node's exact two-hop neighborhood; disabled until a node is selected |
 
-Every broad mode opens as repository/module groups. Select a group for bounded
-exact detail, then select or search a node for Focus. `GRAPH_DETAIL_NODE_LIMIT`
-(default 80) caps Module, Focus and Impact display without inventing edges;
-search still reaches nodes outside that display bound.
+Every broad mode opens as repository/module groups. Open a group for bounded
+exact detail, then open a node for its neighborhood — see *Selecting versus
+opening* below. `GRAPH_DETAIL_NODE_LIMIT` (default 80) caps Module, Focus and
+Impact display without inventing edges; search still reaches nodes outside that
+display bound.
 
 The context bar distinguishes groups, filter-eligible nodes, loaded nodes,
 displayed nodes and exact visible edges. For example, Dependencies may say
@@ -81,7 +82,7 @@ displayed nodes and exact visible edges. For example, Dependencies may say
 
 2D and 3D share scope, filters, selected node and navigation level. Switching
 dimensions preserves Module/Focus; a local 3D path is cleared because 2D does
-not render it. Back and Escape unwind Path → Focus → Module → grouped entry.
+not render it.
 
 ### Selecting versus opening
 
@@ -95,23 +96,26 @@ and edges it holds, and of which types.
 Search results and the drawer's "Load this node's neighborhood" open the node
 they name, because fetching a graph around a node is the same request.
 
-Back and Escape unwind one level: what you opened, then the module, then the
-grouped entry. Closing the drawer with its X leaves the canvas where it is.
+Back and Escape unwind one level at a time: a 3D path, then what you opened,
+then the module, then the grouped entry. Reading a thing you had opened is one
+step, so one press leaves both. Closing the drawer with its X is not a
+navigation step and leaves the canvas where it is.
 
 ### Canvas controls
 
 - **2D:** Reset camera, Fit, Rotate, Settle/Re-layout, Labels, directional
   Particles and Fullscreen. Settling forces never disables navigation.
-- **3D:** Less noise, Labels, zoom in/out/100% and camera Reset. `L` toggles
-  labels and `o` opens the selected node, after the graph receives focus. Click a node for Focus; Shift+click or
-  Shift+Enter another node for a directed local path through edges already on
-  the sampled canvas.
+- **3D:** Less noise, Labels, zoom in/out/100% and camera Reset. Once the graph
+  has keyboard focus, `L` toggles labels and `o` opens the selected node.
+  Shift+click or Shift+Enter a second node for a directed local path through
+  edges already on the sampled canvas.
 
 The camera re-frames only when the drawn scene changes — a new scope, view
-mode, expanded module or focus fetch — and never past the point where more zoom
-adds nothing, so a module holding one file no longer fills the screen with it. Selecting a node keeps your zoom, because
-the nodes keep their positions; the view pans only when the selection would
-otherwise sit off screen. Fit and Reset are there for a deliberate re-frame.
+mode, expanded module or focus fetch — and it stops short of the zoom where
+more magnification adds nothing, so a module holding a single file no longer
+fills the screen with it. Selecting a node keeps your zoom, because the nodes
+keep their positions; the view pans only when the selection would otherwise sit
+off screen. Fit and Reset are there for a deliberate re-frame.
 
 ### The left panel
 
