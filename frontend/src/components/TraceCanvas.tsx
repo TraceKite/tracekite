@@ -108,9 +108,9 @@ export default function TraceCanvas() {
     const radius = 10 / globalScale;
     ctx.beginPath();
     ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
-    ctx.fillStyle = "rgba(139, 92, 246, 0.2)"; // violet
+    ctx.fillStyle = "rgba(164, 81, 56, 0.14)";
     ctx.fill();
-    ctx.strokeStyle = "#8b5cf6";
+    ctx.strokeStyle = "#a45138";
     ctx.lineWidth = 1.5 / globalScale;
     ctx.stroke();
 
@@ -120,13 +120,13 @@ export default function TraceCanvas() {
     ctx.font = `600 ${labelSize}px ui-sans-serif, system-ui, sans-serif`;
     const label = node.name;
     const tm = ctx.measureText(label);
-    ctx.fillStyle = "rgba(8, 9, 10, 0.9)";
+    ctx.fillStyle = "rgba(255, 254, 250, 0.96)";
     ctx.beginPath();
     ctx.roundRect(node.x - tm.width / 2 - 3 / globalScale, node.y + radius + 2 / globalScale,
                   tm.width + 6 / globalScale, labelSize * 1.35, 3 / globalScale);
     ctx.fill();
 
-    ctx.fillStyle = "#e9ecef";
+    ctx.fillStyle = "#1a1d23";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(label, node.x, node.y + radius + 2 / globalScale + labelSize * 0.7);
@@ -137,7 +137,7 @@ export default function TraceCanvas() {
     const end = link.target;
     if (!start || !end || start.x == null || end.x == null) return;
 
-    const color = EDGE_COLORS[link.type] || "#8b5cf6";
+    const color = EDGE_COLORS[link.type] || "#a45138";
     const confStyle = getConfidenceStyle(link.confidence);
     const isSelected = selectedEdge?.id === link.id;
 
@@ -159,7 +159,7 @@ export default function TraceCanvas() {
       ctx.shadowBlur = 8;
       ctx.shadowColor = color;
       ctx.lineWidth = 4 / globalScale;
-      ctx.strokeStyle = "rgba(255,255,255,0.8)";
+      ctx.strokeStyle = "rgba(37,40,33,0.18)";
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.lineTo(ex, ey);
@@ -187,10 +187,12 @@ export default function TraceCanvas() {
     ctx.restore();
   }, [selectedEdge]);
 
-  if (!ForceGraphComponent) return null;
+  if (!ForceGraphComponent || !traceData) return null;
 
   return (
-    <div className="absolute inset-0 bg-[#08090a]" ref={setContainerEl}>
+    <div className="absolute inset-0 bg-[#fbfaf6]" ref={setContainerEl}
+      role="application"
+      aria-label={`Trace result, ${traceData?.paths.length ?? 0} paths, ${graphData.nodes.length} services and ${graphData.links.length} hops.`}>
       <ForceGraphComponent
         ref={fgRef}
         graphData={graphData}
@@ -232,6 +234,13 @@ export default function TraceCanvas() {
           setSelectedEdge(link);
         }}
       />
+      {traceData && (
+        <div className="absolute left-4 top-4 z-20 rounded-md border border-[#c9c3b7]
+                        bg-[#fffefa]/95 px-3 py-1.5 text-2xs text-[#6e7168] shadow-sm">
+          <b className="mr-2 text-[#252821]">Trace result</b>
+          <span className="font-mono">{traceData.paths.length} paths · {graphData.links.length} hops</span>
+        </div>
+      )}
     </div>
   );
 }

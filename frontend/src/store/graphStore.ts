@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import {
   GraphNode, GraphLink, GraphStats, RepoSummary,
-  NodeDetail, ViewMode, JobStatus, ServiceMapResponse, TraceResponse, LinkerStatus
+  NodeDetail, ViewMode, JobStatus, ServiceMapResponse, TraceResponse, LinkerStatus,
+  ClientConfig,
 } from "@/lib/types";
 
 type AppMode = "repo" | "service_map" | "trace";
@@ -9,9 +10,6 @@ type AppMode = "repo" | "service_map" | "trace";
 interface GraphState {
   appMode: AppMode;
   setAppMode: (mode: AppMode) => void;
-  // Which edge types the service map draws. Superimposing routing, calls and
-  // messaging on one canvas is a documented failure mode — they are different
-  // relations and deserve to be separable.
   mapEdgeTypes: string[];
   toggleMapEdgeType: (type: string) => void;
 
@@ -19,18 +17,11 @@ interface GraphState {
   repos: RepoSummary[];
   setSelectedRepo: (repo: RepoSummary | null) => void;
 
-  // Scope vs focus. `selectedRepo` is the FOCUS: the one repo the Repo tab
-  // renders internals for. `scopeRepoIds` is the SCOPE: which repos the
-  // cross-repo views (Service Map, Trace) consider. Overloading one field for
-  // both is why the dropdown looked like a global filter while Service Map and
-  // Trace ignored it entirely. Empty means "all repos".
+  // Empty scope means all repositories in every workspace.
   scopeRepoIds: string[];
   toggleScopeRepo: (repoId: string) => void;
   setScopeRepos: (repoIds: string[]) => void;
 
-  // Trace endpoints live here rather than inside TraceView so the Service Map
-  // can hand off to them: selecting a service and choosing "trace from here"
-  // is what makes Trace the second step of one flow instead of a rival view.
   traceFrom: string;
   traceTo: string;
   setTraceEndpoints: (from: string, to: string) => void;
@@ -58,9 +49,11 @@ interface GraphState {
   // say "these repos do not touch" instead of drawing silent islands.
   bridgeCount: number;
   setBridgeCount: (n: number) => void;
+  bridgeStatus: "idle" | "loading" | "ready" | "unavailable";
+  setBridgeStatus: (status: GraphState["bridgeStatus"]) => void;
 
-  clientConfig: { max_scope_repos: number; service_map_edge_limit: number } | null;
-  setClientConfig: (c: { max_scope_repos: number; service_map_edge_limit: number }) => void;
+  clientConfig: ClientConfig | null;
+  setClientConfig: (c: ClientConfig) => void;
   setRepos: (repos: RepoSummary[]) => void;
   addRepo: (repo: RepoSummary) => void;
 
@@ -90,6 +83,7 @@ interface GraphState {
   setSearchQuery: (query: string) => void;
   showLabels: boolean;
   setShowLabels: (show: boolean) => void;
+  toggleShowLabels: () => void;
   showParticles: boolean;
   setShowParticles: (show: boolean) => void;
   isFullscreen: boolean;
@@ -110,6 +104,22 @@ interface GraphState {
   linkerStatus: LinkerStatus | null;
   setLinkerStatus: (status: LinkerStatus | null) => void;
 
+  dimension: "2d" | "3d";
+  setDimension: (dim: "2d" | "3d") => void;
+  toggleDimension: () => void;
+  layout3d: "atlas" | "sphere" | "layers";
+  setLayout3d: (l: "atlas" | "sphere" | "layers") => void;
+  flow3d: boolean;
+  toggleFlow3d: () => void;
+  autoOrbit3d: boolean;
+  toggleAutoOrbit3d: () => void;
+  activePath3d: string[] | null;
+  setActivePath3d: (path: string[] | null) => void;
+  hudMode3d: "OVERVIEW" | "FOCUS" | "PATH";
+  setHudMode3d: (mode: GraphState["hudMode3d"]) => void;
+  hideLockfileDeps: boolean;
+  toggleHideLockfileDeps: () => void;
+
   graphControlCallbacks: {
     resetCamera?: () => void;
     fitGraph?: () => void;
@@ -122,13 +132,12 @@ interface GraphState {
 
 export const useGraphStore = create<GraphState>((set) => ({
   appMode: "repo",
-  // Switching view clears any highlight. The two canvases share this state but
-  // NOT their edge vocabularies -- they overlap on 2 of 20 types -- so carrying
-  // a highlight across would dim every edge in the destination view, with a
-  // "Clear highlight" control naming a type absent from its own list. Same
-  // fault as leaving a highlight on a hidden type: the canvas looks broken and
-  // says nothing. A highlight is a transient investigation, not a preference.
-  setAppMode: (mode) => set({ appMode: mode, highlightedEdgeTypes: [] }),
+  setAppMode: (mode) => set((state) => state.appMode === mode ? state : ({
+    appMode: mode, highlightedEdgeTypes: [], selectedNode: null,
+    selectedNodeDetails: null, selectedEdge: null, activePath3d: null,
+    hudMode3d: "OVERVIEW", focusNodeId: null, focusNodeRepo: null,
+    searchQuery: "",
+  })),
   mapEdgeTypes: ["ROUTES_TO", "CALLS_SERVICE", "PUBLISHES_TO", "CONSUMES_FROM", "FANS_OUT_TO"],
   toggleMapEdgeType: (type) =>
     set((state) => ({
@@ -147,12 +156,25 @@ export const useGraphStore = create<GraphState>((set) => ({
       scopeRepoIds: state.scopeRepoIds.includes(repoId)
         ? state.scopeRepoIds.filter((id) => id !== repoId)
         : [...state.scopeRepoIds, repoId],
+      selectedNode: null, selectedEdge: null, focusNodeId: null,
+      focusNodeRepo: null, activePath3d: null, traceData: null, searchQuery: "",
     })),
-  setScopeRepos: (repoIds) => set({ scopeRepoIds: repoIds }),
+  setScopeRepos: (scopeRepoIds) => set((state) =>
+    state.scopeRepoIds.join(",") === scopeRepoIds.join(",")
+      ? state
+      : {
+          scopeRepoIds, selectedNode: null, selectedNodeDetails: null,
+          selectedEdge: null, focusNodeId: null, focusNodeRepo: null,
+          activePath3d: null, traceData: null, traceFrom: "", traceTo: "",
+          searchQuery: "",
+        }),
 
   traceFrom: "",
   traceTo: "",
-  setTraceEndpoints: (from, to) => set({ traceFrom: from, traceTo: to }),
+  setTraceEndpoints: (traceFrom, traceTo) => set((state) =>
+    state.traceFrom === traceFrom && state.traceTo === traceTo
+      ? state
+      : { traceFrom, traceTo, traceData: null, selectedEdge: null }),
 
   highlightedEdgeTypes: [],
   toggleHighlightEdgeType: (type) =>
@@ -172,6 +194,8 @@ export const useGraphStore = create<GraphState>((set) => ({
   setConnectionsOnly: (on) => set({ connectionsOnly: on }),
   bridgeCount: 0,
   setBridgeCount: (n) => set({ bridgeCount: n }),
+  bridgeStatus: "idle",
+  setBridgeStatus: (bridgeStatus) => set({ bridgeStatus }),
 
   clientConfig: null,
   setClientConfig: (c) => set({ clientConfig: c }),
@@ -181,7 +205,12 @@ export const useGraphStore = create<GraphState>((set) => ({
   nodes: [],
   links: [],
   stats: null,
-  setGraphData: (nodes, links, stats) => set({ nodes, links, stats, selectedNode: null, selectedEdge: null }),
+  setGraphData: (nodes, links, stats) => set((state) => {
+    const selected = state.selectedNode
+      ? nodes.find((node) => node.id === state.selectedNode?.id) ?? null
+      : null;
+    return { nodes, links, stats, selectedNode: selected, selectedEdge: null };
+  }),
   loadingGraph: false,
   setLoadingGraph: (loading) => set({ loadingGraph: loading }),
 
@@ -207,7 +236,8 @@ export const useGraphStore = create<GraphState>((set) => ({
   // being selected is the whole fix.
   setSelectedNode: (node) =>
     set(node
-      ? { selectedNode: node, selectedNodeDetails: null, selectedEdge: null }
+      ? { selectedNode: node, selectedNodeDetails: null, selectedEdge: null,
+          activePath3d: null, hudMode3d: "FOCUS" }
       : { selectedNode: null, selectedNodeDetails: null }),
 
   selectedEdge: null,
@@ -220,7 +250,8 @@ export const useGraphStore = create<GraphState>((set) => ({
   setSearchQuery: (query) => set({ searchQuery: query }),
   showLabels: true,
   setShowLabels: (show) => set({ showLabels: show }),
-  showParticles: true,
+  toggleShowLabels: () => set((state) => ({ showLabels: !state.showLabels })),
+  showParticles: false,
   setShowParticles: (show) => set({ showParticles: show }),
   isFullscreen: false,
   setIsFullscreen: (fs) => set({ isFullscreen: fs }),
@@ -235,10 +266,29 @@ export const useGraphStore = create<GraphState>((set) => ({
   setServiceMapData: (data) => set({ serviceMapData: data }),
 
   traceData: null,
-  setTraceData: (data) => set({ traceData: data }),
+  setTraceData: (data) => set({ traceData: data, selectedEdge: null }),
 
   linkerStatus: null,
   setLinkerStatus: (status) => set({ linkerStatus: status }),
+
+  dimension: "2d",
+  setDimension: (dim) => set({ dimension: dim }),
+  toggleDimension: () => set((state) => ({ dimension: state.dimension === "2d" ? "3d" : "2d" })),
+  layout3d: "atlas",
+  setLayout3d: (layout3d) => set({ layout3d }),
+  flow3d: false,
+  toggleFlow3d: () => set((state) => ({ flow3d: !state.flow3d })),
+  autoOrbit3d: false,
+  toggleAutoOrbit3d: () => set((state) => ({ autoOrbit3d: !state.autoOrbit3d })),
+  activePath3d: null,
+  setActivePath3d: (path) => set((state) => ({
+    activePath3d: path,
+    hudMode3d: path?.length ? "PATH" : state.selectedNode ? "FOCUS" : "OVERVIEW",
+  })),
+  hudMode3d: "OVERVIEW",
+  setHudMode3d: (mode) => set({ hudMode3d: mode }),
+  hideLockfileDeps: true,
+  toggleHideLockfileDeps: () => set((state) => ({ hideLockfileDeps: !state.hideLockfileDeps })),
 
   graphControlCallbacks: {},
   setGraphControlCallbacks: (callbacks) => set({ graphControlCallbacks: callbacks }),

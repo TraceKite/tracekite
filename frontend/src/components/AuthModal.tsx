@@ -180,7 +180,7 @@ export default function AuthModal() {
             type="button"
             onClick={() => setIsOpen(false)}
             aria-label="Dismiss"
-            className="absolute top-4 right-4 p-1.5 rounded-md text-tertiary hover:text-primary hover:bg-white/5 transition-colors"
+            className="absolute top-4 right-4 p-1.5 rounded-md text-tertiary hover:text-primary hover:bg-slate-100 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -196,7 +196,7 @@ export default function AuthModal() {
             {/* Reads may be open while writes are not, so this copy has to
                 cover both cases rather than claiming reading needs a token. */}
             This action needs an authorization token. Paste your{" "}
-            <code className="bg-black/30 px-1 py-0.5 rounded-xs text-accent-text font-mono text-sm">API_TOKEN</code>.
+            <code className="bg-slate-100 px-1 py-0.5 rounded-xs text-accent-text font-mono text-sm">API_TOKEN</code>.
             Ingesting, deleting and rebuilding always require one.
           </p>
         </div>

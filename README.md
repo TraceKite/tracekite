@@ -107,7 +107,7 @@ Adduce is available as a **standalone CLI tool** (`adduce`), an **embeddable Pyt
 |---|---|---|
 | **Standalone CLI Tool** | `uv tool install .` $\rightarrow$ `adduce link ...` | Terminal graph queries, PR impact checks, and MCP stdio |
 | **Embeddable Library** | `pip install dist/adduce_core-*.whl` | Embed `scan()` and `link()` into Python CI scripts without a server |
-| **Full Web Application** | `docker compose up -d` | Visual 2D estate exploration, Service Map & Trace UI |
+| **Full Web Application** | `docker compose up -d` | Grouped 2D/3D code exploration, Service Map and Trace UI |
 
 ### 1. One-Line Setup
 
@@ -463,6 +463,7 @@ worth knowing:
 | `BIND_ADDR` | `127.0.0.1` | interface the ports bind to |
 | `AUTH_ENABLED` | `false` | token required on every route when true |
 | `MAX_SCOPE_REPOS` | `10` | repositories selectable at once in the UI |
+| `GRAPH_DETAIL_NODE_LIMIT` | `80` | exact nodes shown in bounded Module, Focus and Impact canvases |
 | `GITHUB_TOKEN` | *(empty)* | needed only for private repositories |
 
 **Security posture.** Ports bind to `127.0.0.1` and authentication is off,
@@ -479,6 +480,7 @@ never reach nodes, claims, or evidence.
 | [Developer use cases](docs/use-cases.md) | valid CLI, artifact, CI, MCP, and embedding examples |
 | [Agent and MCP integration](docs/plugins-and-mcp-guide.md) | client registration, skill installation, and MCP input semantics |
 | [Using the views](docs/using-the-views.md) | the three views and their shared controls |
+| [Frontend UX implementation and QA](docs/future/navigation-and-feature-qa-2026-08-30.md) | current navigation contract, browser matrix and redesign status |
 | [Agent plugin](plugins/adduce/) | one validated plugin source for Claude Code, Codex, and Kimi Code |
 | [Coverage gaps](docs/design/coverage-gaps.md) | what the graph still misses, ranked, with reproducible measurements |
 | [Comparison](docs/comparison.md) | against code-graph tools, catalogs and runtime maps, with measured numbers |

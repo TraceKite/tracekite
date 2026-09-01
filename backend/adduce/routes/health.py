@@ -28,6 +28,7 @@ async def client_config():
     """
     return {
         "max_scope_repos": settings.max_scope_repos,
+        "graph_detail_node_limit": settings.graph_detail_node_limit,
         # The service map truncates at this many edges; the picker warns as a
         # selection approaches it, because silently truncated output is the
         # failure this project exists to avoid.

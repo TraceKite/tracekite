@@ -65,18 +65,18 @@ function HomePage() {
 
   return (
     <ErrorBoundary>
-      <div className={`flex flex-col ${isFullscreen ? "fixed inset-0 z-50 bg-[#0e1013]" : "h-[100dvh] bg-[#0e1013]"}`}>
+      <div className={`flex flex-col ${isFullscreen ? "fixed inset-0 z-50 bg-[#f8f9fb]" : "h-[100dvh] bg-[#f8f9fb]"}`}>
         {!isFullscreen && <AppHeader />}
         {isFullscreen && (
           <button
             onClick={exitFullscreen}
             className="fixed top-4 right-4 z-[60] inline-flex items-center gap-2 px-3 py-2 rounded-md
-                       text-sm font-medium bg-black/70 hover:bg-black/85 border border-white/15
-                       text-[#e9ecef] backdrop-blur-sm transition-colors"
+                       text-sm font-medium bg-slate-800/80 hover:bg-slate-800/90 border border-slate-600
+                       text-white backdrop-blur-sm transition-colors"
           >
             <Minimize className="w-4 h-4" />
             Exit fullscreen
-            <kbd className="ml-1 text-2xs text-[#8c949e] border border-white/15 rounded px-1">Esc</kbd>
+            <kbd className="ml-1 text-2xs text-slate-300 border border-slate-500 rounded px-1">Esc</kbd>
           </button>
         )}
 

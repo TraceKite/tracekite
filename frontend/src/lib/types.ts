@@ -1,10 +1,3 @@
-export interface ParseCoverage {
-  files_seen: number;
-  files_parsed: number;
-  entities: number;
-  tier: "full" | "partial" | "none";
-}
-
 export interface RepoSummary {
   id: string;
   name: string;
@@ -19,7 +12,13 @@ export interface RepoSummary {
   head_commit_sha: string | null;
   linked_at: string | null;
   claims_by_kind: Record<string, number> | null;
-  parse_coverage: Record<string, ParseCoverage> | null;
+  parse_coverage: Record<string, number> | null;
+}
+
+export interface ClientConfig {
+  max_scope_repos: number;
+  service_map_edge_limit: number;
+  graph_detail_node_limit: number;
 }
 
 export interface GraphNode {
@@ -28,6 +27,12 @@ export interface GraphNode {
   label: string;
   name: string;
   path?: string;
+  repo_id?: string;
+  module?: string;
+  x?: number;
+  y?: number;
+  fx?: number;
+  fy?: number;
   language?: string;
   size: number;
   group: string;
@@ -42,6 +47,9 @@ export interface GraphLink {
   label: string;
   value: number;
   confidence: number | null;
+  aggregate?: boolean;
+  member_count?: number;
+  relationship_types?: string[];
 }
 
 export interface GraphStats {

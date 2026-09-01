@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     # visible. Operators with small repos can raise it.
     max_scope_repos: int = 10
 
+    # Maximum exact nodes shown after expanding one repository/module group.
+    # Search remains exhaustive; the canvas stays a bounded reasoning surface.
+    graph_detail_node_limit: int = 80
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

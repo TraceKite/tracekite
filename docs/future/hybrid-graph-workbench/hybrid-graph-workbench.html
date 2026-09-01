@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Adduce Hybrid Graph Workbench</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      color-scheme: light;
+      --ink: #252821;
+      --muted: #6e7168;
+      --quiet: #96988f;
+      --canvas: #fbfaf6;
+      --shell: #f3f0e8;
+      --surface: #fffefa;
+      --line: #d4cfc3;
+      --line-soft: #e7e2d8;
+      --forest: #315b47;
+      --forest-soft: #dce7df;
+      --rust: #a45138;
+      --rust-soft: #eedfd9;
+      --ochre: #9b7a31;
+      --ochre-soft: #eee6d1;
+      --smoke: #7f8379;
+    }
+    html, body { margin: 0; min-height: 100%; background: #e9e6de; color: var(--ink); }
+    body { padding: 16px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    #hybrid-workbench {
+      min-width: 980px;
+      height: calc(100vh - 32px);
+      min-height: 720px;
+      display: grid;
+      grid-template-rows: 54px 1fr 30px;
+      overflow: hidden;
+      border: 1px solid #bdb7ab;
+      background: var(--shell);
+      box-shadow: 0 18px 60px rgba(48, 44, 34, .12);
+    }
+    .hybrid-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 254, 250, .97);
+    }
+    .hybrid-brand { width: 184px; display: flex; align-items: center; gap: 9px; }
+    .hybrid-mark {
+      width: 27px; height: 27px; display: grid; place-items: center;
+      background: var(--ink); color: var(--shell); border-radius: 5px;
+      font-size: 13px; font-weight: 700;
+    }
+    .hybrid-brand strong { display: block; font-size: 12px; letter-spacing: .08em; }
+    .hybrid-brand small { display: block; margin-top: 1px; color: var(--muted); font-size: 10px; }
+    .hybrid-nav, .hybrid-switch { display: flex; align-items: center; border: 1px solid var(--line); background: var(--shell); }
+    .hybrid-nav button, .hybrid-switch button {
+      border: 0; border-right: 1px solid var(--line); background: transparent;
+      padding: 7px 12px; font-size: 12px; cursor: pointer;
+    }
+    .hybrid-nav button:last-child, .hybrid-switch button:last-child { border-right: 0; }
+    .hybrid-nav button.is-active { background: var(--ink); color: white; }
+    .hybrid-switch button.is-active { background: var(--forest); color: white; }
+    .hybrid-scope {
+      height: 32px; display: flex; align-items: center; gap: 8px; min-width: 170px;
+      padding: 0 11px; border: 1px solid var(--line); background: var(--surface); font-size: 12px;
+    }
+    .hybrid-search {
+      flex: 1; max-width: 360px; height: 32px; padding: 0 11px;
+      border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+    }
+    .hybrid-ingest {
+      margin-left: auto; border: 0; background: var(--forest); color: white;
+      height: 32px; padding: 0 14px; font-weight: 600; cursor: pointer;
+    }
+    .hybrid-body { min-height: 0; display: grid; grid-template-columns: 244px minmax(0, 1fr) 316px; }
+    .hybrid-rail, .hybrid-inspector { min-height: 0; overflow: auto; background: var(--shell); }
+    .hybrid-rail { border-right: 1px solid var(--line); }
+    .hybrid-inspector { border-left: 1px solid var(--line); }
+    .hybrid-section { padding: 14px; border-bottom: 1px solid var(--line); }
+    .hybrid-kicker { margin: 0 0 8px; color: var(--muted); font: 600 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; text-transform: uppercase; }
+    .hybrid-view-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+    .hybrid-view-grid button {
+      border: 1px solid transparent; background: transparent; text-align: left;
+      padding: 7px 8px; font-size: 12px; cursor: pointer;
+    }
+    .hybrid-view-grid button.is-active { background: var(--ink); color: white; }
+    .hybrid-contract { display: grid; gap: 7px; }
+    .hybrid-contract-row { display: grid; grid-template-columns: 64px 1fr; gap: 8px; align-items: start; font-size: 11px; }
+    .hybrid-contract-row strong { color: var(--ink); }
+    .hybrid-contract-row span { color: var(--muted); line-height: 1.4; }
+    .hybrid-legend { display: grid; gap: 7px; }
+    .hybrid-legend-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+    .hybrid-dot { width: 9px; height: 9px; border-radius: 50%; }
+    .hybrid-line { width: 22px; height: 0; border-top: 2px solid; }
+    .hybrid-stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .hybrid-stat { padding: 9px; background: var(--surface); border: 1px solid var(--line); }
+    .hybrid-stat strong { display: block; font: 600 18px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .hybrid-stat span { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .hybrid-canvas { position: relative; min-width: 0; overflow: hidden; background: var(--canvas); }
+    .hybrid-canvas-header {
+      position: absolute; z-index: 6; top: 12px; left: 14px; right: 14px;
+      display: flex; align-items: center; gap: 7px; pointer-events: none;
+    }
+    .hybrid-chip {
+      padding: 6px 8px; border: 1px solid var(--line); background: rgba(255, 254, 250, .94);
+      color: var(--muted); font: 500 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .hybrid-chip strong { color: var(--ink); }
+    .hybrid-zero { margin-left: auto; color: #775d25; background: rgba(238, 230, 209, .95); border-color: #d7c696; }
+    .hybrid-graph { width: 100%; height: 100%; display: block; }
+    .hybrid-canvas-tools {
+      position: absolute; z-index: 6; left: 50%; bottom: 14px; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 4px; padding: 4px;
+      border: 1px solid var(--line); background: rgba(255, 254, 250, .96);
+    }
+    .hybrid-canvas-tools button {
+      border: 0; background: transparent; padding: 6px 9px; font-size: 11px; cursor: pointer;
+    }
+    .hybrid-canvas-tools button.is-active { background: var(--forest); color: white; }
+    .hybrid-canvas-tools .hybrid-divider { width: 1px; height: 18px; background: var(--line); margin: 0 3px; }
+    .hybrid-inspector-head { padding: 15px; border-bottom: 1px solid var(--line); }
+    .hybrid-inspector-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+    .hybrid-inspector-head p { margin: 5px 0 0; color: var(--muted); font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .hybrid-empty { padding: 18px 15px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .hybrid-breakdown { padding: 0 15px 15px; }
+    .hybrid-breakdown-row { padding: 9px 0; border-bottom: 1px solid var(--line-soft); }
+    .hybrid-breakdown-row div { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; }
+    .hybrid-breakdown-row span { color: var(--muted); }
+    .hybrid-meter { height: 3px; margin-top: 6px; background: var(--line-soft); }
+    .hybrid-meter i { display: block; height: 100%; }
+    .hybrid-node-stats { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--line); }
+    .hybrid-node-stats div { padding: 11px 8px; border-right: 1px solid var(--line); }
+    .hybrid-node-stats div:last-child { border-right: 0; }
+    .hybrid-node-stats strong { display: block; font: 600 18px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .hybrid-node-stats span { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; text-transform: uppercase; }
+    .hybrid-relations { padding: 13px 15px; }
+    .hybrid-relation { display: grid; grid-template-columns: 68px 1fr; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); font-size: 11px; }
+    .hybrid-relation code { color: var(--rust); }
+    .hybrid-relation span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hybrid-footer {
+      display: flex; align-items: center; gap: 18px; padding: 0 14px;
+      border-top: 1px solid var(--line); background: var(--surface);
+      color: var(--muted); font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .hybrid-footer strong { color: var(--ink); }
+    .hybrid-node { cursor: pointer; }
+    .hybrid-node:focus { outline: 3px solid rgba(49, 91, 71, .35); outline-offset: 3px; }
+    .hybrid-node text { pointer-events: none; }
+    .hybrid-depth-note { font: 500 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--muted); }
+    @media (max-width: 1180px) {
+      body { padding: 0; }
+      #hybrid-workbench { min-width: 920px; height: 100vh; border: 0; }
+      .hybrid-body { grid-template-columns: 218px minmax(0, 1fr) 286px; }
+      .hybrid-brand { width: 154px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="hybrid-workbench">
+    <header class="hybrid-header">
+      <div class="hybrid-brand">
+        <div class="hybrid-mark">A</div>
+        <div><strong>ADDUCE</strong><small>Code Intelligence</small></div>
+      </div>
+      <nav class="hybrid-nav" aria-label="Primary">
+        <button class="is-active">Repo</button><button>Service Map</button><button>Trace</button>
+      </nav>
+      <div class="hybrid-switch" aria-label="Projection">
+        <button id="hybrid-2d" class="is-active" aria-pressed="true">2D</button>
+        <button id="hybrid-3d" aria-pressed="false">3D</button>
+      </div>
+      <div class="hybrid-scope">Scope&nbsp; <strong>2 repositories</strong>⌄</div>
+      <input class="hybrid-search" aria-label="Search" value="" placeholder="Search files, endpoints, dependencies…">
+      <button class="hybrid-ingest">+ Ingest</button>
+    </header>
+
+    <div class="hybrid-body">
+      <aside class="hybrid-rail">
+        <section class="hybrid-section">
+          <p class="hybrid-kicker">View mode</p>
+          <div class="hybrid-view-grid">
+            <button class="is-active">Overview</button><button>Architecture</button>
+            <button>Code</button><button>API</button>
+            <button>Dependencies</button><button>Impact</button>
+          </div>
+        </section>
+        <section class="hybrid-section">
+          <p class="hybrid-kicker">Reading this view</p>
+          <div class="hybrid-contract">
+            <div class="hybrid-contract-row"><strong>Overview</strong><span>Repository and module groups only.</span></div>
+            <div class="hybrid-contract-row"><strong>Focus</strong><span>One selected node and exact one-hop edges.</span></div>
+            <div class="hybrid-contract-row"><strong>Trace</strong><span>Evidence-bearing service paths only.</span></div>
+          </div>
+        </section>
+        <section class="hybrid-section">
+          <p class="hybrid-kicker">Graph legend</p>
+          <div class="hybrid-legend">
+            <div class="hybrid-legend-row"><i class="hybrid-dot" style="background:var(--forest)"></i>Module or directory</div>
+            <div class="hybrid-legend-row"><i class="hybrid-dot" style="background:var(--rust)"></i>API or selected entity</div>
+            <div class="hybrid-legend-row"><i class="hybrid-dot" style="background:var(--ochre)"></i>Manifest or dependency</div>
+            <div class="hybrid-legend-row"><i class="hybrid-line" style="border-color:var(--smoke)"></i>Exact relationship</div>
+          </div>
+        </section>
+        <section class="hybrid-section">
+          <p class="hybrid-kicker">Loaded data</p>
+          <div class="hybrid-stat-row">
+            <div class="hybrid-stat"><strong>501</strong><span>nodes loaded</span></div>
+            <div class="hybrid-stat"><strong>402</strong><span>edges indexed</span></div>
+          </div>
+        </section>
+      </aside>
+
+      <main class="hybrid-canvas">
+        <div class="hybrid-canvas-header">
+          <span class="hybrid-chip"><strong id="hybrid-state-label">Overview</strong></span>
+          <span class="hybrid-chip" id="hybrid-drawn-label">9 groups drawn · 501 nodes loaded</span>
+          <span class="hybrid-chip">labels: groups + selected</span>
+          <span class="hybrid-chip hybrid-zero">0 verified cross-repo code bridges</span>
+        </div>
+        <svg id="hybrid-graph" class="hybrid-graph" viewBox="0 0 1060 720" role="img" aria-label="Hybrid Adduce graph design"></svg>
+        <div class="hybrid-canvas-tools" aria-label="Graph state">
+          <button id="hybrid-overview" class="is-active" aria-pressed="true">Overview</button>
+          <button id="hybrid-focus" aria-pressed="false">Focus App.tsx</button>
+          <span class="hybrid-divider"></span>
+          <button>Fit</button><button>Labels</button><button>Reset</button>
+        </div>
+      </main>
+
+      <aside class="hybrid-inspector" id="hybrid-inspector"></aside>
+    </div>
+
+    <footer class="hybrid-footer">
+      <span><strong>template only</strong> · not connected to runtime data</span>
+      <span id="hybrid-footer-mode">2D overview · grouped projection</span>
+      <span>selection and scope persist between projections</span>
+    </footer>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.getElementById('hybrid-workbench');
+      const svg = document.getElementById('hybrid-graph');
+      const inspector = document.getElementById('hybrid-inspector');
+      const stateLabel = document.getElementById('hybrid-state-label');
+      const drawnLabel = document.getElementById('hybrid-drawn-label');
+      const footerMode = document.getElementById('hybrid-footer-mode');
+      const btn2d = document.getElementById('hybrid-2d');
+      const btn3d = document.getElementById('hybrid-3d');
+      const btnOverview = document.getElementById('hybrid-overview');
+      const btnFocus = document.getElementById('hybrid-focus');
+      const ns = 'http://www.w3.org/2000/svg';
+      const state = { dimension: '2d', focus: false };
+
+      const groups = [
+        { id:'la-backend', label:'lanovyx / backend', count:175, repo:'lanovyx', x:315, y:265, color:'#a45138' },
+        { id:'la-frontend', label:'lanovyx / frontend', count:65, repo:'lanovyx', x:250, y:455, color:'#315b47' },
+        { id:'la-mcp', label:'lanovyx / mcp', count:17, repo:'lanovyx', x:450, y:475, color:'#9b7a31' },
+        { id:'ad-backend', label:'adduce / backend', count:175, repo:'adduce', x:760, y:255, color:'#a45138' },
+        { id:'ad-frontend', label:'adduce / frontend', count:65, repo:'adduce', x:820, y:455, color:'#315b47' },
+        { id:'ad-lib', label:'adduce / lib', count:13, repo:'adduce', x:660, y:485, color:'#9b7a31' },
+        { id:'ad-artifacts', label:'adduce / artifacts', count:8, repo:'adduce', x:900, y:320, color:'#7f8379' },
+        { id:'la-docs', label:'lanovyx / docs', count:9, repo:'lanovyx', x:135, y:340, color:'#7f8379' },
+        { id:'ad-corpus', label:'adduce / corpus', count:13, repo:'adduce', x:590, y:330, color:'#7f8379' }
+      ];
+      const localEdges = [
+        ['la-backend','la-frontend'], ['la-backend','la-mcp'], ['la-frontend','la-docs'],
+        ['ad-backend','ad-frontend'], ['ad-backend','ad-lib'], ['ad-backend','ad-artifacts'],
+        ['ad-corpus','ad-backend'], ['ad-lib','ad-frontend']
+      ];
+      const focusNodes = [
+        { label:'App.tsx', x:535, y:350, z:0, type:'selected' },
+        { label:'GraphCanvas2D', x:365, y:245, z:-1, type:'out' },
+        { label:'GraphCanvas3D', x:695, y:245, z:1, type:'out' },
+        { label:'HomePage', x:350, y:445, z:0, type:'out' },
+        { label:'onKeyDown', x:710, y:445, z:1, type:'out' },
+        { label:'src', x:535, y:545, z:-1, type:'in' }
+      ];
+      const focusEdges = [[0,1],[0,2],[0,3],[0,4],[5,0]];
+
+      function el(name, attrs = {}, text = '') {
+        const item = document.createElementNS(ns, name);
+        Object.entries(attrs).forEach(([key, value]) => item.setAttribute(key, String(value)));
+        if (text) item.textContent = text;
+        return item;
+      }
+      function clearSvg() { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+      function setButtons() {
+        btn2d.classList.toggle('is-active', state.dimension === '2d');
+        btn3d.classList.toggle('is-active', state.dimension === '3d');
+        btn2d.setAttribute('aria-pressed', state.dimension === '2d');
+        btn3d.setAttribute('aria-pressed', state.dimension === '3d');
+        btnOverview.classList.toggle('is-active', !state.focus);
+        btnFocus.classList.toggle('is-active', state.focus);
+        btnOverview.setAttribute('aria-pressed', !state.focus);
+        btnFocus.setAttribute('aria-pressed', state.focus);
+      }
+      function drawHull(cx, cy, rx, ry, stroke, label) {
+        svg.appendChild(el('ellipse', { cx, cy, rx, ry, fill: stroke, 'fill-opacity':.045, stroke, 'stroke-opacity':.32, 'stroke-dasharray':'7 7' }));
+        svg.appendChild(el('text', { x:cx-rx+16, y:cy-ry+25, fill:'#4d5049', 'font-size':12, 'font-weight':500 }, label));
+      }
+      function drawGroup(group, is3d = false) {
+        const perspective = is3d ? 1 + ((group.x - 530) / 1800) : 1;
+        const radius = Math.max(18, Math.min(38, 15 + Math.sqrt(group.count) * 1.35)) * perspective;
+        const g = el('g', { class:'hybrid-node', tabindex:0, role:'button', 'aria-label':`${group.label}, ${group.count} nodes` });
+        const orbit = el('circle', { cx:group.x, cy:group.y, r:radius+13, fill:'none', stroke:group.color, 'stroke-opacity':.16 });
+        const circle = el('circle', { cx:group.x, cy:group.y, r:radius, fill:group.color, 'fill-opacity':.13, stroke:group.color, 'stroke-width':2 });
+        const core = el('circle', { cx:group.x, cy:group.y, r:6, fill:group.color });
+        const labelWidth = Math.min(170, 35 + group.label.length * 6.1);
+        const labelX = group.x - labelWidth/2;
+        const labelY = group.y + radius + 12;
+        const plate = el('rect', { x:labelX, y:labelY, width:labelWidth, height:28, fill:'#fffefa', stroke:'#d4cfc3' });
+        const text = el('text', { x:group.x, y:labelY+12, 'text-anchor':'middle', fill:'#252821', 'font-size':11, 'font-weight':500 }, group.label);
+        const count = el('text', { x:group.x, y:labelY+23, 'text-anchor':'middle', fill:'#6e7168', 'font-size':9 }, `${group.count} nodes`);
+        g.append(orbit, circle, core, plate, text, count);
+        g.addEventListener('click', () => { state.focus = true; render(); });
+        g.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); state.focus = true; render(); } });
+        svg.appendChild(g);
+        for (let i = 0; i < Math.min(12, Math.ceil(group.count/12)); i++) {
+          const angle = (Math.PI*2*i)/Math.min(12, Math.ceil(group.count/12));
+          const rr = radius + 22 + (i%2)*8;
+          svg.appendChild(el('circle', { cx:group.x+Math.cos(angle)*rr, cy:group.y+Math.sin(angle)*rr, r:2.4, fill:group.color, 'fill-opacity':.38 }));
+        }
+      }
+      function drawOverview2d() {
+        drawHull(300,355,235,245,'#315b47','sfbayman/lanovyx · 4 groups shown');
+        drawHull(755,355,245,245,'#a45138','adduce-labs/adduce · 5 groups shown');
+        localEdges.forEach(([a,b]) => {
+          const source = groups.find(group => group.id === a);
+          const target = groups.find(group => group.id === b);
+          svg.appendChild(el('line', { x1:source.x, y1:source.y, x2:target.x, y2:target.y, stroke:'#7f8379', 'stroke-opacity':.55, 'stroke-width':1.4 }));
+        });
+        groups.forEach(group => drawGroup(group));
+      }
+      function drawFocus2d() {
+        svg.appendChild(el('text', { x:42, y:120, fill:'#6e7168', 'font-size':12 }, 'faint repository context'));
+        drawHull(285,390,190,205,'#315b47','sfbayman/lanovyx');
+        drawHull(770,390,190,205,'#a45138','adduce-labs/adduce');
+        focusEdges.forEach(([a,b]) => {
+          const source = focusNodes[a], target = focusNodes[b];
+          svg.appendChild(el('line', { x1:source.x, y1:source.y, x2:target.x, y2:target.y, stroke:a===5?'#9b7a31':'#a45138', 'stroke-width':2.2, 'marker-end':'url(#arrow)' }));
+        });
+        focusNodes.forEach((node, index) => {
+          const selected = index === 0;
+          const g = el('g', { class:'hybrid-node', tabindex:0, role:'button', 'aria-label':node.label });
+          g.appendChild(el('circle', { cx:node.x, cy:node.y, r:selected?21:12, fill:selected?'#a45138':node.type==='in'?'#9b7a31':'#315b47', stroke:selected?'#252821':'#fffefa', 'stroke-width':selected?4:2 }));
+          const width = 28 + node.label.length*6.2;
+          g.appendChild(el('rect', { x:node.x-width/2, y:node.y+(selected?28:19), width, height:24, fill:'#fffefa', stroke:'#d4cfc3' }));
+          g.appendChild(el('text', { x:node.x, y:node.y+(selected?44:35), 'text-anchor':'middle', fill:'#252821', 'font-size':11, 'font-weight':500 }, node.label));
+          svg.appendChild(g);
+        });
+      }
+      function drawOverview3d() {
+        const defs = el('defs');
+        const gradient = el('linearGradient', { id:'depthFade', x1:'0', x2:'0', y1:'0', y2:'1' });
+        gradient.append(el('stop',{offset:'0%', 'stop-color':'#315b47','stop-opacity':.04}), el('stop',{offset:'100%', 'stop-color':'#315b47','stop-opacity':0}));
+        defs.appendChild(gradient); svg.appendChild(defs);
+        for (let i=0;i<7;i++) svg.appendChild(el('line',{x1:110+i*135,y1:605,x2:280+i*82,y2:120,stroke:'#d4cfc3','stroke-opacity':.42}));
+        for (let i=0;i<5;i++) svg.appendChild(el('ellipse',{cx:530,cy:580,rx:140+i*92,ry:34+i*24,fill:'none',stroke:'#d4cfc3','stroke-opacity':.6}));
+        localEdges.forEach(([a,b]) => {
+          const source = groups.find(group => group.id === a), target = groups.find(group => group.id === b);
+          svg.appendChild(el('line',{x1:source.x,y1:source.y,x2:target.x,y2:target.y,stroke:'#7f8379','stroke-opacity':.52,'stroke-width':1.5}));
+        });
+        groups.forEach(group => drawGroup(group,true));
+        svg.appendChild(el('text',{x:35,y:675,class:'hybrid-depth-note'},'Depth encodes repository/module separation only · no decorative sphere mode'));
+      }
+      function drawFocus3d() {
+        for (let i=0;i<6;i++) svg.appendChild(el('line',{x1:120+i*165,y1:625,x2:320+i*65,y2:130,stroke:'#d4cfc3','stroke-opacity':.4}));
+        focusEdges.forEach(([a,b]) => {
+          const source=focusNodes[a], target=focusNodes[b];
+          svg.appendChild(el('line',{x1:source.x,y1:source.y,x2:target.x,y2:target.y,stroke:'#6e7168','stroke-width':2,'stroke-opacity':.72}));
+        });
+        focusNodes.forEach((node,index) => {
+          const selected=index===0;
+          const scale=1+(node.z*.12);
+          svg.appendChild(el('circle',{cx:node.x,cy:node.y,r:(selected?24:13)*scale,fill:selected?'#a45138':node.type==='in'?'#9b7a31':'#315b47','fill-opacity':selected?1:.82,stroke:'#fffefa','stroke-width':3}));
+          svg.appendChild(el('text',{x:node.x,y:node.y+(selected?38:27),'text-anchor':'middle',fill:'#252821','font-size':12,'font-weight':500},node.label));
+          svg.appendChild(el('text',{x:node.x,y:node.y+(selected?52:40),'text-anchor':'middle',fill:'#6e7168','font-size':9},node.z<0?'near':node.z>0?'far':'focus plane'));
+        });
+        svg.appendChild(el('text',{x:35,y:675,class:'hybrid-depth-note'},'Bounded scene · selected node + 5 exact one-hop relationships'));
+      }
+      function addArrowMarker() {
+        const defs = el('defs');
+        const marker = el('marker',{id:'arrow',viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:6,markerHeight:6,orient:'auto-start-reverse'});
+        marker.appendChild(el('path',{d:'M 0 0 L 10 5 L 0 10 z',fill:'#a45138'}));
+        defs.appendChild(marker); svg.appendChild(defs);
+      }
+      function renderInspector() {
+        if (!state.focus) {
+          inspector.innerHTML = `
+            <div class="hybrid-inspector-head"><h2>No entity selected</h2><p>Overview shows repository and module groups. Select a group or use search to inspect exact nodes.</p></div>
+            <div class="hybrid-empty">The canvas draws <strong>9 groups</strong>, not 501 equal-weight nodes. Loaded totals remain visible so simplification is never mistaken for completeness.</div>
+            <div class="hybrid-breakdown">
+              <p class="hybrid-kicker">Scope breakdown</p>
+              <div class="hybrid-breakdown-row"><div><strong>sfbayman/lanovyx</strong><span>4 groups</span></div><div class="hybrid-meter"><i style="width:58%;background:var(--forest)"></i></div></div>
+              <div class="hybrid-breakdown-row"><div><strong>adduce-labs/adduce</strong><span>5 groups</span></div><div class="hybrid-meter"><i style="width:66%;background:var(--rust)"></i></div></div>
+            </div>`;
+        } else {
+          inspector.innerHTML = `
+            <div class="hybrid-inspector-head"><h2>App.tsx <small style="font-weight:400;color:var(--muted)">/ File</small></h2><p>frontend/src/App.tsx</p></div>
+            <div class="hybrid-node-stats"><div><strong>1</strong><span>Incoming</span></div><div><strong>5</strong><span>Outgoing</span></div><div><strong>6</strong><span>Neighbors</span></div></div>
+            <div class="hybrid-relations"><p class="hybrid-kicker">Exact one-hop relationships</p>
+              <div class="hybrid-relation"><code>CONTAINS</code><span>src</span></div>
+              <div class="hybrid-relation"><code>IMPORTS</code><span>GraphCanvas2D</span></div>
+              <div class="hybrid-relation"><code>IMPORTS</code><span>GraphCanvas3D</span></div>
+              <div class="hybrid-relation"><code>DEFINES</code><span>HomePage</span></div>
+              <div class="hybrid-relation"><code>CALLS</code><span>onKeyDown</span></div>
+            </div>`;
+        }
+      }
+      function render() {
+        clearSvg(); addArrowMarker(); setButtons();
+        stateLabel.textContent = state.focus ? 'Focus · 1 hop' : 'Overview · groups';
+        drawnLabel.textContent = state.focus ? '6 exact nodes drawn · 501 nodes loaded' : '9 groups drawn · 501 nodes loaded';
+        footerMode.textContent = `${state.dimension.toUpperCase()} ${state.focus?'focus · exact one-hop':'overview · grouped projection'}`;
+        if (state.dimension === '2d') state.focus ? drawFocus2d() : drawOverview2d();
+        else state.focus ? drawFocus3d() : drawOverview3d();
+        renderInspector();
+      }
+      btn2d.addEventListener('click', () => { state.dimension='2d'; render(); });
+      btn3d.addEventListener('click', () => { state.dimension='3d'; render(); });
+      btnOverview.addEventListener('click', () => { state.focus=false; render(); });
+      btnFocus.addEventListener('click', () => { state.focus=true; render(); });
+      render();
+    })();
+  </script>
+</body>
+</html>
