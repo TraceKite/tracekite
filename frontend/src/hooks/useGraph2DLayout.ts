@@ -7,7 +7,7 @@ import {
   useGraphControls,
   type ForceGraph2DMethods,
 } from "@/hooks/useGraphControls";
-import type { GraphLink, GraphNode, ViewMode } from "@/lib/types";
+import type { GraphLink, GraphNode } from "@/lib/types";
 
 interface LayoutOptions {
   graphRef: RefObject<ForceGraph2DMethods | null>;
@@ -16,9 +16,6 @@ interface LayoutOptions {
   dimensions: { width: number; height: number };
   showLabels: boolean;
   engineReady: boolean;
-  scopeKey: string;
-  viewMode: ViewMode;
-  selectedNodeId: string | null;
 }
 
 export function useGraph2DLayout({
@@ -28,12 +25,9 @@ export function useGraph2DLayout({
   dimensions,
   showLabels,
   engineReady,
-  scopeKey,
-  viewMode,
-  selectedNodeId,
 }: LayoutOptions): boolean {
   const physicsEnabled = useGraphControls(graphRef, nodes);
-  const fittedKeyRef = useRef<string | null>(null);
+  const reheatedForRef = useRef<string | null>(null);
 
   const childCount = useMemo(() => {
     const counts = new Map<string, number>();
@@ -83,32 +77,21 @@ export function useGraph2DLayout({
           return showLabels ? radius + 9 : radius;
         })
         .iterations(2));
-      if (physicsEnabled) graph.d3ReheatSimulation?.();
+      // Re-applying forces is cheap; reheating restarts a settled layout and
+      // moves every node. A resize — the side panel collapsing, the window
+      // changing — must not do that. Only the collide radius growing or
+      // shrinking with the labels invalidates the positions we already have;
+      // a new node set restarts the engine on its own.
+      const reheatKey = String(showLabels);
+      if (physicsEnabled && reheatedForRef.current !== reheatKey) {
+        reheatedForRef.current = reheatKey;
+        graph.d3ReheatSimulation?.();
+      }
     };
     apply();
     return () => { cancelled = true; };
   }, [dimensions.height, dimensions.width, engineReady, graphRef, linkDistance,
       physicsEnabled, showLabels]);
-
-  useEffect(() => {
-    if (!nodes.length || !engineReady) return;
-    const fitKey = `${scopeKey}:${viewMode}`;
-    if (fittedKeyRef.current === fitKey) return;
-    fittedKeyRef.current = fitKey;
-    const timer = window.setTimeout(() => graphRef.current?.zoomToFit(700, 70), 900);
-    return () => window.clearTimeout(timer);
-  }, [engineReady, graphRef, nodes.length, scopeKey, viewMode]);
-
-  useEffect(() => {
-    if (!selectedNodeId) return;
-    const selected = nodes.find((node) => node.id === selectedNodeId) as
-      (GraphNode & { x?: number; y?: number }) | undefined;
-    if (selected?.x == null || selected.y == null) return;
-    const screen = graphRef.current?.graph2ScreenCoords?.(selected.x, selected.y);
-    const outside = !screen || screen.x < 80 || screen.y < 80 ||
-      screen.x > dimensions.width - 80 || screen.y > dimensions.height - 80;
-    if (outside) graphRef.current?.centerAt(selected.x, selected.y, 450);
-  }, [dimensions.height, dimensions.width, graphRef, nodes, selectedNodeId]);
 
   return physicsEnabled;
 }

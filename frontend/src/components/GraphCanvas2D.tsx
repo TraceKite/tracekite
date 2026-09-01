@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useGraphStore } from "@/store/graphStore";
 import { useGraph2DLayout } from "@/hooks/useGraph2DLayout";
+import { useGraph2DCameraFrame } from "@/hooks/useGraph2DCameraFrame";
 import { useGraphProjection } from "@/hooks/useGraphProjection";
 import type { ForceGraph2DMethods } from "@/hooks/useGraphControls";
 import type { GraphNode } from "@/lib/types";
-import { graphGroupOf, getNodeColor } from "@/lib/graphStyle";
-import { isModuleGroup, moduleGroupKey } from "@/lib/graphOverviewProjection";
+import { graphGroupOf } from "@/lib/graphStyle";
+import { useGraphNodeClick } from "@/hooks/useGraphNodeClick";
 import {
   buildLabelBudget,
   buildNodeIndex,
@@ -19,9 +20,10 @@ import {
   paintNodePointerArea,
 } from "@/lib/graph2dPainter";
 import { endpointId } from "@/lib/graphVisibility";
-import { effectiveRepoIds } from "@/lib/graphNavigation";
+import { cameraSceneKey, effectiveRepoIds } from "@/lib/graphNavigation";
 import GraphCanvasMessage from "@/components/GraphCanvasMessage";
 import GraphContextBar from "@/components/GraphContextBar";
+import Graph2DHoverCard from "@/components/Graph2DHoverCard";
 import { useGraphBackNavigation } from "@/hooks/useGraphBackNavigation";
 
 export default function GraphCanvas2D() {
@@ -45,6 +47,7 @@ export default function GraphCanvas2D() {
     filteredEdgeTypes,
     hideLockfileDeps,
     clientConfig,
+    focusNodeId,
   } = useGraphStore();
   const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
   const [ForceGraphComponent, setForceGraphComponent] = useState<any>(null);
@@ -88,6 +91,8 @@ export default function GraphCanvas2D() {
     projectionMode,
     expandedGroup,
     setExpandedGroup,
+    openedNodeId,
+    setExpandedNode,
     projectedTotalNodeCount,
   } = useGraphProjection({
     nodes, links,
@@ -95,7 +100,7 @@ export default function GraphCanvas2D() {
     hiddenEdgeTypes: filteredEdgeTypes,
     hideLockfileDeps,
     connectionsOnly,
-    selectedNodeId: selectedNode?.id ?? null,
+    focusNodeId,
     viewMode,
     scopeKey,
     detailNodeLimit: clientConfig?.graph_detail_node_limit ?? 80,
@@ -122,7 +127,11 @@ export default function GraphCanvas2D() {
     }
     return ids;
   }, [highlightedEdgeTypes, visibleLinks]);
-  const focusId = selectedNode?.id ?? hoverNode?.id ?? null;
+  const nodeIndex = useMemo(() => buildNodeIndex(visibleNodes), [visibleNodes]);
+  // A module is never drawn among its own members. Focusing on one would dim
+  // every node on the canvas and match none of them.
+  const focusId = (selectedNode && nodeIndex.has(selectedNode.id)
+    ? selectedNode.id : null) ?? hoverNode?.id ?? null;
   const focus = useMemo(
     () => computeFocusContext(visibleLinks, focusId),
     [focusId, visibleLinks],
@@ -131,7 +140,6 @@ export default function GraphCanvas2D() {
     () => buildLabelBudget(visibleNodes, visibleLinks, focusId),
     [focusId, visibleLinks, visibleNodes],
   );
-  const nodeIndex = useMemo(() => buildNodeIndex(visibleNodes), [visibleNodes]);
 
   useEffect(() => {
     if (!selectedNode) return;
@@ -146,8 +154,13 @@ export default function GraphCanvas2D() {
     dimensions,
     showLabels,
     engineReady: Boolean(ForceGraphComponent),
-    scopeKey: `${scopeKey}:${projectionMode}:${expandedGroup ?? selectedNode?.id ?? ""}`,
-    viewMode,
+  });
+  const camera = useGraph2DCameraFrame({
+    graphRef,
+    nodes: visibleNodes,
+    dimensions,
+    ready: Boolean(ForceGraphComponent),
+    sceneKey: cameraSceneKey({ repoIds, viewMode, focusNodeId, expandedGroup }),
     selectedNodeId: selectedNode?.id ?? null,
   });
   const drawNode = useCallback((node: any, context: CanvasRenderingContext2D, scale: number) => {
@@ -181,6 +194,12 @@ export default function GraphCanvas2D() {
     });
   }, [visibleLinks]);
 
+  const openedLabel = visibleNodes.find((node) => node.id === openedNodeId)?.label ?? null;
+  const { handleNodeClick, openNode } = useGraphNodeClick({
+    onSelect: setSelectedNode,
+    onOpenNode: setExpandedNode,
+    onOpenGroup: setExpandedGroup,
+  });
   const navigateBack = useGraphBackNavigation();
 
   if (loadingGraph || !ForceGraphComponent) {
@@ -203,9 +222,10 @@ export default function GraphCanvas2D() {
       role="application"
       aria-label={`2D dependency graph, ${visibleNodes.length} displayed nodes and ${visibleLinks.length} displayed edges.`}
       className="absolute inset-0 outline-none"
+      onWheelCapture={camera.onUserZoom}
       onKeyDown={(event) => {
-        if (event.key !== "Escape") return;
-        navigateBack();
+        if (event.key.toLowerCase() === "o" && selectedNode) openNode(selectedNode);
+        else if (event.key === "Escape") navigateBack();
       }}
       onPointerMove={(event) => {
         if (!tooltipRef.current) return;
@@ -221,7 +241,8 @@ export default function GraphCanvas2D() {
         projectionMode={projectionMode}
         viewMode={viewMode}
         expandedGroup={expandedGroup}
-        selectedNode={selectedNode}
+        openedLabel={openedLabel}
+        hasSelection={Boolean(selectedNode)}
         visibleNodeCount={visibleNodes.length}
         visibleEdgeCount={visibleLinks.length}
         loadedNodeCount={nodes.length}
@@ -230,8 +251,8 @@ export default function GraphCanvas2D() {
         onBack={navigateBack}
       />
       <span className="sr-only" aria-live="polite">
-        {selectedNode
-          ? `Focused ${selectedNode.label}, ${focus.nodeIds.size - 1} neighbors`
+        {openedLabel
+          ? `Opened ${openedLabel}, ${visibleNodes.length} displayed nodes`
           : expandedGroup
             ? `Module ${expandedGroup}, ${visibleNodes.length} displayed nodes`
             : `${viewMode} grouped overview`}
@@ -252,15 +273,12 @@ export default function GraphCanvas2D() {
         nodePointerAreaPaint={paintNodePointerArea}
         linkCanvasObject={drawLink}
         linkCanvasObjectMode={() => "replace"}
+        onEngineStop={camera.onEngineStop}
         d3VelocityDecay={physicsEnabled ? 0.3 : 1}
         d3AlphaDecay={physicsEnabled ? 0.025 : 1}
         warmupTicks={physicsEnabled ? 24 : 0}
         cooldownTicks={physicsEnabled ? 220 : 0}
-        onNodeClick={(node: GraphNode) => {
-          const groupKey = moduleGroupKey(node);
-          if (isModuleGroup(node) && groupKey) setExpandedGroup(groupKey);
-          else setSelectedNode(node);
-        }}
+        onNodeClick={handleNodeClick}
         onLinkClick={(link: any) => { if (!link.aggregate) setSelectedEdge(link); }}
         onNodeHover={(node: GraphNode | null) => {
           setHoverNode(node);
@@ -270,16 +288,7 @@ export default function GraphCanvas2D() {
           if (selectedNode || useGraphStore.getState().selectedEdge) navigateBack();
         }}
       />
-      {hoverNode && !selectedNode && (
-        <div ref={tooltipRef} className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-[120%] rounded-md border border-[#d4cfc3] bg-[#fffefa]/95 px-3 py-2 text-xs text-[#252821] shadow-lg">
-          <div className="flex items-center gap-2 font-semibold">
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: getNodeColor(hoverNode.type) }} />
-            <span>{hoverNode.label}</span>
-          </div>
-          <div className="mt-1 font-mono text-2xs text-[#6e7168]">{hoverNode.type}</div>
-          {hoverNode.path && <div className="max-w-[260px] truncate font-mono text-2xs text-[#6e7168]">{hoverNode.path}</div>}
-        </div>
-      )}
+      {!selectedNode && <Graph2DHoverCard node={hoverNode} cardRef={tooltipRef} />}
     </div>
   );
 }

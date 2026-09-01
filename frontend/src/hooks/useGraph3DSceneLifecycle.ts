@@ -9,7 +9,7 @@ import type { Camera3DState } from "@/hooks/useGraph3DInteraction";
 interface LifecycleProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
   camRef: React.RefObject<Camera3DState>;
-  onSelectNode: (nodeId: string, pathMode?: boolean) => void;
+  onSelectNode: (nodeId: string, pathMode?: boolean, open?: boolean) => void;
   onFocusCluster?: (cluster: ClusterInfo) => void;
 }
 
@@ -38,7 +38,7 @@ export function useGraph3DSceneLifecycle({
     threeRef.current = ctx;
 
     const labelPool = createDomLabelPool(el, 24,
-      (nodeId, pathMode) => selectNodeRef.current(nodeId, pathMode));
+      (nodeId, pathMode, open) => selectNodeRef.current(nodeId, pathMode, open));
     labelPoolRef.current = labelPool;
 
     const clusterPool = createClusterHoloPool(el, (c) => {

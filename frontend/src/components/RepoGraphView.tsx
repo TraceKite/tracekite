@@ -9,6 +9,7 @@ import EmptyState from "@/components/EmptyState";
 import { effectiveRepoIds } from "@/lib/graphNavigation";
 import GraphDataWarning from "@/components/GraphDataWarning";
 import GraphCanvasMessage from "@/components/GraphCanvasMessage";
+import SidebarPanel from "@/components/SidebarPanel";
 
 const GraphCanvas3D = lazy(() => import("@/components/GraphCanvas3D"));
 
@@ -23,13 +24,13 @@ export default function RepoGraphView() {
   return (
     <>
       {!isFullscreen && (
-        <aside className="w-72 flex-shrink-0 border-r border-[#c9c3b7] bg-[#f4f1e9] flex flex-col overflow-hidden z-10 shadow-sm">
+        <SidebarPanel label="Graph controls">
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <GraphFilters />
             {dimension === "2d" && <GraphControls />}
             <RepoStats />
           </div>
-        </aside>
+        </SidebarPanel>
       )}
       <main className="flex-1 relative overflow-hidden"
         style={{

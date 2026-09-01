@@ -11,6 +11,7 @@ export interface ForceGraph2DMethods {
   d3Force(name: string, force: any | null): ForceGraph2DMethods;
   d3ReheatSimulation: () => void;
   graph2ScreenCoords?: (x: number, y: number) => { x: number; y: number };
+  getGraphBbox?: () => { x: [number, number]; y: [number, number] } | null;
 }
 
 function rotateNode(node: any) {

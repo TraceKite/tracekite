@@ -83,14 +83,48 @@ displayed nodes and exact visible edges. For example, Dependencies may say
 dimensions preserves Module/Focus; a local 3D path is cleared because 2D does
 not render it. Back and Escape unwind Path → Focus → Module → grouped entry.
 
+### Selecting versus opening
+
+One rule, whatever you click. A click selects: the details drawer on the right
+fills in and the canvas stays exactly as it was. **Double-click** — or press `o`
+with something selected — opens it: a module into its members, any other node
+into its one-hop neighborhood (its bounded impact in the Impact view). A
+module's drawer is a summary this UI counted, not a stored node: how many nodes
+and edges it holds, and of which types.
+
+Search results and the drawer's "Load this node's neighborhood" open the node
+they name, because fetching a graph around a node is the same request.
+
+Back and Escape unwind one level: what you opened, then the module, then the
+grouped entry. Closing the drawer with its X leaves the canvas where it is.
+
 ### Canvas controls
 
 - **2D:** Reset camera, Fit, Rotate, Settle/Re-layout, Labels, directional
   Particles and Fullscreen. Settling forces never disables navigation.
 - **3D:** Less noise, Labels, zoom in/out/100% and camera Reset. `L` toggles
-  labels after the graph receives focus. Click a node for Focus; Shift+click or
+  labels and `o` opens the selected node, after the graph receives focus. Click a node for Focus; Shift+click or
   Shift+Enter another node for a directed local path through edges already on
   the sampled canvas.
+
+The camera re-frames only when the drawn scene changes — a new scope, view
+mode, expanded module or focus fetch — and never past the point where more zoom
+adds nothing, so a module holding one file no longer fills the screen with it. Selecting a node keeps your zoom, because
+the nodes keep their positions; the view pans only when the selection would
+otherwise sit off screen. Fit and Reset are there for a deliberate re-frame.
+
+### The left panel
+
+Repo, Service Map and Trace each collapse their left panel to a labelled rail —
+the chevron in the panel's top corner closes it, the rail itself reopens it.
+It also collapses on its own when the window no longer has room for the panel,
+a readable canvas and an open details drawer at once, and comes back when the
+room does.
+
+Collapsing or expanding by hand settles that layout and only that one: a panel
+you closed on a wide window stays closed while a drawer opens and shuts, and
+the automatic rule still decides the layouts you have not spoken about. The
+state follows you across the three views.
 
 3D's local path is orientation, not a ranked distributed Trace. The path bar
 names it accordingly.

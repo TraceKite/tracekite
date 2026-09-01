@@ -27,7 +27,9 @@ export function useGraph3DInteraction(
   setSelectedNode: (n: GraphNode | null) => void,
   setActivePath3d: (p: string[] | null) => void,
   setHudMode3d: (m: "OVERVIEW" | "FOCUS" | "PATH") => void,
-  onNodeActivate?: (node: GraphNode) => boolean,
+  // Returns true when the canvas handled the click itself (a module opens
+  // instead of being read). `open` carries the double-click through.
+  onNodeActivate?: (node: GraphNode, open: boolean) => boolean,
 ) {
   const [zoomLevel, setZoomLevel] = useState(1.0);
 
@@ -120,16 +122,13 @@ export function useGraph3DInteraction(
     setHudMode3d("OVERVIEW");
   }, [setSelectedNode, setActivePath3d, setHudMode3d]);
 
-  const flyToNode = useCallback((node: Node3DPhysicsState) => {
-    const c = camRef.current;
-    c.targetLook.set(node.x, node.y, node.z);
-    c.tDist = Math.min(c.tDist, c.baseDist * 0.72);
-    setZoomLevel(c.baseDist / c.tDist);
-  }, []);
-
-  const activateNode = useCallback((clicked: Node3DPhysicsState, pathMode = false) => {
+  const activateNode = useCallback((
+    clicked: Node3DPhysicsState,
+    pathMode = false,
+    open = false,
+  ) => {
     const clickedNode = clicked.node;
-    if (onNodeActivate?.(clickedNode)) return;
+    if (onNodeActivate?.(clickedNode, open)) return;
     if (pathMode && selectedNode && selectedNode.id !== clickedNode.id) {
       const path = findDirectedPath(selectedNode.id, clickedNode.id, links);
       if (path) {
@@ -138,10 +137,12 @@ export function useGraph3DInteraction(
         return;
       }
     }
+    // Selection does not move the camera here. Focusing rebuilds the cloud
+    // from its anchors, so the clicked node is about to be somewhere else;
+    // the canvas aims at where it lands, and the distance stays the reader's.
     setSelectedNode(clickedNode);
     setHudMode3d("FOCUS");
-    flyToNode(clicked);
-  }, [flyToNode, links, onNodeActivate, selectedNode, setActivePath3d,
+  }, [links, onNodeActivate, selectedNode, setActivePath3d,
       setHudMode3d, setSelectedNode]);
 
   const onClick = useCallback(
@@ -167,7 +168,7 @@ export function useGraph3DInteraction(
       }
 
       if (clicked) {
-        activateNode(clicked, e.shiftKey);
+        activateNode(clicked, e.shiftKey, e.detail >= 2);
         return;
       }
 
@@ -194,7 +195,6 @@ export function useGraph3DInteraction(
     onResetView,
     onClearFocus,
     onClick,
-    flyToNode,
     activateNode,
   };
 }

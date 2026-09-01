@@ -1,13 +1,15 @@
 import { ArrowLeft, Box, Crosshair, Layers3 } from "lucide-react";
 
 import type { ProjectionMode } from "@/hooks/useGraphProjection";
-import type { GraphNode, ViewMode } from "@/lib/types";
+import type { ViewMode } from "@/lib/types";
 
 interface Props {
   projectionMode: ProjectionMode;
   viewMode: ViewMode;
   expandedGroup: string | null;
-  selectedNode: GraphNode | null;
+  /** The node the canvas has been opened into, not the one being read. */
+  openedLabel: string | null;
+  hasSelection: boolean;
   visibleNodeCount: number;
   visibleEdgeCount: number;
   loadedNodeCount: number;
@@ -23,18 +25,19 @@ function modeLabel(mode: ViewMode): string {
 }
 
 export default function GraphContextBar({
-  projectionMode, viewMode, expandedGroup, selectedNode,
+  projectionMode, viewMode, expandedGroup, openedLabel, hasSelection,
   visibleNodeCount, visibleEdgeCount, loadedNodeCount, activePath = false,
   eligibleNodeCount, totalNodeCount,
   onBack,
 }: Props) {
-  const canGoBack = activePath || Boolean(selectedNode) || Boolean(expandedGroup);
+  const canGoBack = activePath || hasSelection || Boolean(openedLabel) ||
+    Boolean(expandedGroup);
   const title = activePath
     ? "Directed path"
     : projectionMode === "focus"
       ? viewMode === "impact"
-        ? `Impact · ${selectedNode?.label ?? "selection"}`
-        : selectedNode?.label ?? "Focus"
+        ? `Impact · ${openedLabel ?? "selection"}`
+        : openedLabel ?? "Focus"
       : projectionMode === "group"
         ? expandedGroup ?? "Module"
         : modeLabel(viewMode);

@@ -11,7 +11,7 @@ import {
   initNodeBuffers,
   initEdgeBuffers,
 } from "@/lib/graph3dBufferBuilder";
-import { isModuleGroup, moduleGroupKey } from "@/lib/graphOverviewProjection";
+import { openTarget } from "@/lib/graphNodeGesture";
 import { useGraph3DInteraction } from "@/hooks/useGraph3DInteraction";
 import { useGraph3DShortcuts } from "@/hooks/useGraph3DShortcuts";
 import { useGraph3DSceneLifecycle } from "@/hooks/useGraph3DSceneLifecycle";
@@ -22,7 +22,7 @@ import Graph3DHud from "@/components/Graph3DHud";
 import Graph3DTools from "@/components/Graph3DTools";
 import GraphContextBar from "@/components/GraphContextBar";
 import GraphCanvasMessage from "@/components/GraphCanvasMessage";
-import { effectiveRepoIds } from "@/lib/graphNavigation";
+import { cameraSceneKey, effectiveRepoIds } from "@/lib/graphNavigation";
 import { useGraphBackNavigation } from "@/hooks/useGraphBackNavigation";
 export default function GraphCanvas3D() {
   const {
@@ -51,6 +51,7 @@ export default function GraphCanvas3D() {
     loadingGraph,
     error,
     clientConfig,
+    focusNodeId,
   } = useGraphStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const physicsNodesRef = useRef<Node3DPhysicsState[]>([]);
@@ -64,10 +65,11 @@ export default function GraphCanvas3D() {
   const {
     baseNodes, visibleNodes: sceneNodes, visibleLinks: sceneLinks,
     projectionMode, expandedGroup, setExpandedGroup, projectedTotalNodeCount,
+    openedNodeId, setExpandedNode,
   } = useGraphProjection({
     nodes, links, hiddenNodeTypes: filteredNodeTypes,
     hiddenEdgeTypes: filteredEdgeTypes, hideLockfileDeps, connectionsOnly,
-    selectedNodeId: selectedNode?.id ?? null, viewMode, scopeKey,
+    focusNodeId, viewMode, scopeKey,
     detailNodeLimit: clientConfig?.graph_detail_node_limit ?? 80,
   });
   const graphBlocked = loadingGraph || (Boolean(error) && nodes.length === 0) ||
@@ -84,23 +86,31 @@ export default function GraphCanvas3D() {
   flowRef.current = flow3d;
   labelsRef.current = showLabels && !graphBlocked;
   orbitRef.current = autoOrbit3d;
-  selectedRef.current = graphBlocked ? null : selectedNode?.id || null;
   pathRef.current = graphBlocked ? null : activePath3d;
   searchRef.current = searchQuery;
   highlightsRef.current = highlightedEdgeTypes;
   const nodeIndexMap = useMemo(
     () => new Map(sceneNodes.map((node, index) => [node.id, index])),
     [sceneNodes]);
+  // A module is never drawn among its own members; highlighting one that is
+  // not in the cloud would dim the whole cloud and light nothing.
+  selectedRef.current = !graphBlocked && selectedNode &&
+    nodeIndexMap.has(selectedNode.id) ? selectedNode.id : null;
   const linksRef = useRef(sceneLinks);
   linksRef.current = sceneLinks;
   const nodeIndexMapRef = useRef(nodeIndexMap);
   nodeIndexMapRef.current = nodeIndexMap;
 
+  // Drops a selection the filters removed. A module is an aggregate this UI
+  // builds rather than a loaded node, so it is never in this set and must not
+  // be cleared by it.
   useEffect(() => {
     if (!selectedNode) return;
-    const visible = baseNodes.some((node) => node.id === selectedNode.id);
-    if (!visible) setSelectedNode(null);
-  }, [baseNodes, selectedNode, setSelectedNode]);
+    const loaded = nodes.some((node) => node.id === selectedNode.id);
+    if (loaded && !baseNodes.some((node) => node.id === selectedNode.id)) {
+      setSelectedNode(null);
+    }
+  }, [baseNodes, nodes, selectedNode, setSelectedNode]);
 
   useEffect(() => {
     const anchors = computeLayoutAnchors(sceneNodes, sceneLinks);
@@ -114,13 +124,20 @@ export default function GraphCanvas3D() {
     alphaRef.current = 1.0;
   }, [layout3d, filteredNodeTypes, filteredEdgeTypes, hideLockfileDeps]);
 
-  const activateAggregate = useCallback((node: typeof sceneNodes[number]) => {
-    const groupKey = moduleGroupKey(node);
-    if (!isModuleGroup(node) || !groupKey) return false;
-    setExpandedGroup(groupKey);
+  // Navigation is the canvas's to decide; the interaction hook keeps the
+  // camera and the selection. Reading a node leaves the cloud alone.
+  const openNode = useCallback((node: typeof sceneNodes[number]) => {
+    const target = openTarget(node);
+    if (target.kind === "node") return setExpandedNode(target.nodeId);
+    setExpandedGroup(target.groupKey);
     setHudMode3d("FOCUS");
-    return true;
-  }, [setExpandedGroup, setHudMode3d]);
+  }, [setExpandedGroup, setExpandedNode, setHudMode3d]);
+  const navigateOnActivate = useCallback(
+    (node: typeof sceneNodes[number], open: boolean) => {
+      if (open) openNode(node);
+      // Never handled here: the first click always reads the node.
+      return false;
+    }, [openNode]);
 
   const {
     camRef,
@@ -143,14 +160,24 @@ export default function GraphCanvas3D() {
     setSelectedNode,
     setActivePath3d,
     setHudMode3d,
-    activateAggregate,
+    navigateOnActivate,
   );
   useGraph3DCameraFrame(camRef, physicsNodesRef,
-    `${projectionMode}:${expandedGroup ?? selectedNode?.id ?? ""}:${sceneNodes.length}`);
-  const onSelectNodeId = useCallback((nodeId: string, pathMode = false) => {
-    const pn = physicsNodesRef.current.find((n) => n.id === nodeId);
-    if (pn) activateNode(pn, pathMode);
-  }, [activateNode]);
+    cameraSceneKey({ repoIds, viewMode, focusNodeId, expandedGroup, layout: layout3d }),
+    sceneNodes.length);
+  // Aims at the selection after the rebuild above has placed it, so the look
+  // target never trails a coordinate the node has already left.
+  useEffect(() => {
+    const selectedId = selectedNode?.id;
+    if (!selectedId) return;
+    const placed = physicsNodesRef.current.find((node) => node.id === selectedId);
+    if (placed) camRef.current.targetLook.set(placed.x, placed.y, placed.z);
+  }, [camRef, sceneNodes, selectedNode?.id]);
+  const onSelectNodeId = useCallback(
+    (nodeId: string, pathMode = false, open = false) => {
+      const pn = physicsNodesRef.current.find((n) => n.id === nodeId);
+      if (pn) activateNode(pn, pathMode, open);
+    }, [activateNode]);
 
   const { threeRef, labelPoolRef, clusterPoolRef, tooltipRef } = useGraph3DSceneLifecycle({
     containerRef,
@@ -158,11 +185,17 @@ export default function GraphCanvas3D() {
     onSelectNode: onSelectNodeId,
   });
 
+  const openedLabel = sceneNodes.find((node) => node.id === openedNodeId)?.label ?? null;
   const navigateBack = useGraphBackNavigation({
     onClearNode: onClearFocus,
     onClearGroup: () => setHudMode3d("OVERVIEW"),
   });
-  useGraph3DShortcuts({ toggleShowLabels, onBack: navigateBack, containerRef });
+  useGraph3DShortcuts({
+    toggleShowLabels,
+    onOpenSelected: () => selectedNode && openNode(selectedNode),
+    onBack: navigateBack,
+    containerRef,
+  });
 
   useGraph3DRenderer({
     containerRef, threeRef, labelPoolRef, clusterPoolRef, tooltipRef, camRef,
@@ -208,8 +241,8 @@ export default function GraphCanvas3D() {
     >
       {graphMessage ?? <>
       <span className="sr-only" aria-live="polite">
-        {selectedNode
-          ? `Focused ${selectedNode.label}, ${selectedNode.type}`
+        {openedLabel
+          ? `Opened ${openedLabel}, ${sceneNodes.length} displayed nodes`
           : expandedGroup
             ? `Module ${expandedGroup}, ${sceneNodes.length} displayed nodes`
             : `3D ${viewMode} grouped overview`}
@@ -218,7 +251,8 @@ export default function GraphCanvas3D() {
         projectionMode={projectionMode}
         viewMode={viewMode}
         expandedGroup={expandedGroup}
-        selectedNode={selectedNode}
+        openedLabel={openedLabel}
+        hasSelection={Boolean(selectedNode)}
         visibleNodeCount={sceneNodes.length}
         visibleEdgeCount={sceneLinks.length}
         loadedNodeCount={nodes.length}

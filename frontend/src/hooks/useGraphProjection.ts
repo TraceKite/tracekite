@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo } from "react";
 
 import type { GraphLink, GraphNode, ViewMode } from "@/lib/types";
 import {
-  activeExpandedGroup,
+  activeNavigation,
   graphContextKey,
 } from "@/lib/graphNavigation";
 import {
@@ -28,7 +28,8 @@ interface Options {
   hiddenEdgeTypes: string[];
   hideLockfileDeps: boolean;
   connectionsOnly: boolean;
-  selectedNodeId: string | null;
+  /** Set when a search or the drawer fetched a graph around one node. */
+  focusNodeId: string | null;
   viewMode: ViewMode;
   scopeKey: string;
   detailNodeLimit: number;
@@ -43,17 +44,20 @@ export function useGraphProjection({
   hiddenEdgeTypes,
   hideLockfileDeps,
   connectionsOnly,
-  selectedNodeId,
+  focusNodeId,
   viewMode,
   scopeKey,
   detailNodeLimit,
 }: Options) {
   const navigation = useGraphNavigationStore();
   const contextKey = graphContextKey(scopeKey ? scopeKey.split(",") : [], viewMode);
-  const expandedGroup = activeExpandedGroup(navigation, contextKey);
+  const { expandedGroup, expandedNodeId } = activeNavigation(navigation, contextKey);
   const setExpandedGroup = useCallback((group: string | null) => {
     navigation.setExpandedGroup(group, contextKey);
   }, [contextKey, navigation.setExpandedGroup]);
+  const setExpandedNode = useCallback((nodeId: string | null) => {
+    navigation.setExpandedNode(nodeId, contextKey);
+  }, [contextKey, navigation.setExpandedNode]);
 
   useEffect(() => navigation.syncContext(contextKey), [contextKey, navigation.syncContext]);
 
@@ -79,14 +83,19 @@ export function useGraphProjection({
   }, [connectionsOnly, hiddenEdgeTypes, hiddenNodeTypes, hideLockfileDeps,
       links, nodes]);
 
+  // Opening a node on the canvas and fetching a graph around one are the same
+  // request — draw that node's neighborhood. Selecting a node is not: it fills
+  // the details drawer and leaves the canvas where the reader put it.
+  const openedNodeId = expandedNodeId ?? focusNodeId;
+
   const result = useMemo(() => {
-    const selectedLoaded = selectedNodeId &&
-      base.nodes.some((node) => node.id === selectedNodeId);
-    if (selectedLoaded) {
+    const openedLoaded = openedNodeId &&
+      base.nodes.some((node) => node.id === openedNodeId);
+    if (openedLoaded) {
       return {
         projection: viewMode === "impact"
-          ? buildBoundedImpact(base.nodes, base.links, selectedNodeId, detailNodeLimit)
-          : buildOneHopNeighborhood(base.nodes, base.links, selectedNodeId, detailNodeLimit),
+          ? buildBoundedImpact(base.nodes, base.links, openedNodeId, detailNodeLimit)
+          : buildOneHopNeighborhood(base.nodes, base.links, openedNodeId, detailNodeLimit),
         mode: "focus" as ProjectionMode,
       };
     }
@@ -103,7 +112,7 @@ export function useGraphProjection({
       };
     }
     return { projection: base, mode: "exact" as ProjectionMode };
-  }, [base, detailNodeLimit, expandedGroup, selectedNodeId, viewMode]);
+  }, [base, detailNodeLimit, expandedGroup, openedNodeId, viewMode]);
 
   return {
     baseNodes: base.nodes,
@@ -114,5 +123,7 @@ export function useGraphProjection({
     projectionMode: result.mode,
     expandedGroup,
     setExpandedGroup,
+    openedNodeId,
+    setExpandedNode,
   };
 }

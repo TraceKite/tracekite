@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Minimize } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
+import { isModuleGroup } from "@/lib/graphOverviewProjection";
 import { api } from "@/lib/api";
 import {
   isPreviewMode, PREVIEW_REPOS, PREVIEW_SERVICE_MAP, PREVIEW_TRACE, PREVIEW_REPO_GRAPH,
@@ -10,6 +11,7 @@ import RepoGraphView from "@/components/RepoGraphView";
 import ServiceMapView from "@/components/ServiceMapView";
 import TraceView from "@/components/TraceView";
 import NodeDetailsDrawer from "@/components/NodeDetailsDrawer";
+import ModuleDetailsDrawer from "@/components/ModuleDetailsDrawer";
 import EdgeDetailsDrawer from "@/components/EdgeDetailsDrawer";
 import AuthModal from "@/components/AuthModal";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -90,7 +92,9 @@ function HomePage() {
               manages its own dismissal (close button + auto-hide). */}
           {ingestionJob && <IngestionStatus />}
 
-          {!isFullscreen && selectedNode && !selectedEdge && <NodeDetailsDrawer />}
+          {!isFullscreen && selectedNode && !selectedEdge && (
+            isModuleGroup(selectedNode) ? <ModuleDetailsDrawer /> : <NodeDetailsDrawer />
+          )}
           {!isFullscreen && selectedEdge && !selectedNode && <EdgeDetailsDrawer />}
         </div>
       </div>

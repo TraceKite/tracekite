@@ -21,6 +21,10 @@ export default function GraphReadingGuide({
         <p className="text-2xs leading-relaxed text-slate-600">
           {moduleOrder.length} groups in {viewMode}. Expand a bounded exact subset; search reaches any node.
         </p>
+        <p className="mt-1.5 text-2xs leading-relaxed text-slate-600">
+          Click anything to read it on the right; double-click to open it — a
+          module into its members, a node into its neighborhood.
+        </p>
       </div>
     </div>
   );

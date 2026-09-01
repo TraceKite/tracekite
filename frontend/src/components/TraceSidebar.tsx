@@ -3,6 +3,7 @@ import { GitMerge, Loader2, Play, Zap } from "lucide-react";
 import ServicePickerModal from "@/components/ServicePickerModal";
 import type { ServiceMapNode } from "@/lib/types";
 import { useGraphStore } from "@/store/graphStore";
+import SidebarPanel from "@/components/SidebarPanel";
 
 export default function TraceSidebar({
   onTrace, tracing, traceError
@@ -55,7 +56,7 @@ export default function TraceSidebar({
   };
 
   return (
-    <aside className="w-80 flex-shrink-0 border-r border-[#c9c3b7] bg-[#f4f1e9] flex flex-col overflow-hidden z-30 shadow-sm">
+    <SidebarPanel label="Trace" width="w-80" zIndex="z-30">
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         <div>
           <h3 className="text-lg font-bold text-[#1a1d23] flex items-center gap-2 mb-1">
@@ -241,6 +242,6 @@ export default function TraceSidebar({
           </div>
         )}
       </div>
-    </aside>
+    </SidebarPanel>
   );
 }

@@ -18,7 +18,7 @@ export function shouldExposeLabel(showLabels: boolean, isHighlight: boolean): bo
 export function createDomLabelPool(
   container: HTMLElement,
   poolSize: number = 24,
-  onSelectNode?: (nodeId: string, pathMode?: boolean) => void
+  onSelectNode?: (nodeId: string, pathMode?: boolean, open?: boolean) => void
 ): DomLabelPool {
   const labelLayer = document.createElement("div");
   labelLayer.style.position = "absolute";
@@ -55,7 +55,7 @@ export function createDomLabelPool(
     el.addEventListener("click", (e) => {
       e.stopPropagation();
       const nid = el.dataset.nodeId;
-      if (nid && onSelectNode) onSelectNode(nid, e.shiftKey);
+      if (nid && onSelectNode) onSelectNode(nid, e.shiftKey, e.detail >= 2);
     });
     el.addEventListener("keydown", (e) => {
       if (e.key !== "Enter" && e.key !== " ") return;

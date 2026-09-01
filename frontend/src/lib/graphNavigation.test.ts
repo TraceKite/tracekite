@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  activeExpandedGroup,
+  activeNavigation,
+  cameraSceneKey,
   effectiveRepoIds,
   graphContextKey,
   synchronizeGraphContext,
@@ -13,11 +14,20 @@ const repo = (id: string) => ({ id } as any);
 
 test("graph context survives a 2D/3D renderer switch but resets for a new view", () => {
   const key = graphContextKey(["b", "a"], "overview");
-  const context = { contextKey: key, expandedGroup: "a/root" };
-  assert.equal(activeExpandedGroup(context, graphContextKey(["a", "b"], "overview")), "a/root");
+  const context = { contextKey: key, expandedGroup: "a/root", expandedNodeId: "a:main.py" };
+  assert.deepEqual(activeNavigation(context, graphContextKey(["a", "b"], "overview")), {
+    expandedGroup: "a/root",
+    expandedNodeId: "a:main.py",
+  });
+  // A different view draws a different set, so neither level survives it.
+  assert.deepEqual(activeNavigation(context, graphContextKey(["a", "b"], "code")), {
+    expandedGroup: null,
+    expandedNodeId: null,
+  });
   assert.deepEqual(synchronizeGraphContext(context, graphContextKey(["a", "b"], "code")), {
     contextKey: "a,b|code",
     expandedGroup: null,
+    expandedNodeId: null,
   });
 });
 
@@ -32,4 +42,22 @@ test("repository selection is staged without an ambiguous empty custom scope", (
 test("empty repository scope consistently means every loaded repository", () => {
   assert.deepEqual(effectiveRepoIds([repo("a"), repo("b")], [], repo("a")), ["a", "b"]);
   assert.deepEqual(effectiveRepoIds([repo("a"), repo("b")], ["b"], repo("a")), ["b"]);
+});
+
+test("the camera frames a scene, and a selection is not one", () => {
+  const scene = {
+    repoIds: ["b", "a"],
+    viewMode: "overview" as const,
+    focusNodeId: null,
+    expandedGroup: null,
+  };
+  assert.equal(cameraSceneKey(scene), cameraSceneKey({ ...scene, repoIds: ["a", "b"] }));
+  for (const rebuilt of [
+    { ...scene, viewMode: "code" as const },
+    { ...scene, expandedGroup: "a/api" },
+    { ...scene, focusNodeId: "a:src/main.py" },
+    { ...scene, layout: "sphere" },
+  ]) {
+    assert.notEqual(cameraSceneKey(scene), cameraSceneKey(rebuilt));
+  }
 });
