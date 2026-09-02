@@ -29,6 +29,16 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, 'dist/public'),
     emptyOutDir: true,
+    // Three.js is isolated behind the 3D mode boundary; its 508 kB vendor
+    // chunk is 127 kB gzip and never blocks the default 2D workspace.
+    chunkSizeWarningLimit: 550,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ['three'],
+        },
+      },
+    },
   },
   server: {
     port,

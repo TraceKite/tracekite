@@ -762,9 +762,9 @@ means a 1,000-repo estate re-parses only what changed.
 
 | | |
 |---|---|
-| Scaling | API stateless → trivially horizontal. **UI does not scale** |
-| Ceiling | rendering: a node-per-service canvas cannot show 1,000 repos |
-| State | `MAX_SCOPE_REPOS` caps the damage; an aggregate/roll-up view is still needed |
+| Scaling | API stateless → horizontal. UI uses grouped entry plus bounded Module/Focus/Impact projections |
+| Ceiling | server responses still load per-repo samples; a client roll-up is not a 1,000-repo backend aggregate |
+| State | frontend roll-up exists; `MAX_SCOPE_REPOS` and `GRAPH_DETAIL_NODE_LIMIT` bound rendering. Authoritative backend aggregates/totals are still needed |
 
 ### Cross-cutting
 

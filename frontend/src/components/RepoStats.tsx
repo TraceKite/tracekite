@@ -1,106 +1,116 @@
 import { useGraphStore } from "@/store/graphStore";
 import { CircleDot, GitBranch, Layers, Globe, Package, Database, Boxes } from "lucide-react";
+import { summarizeCoverage } from "@/lib/coverageSummary";
+import { effectiveRepoIds } from "@/lib/graphNavigation";
 
 export default function RepoStats() {
-  const { stats, selectedRepo } = useGraphStore();
+  const { stats, repos, selectedRepo, scopeRepoIds } = useGraphStore();
   if (!stats || !selectedRepo) return null;
+  const multiRepo = effectiveRepoIds(repos, scopeRepoIds, selectedRepo).length > 1;
 
   const statCards = [
-    { label: "Nodes", value: stats.total_nodes, icon: <CircleDot className="w-3.5 h-3.5" />, color: "#60a5fa" },
-    { label: "Edges", value: stats.total_edges, icon: <GitBranch className="w-3.5 h-3.5" />, color: "#4ade80" },
-    { label: "Files", value: stats.files, icon: <Layers className="w-3.5 h-3.5" />, color: "#aab2bb" },
-    { label: "APIs", value: stats.apis, icon: <Globe className="w-3.5 h-3.5" />, color: "#f87171" },
-    { label: "Deps", value: stats.dependencies, icon: <Package className="w-3.5 h-3.5" />, color: "#facc15" },
-    { label: "Systems", value: stats.external_systems, icon: <Database className="w-3.5 h-3.5" />, color: "#f43f5e" },
+    { label: "Loaded nodes", value: stats.total_nodes, icon: <CircleDot className="w-3.5 h-3.5" />, color: "#315b47" },
+    { label: "Loaded edges", value: stats.total_edges, icon: <GitBranch className="w-3.5 h-3.5" />, color: "#a45138" },
+    ...(!multiRepo ? [
+      { label: "Sample files", value: stats.files, icon: <Layers className="w-3.5 h-3.5" />, color: "#6b6f65" },
+      { label: "Sample APIs", value: stats.apis, icon: <Globe className="w-3.5 h-3.5" />, color: "#a45138" },
+      { label: "Sample deps", value: stats.dependencies, icon: <Package className="w-3.5 h-3.5" />, color: "#9b7a31" },
+      { label: "Sample systems", value: stats.external_systems, icon: <Database className="w-3.5 h-3.5" />, color: "#3c4038" },
+    ] : []),
   ];
 
   const sortedNodeTypes = Object.entries(stats.node_types).sort((a, b) => b[1] - a[1]).slice(0, 6);
   const sortedEdgeTypes = Object.entries(stats.edge_types).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const coverage = selectedRepo.parse_coverage
+    ? summarizeCoverage(selectedRepo.parse_coverage)
+    : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       <div>
-        <h4 className="text-xs font-semibold text-[#8c949e] uppercase tracking-wider flex items-center gap-1.5 mb-3">
+        <h4 className="text-2xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-2.5">
           <Boxes className="w-3 h-3" /> Statistics
         </h4>
         <div className="grid grid-cols-2 gap-2">
           {statCards.map((card) => (
-            <div key={card.label} className="rounded-lg p-2 text-center bg-black/20 border border-white/5">
+            <div key={card.label} className="rounded-xl p-2.5 text-center bg-slate-50/80 border border-slate-200 shadow-xs">
               <div className="flex justify-center mb-1" style={{ color: card.color }}>{card.icon}</div>
-              <p className="text-lg font-bold text-[#e9ecef] leading-tight">{card.value.toLocaleString()}</p>
-              <p className="text-2xs text-[#8c949e]">{card.label}</p>
+              <p className="text-base font-bold text-slate-900 leading-tight">{card.value.toLocaleString()}</p>
+              <p className="text-2xs font-medium text-slate-400">{card.label}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {selectedRepo.claims_by_kind && (
+      {!multiRepo && selectedRepo.claims_by_kind && Object.keys(selectedRepo.claims_by_kind).length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-2xs font-semibold text-[#8c949e] uppercase tracking-wider">Claims</p>
-          <div className="bg-black/20 border border-white/5 rounded-lg p-2 space-y-1">
-            {Object.keys(selectedRepo.claims_by_kind).length === 0 ? (
-              <p className="text-xs text-[#8c949e] text-center">No claims</p>
-            ) : (
-              Object.entries(selectedRepo.claims_by_kind).map(([kind, count]) => (
-                <div key={kind} className="flex items-center justify-between text-xs">
-                  <span className="text-[#aab2bb]">{kind}</span>
-                  <span className="text-[#8c949e] bg-[#2b313a] px-1.5 py-0.5 rounded">{count}</span>
-                </div>
-              ))
-            )}
+          <p className="text-2xs font-semibold text-slate-400 uppercase tracking-wider">Claims</p>
+          <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-2.5 space-y-1 shadow-xs">
+            {Object.entries(selectedRepo.claims_by_kind).map(([kind, count]) => (
+              <div key={kind} className="flex items-center justify-between text-xs">
+                <span className="text-slate-600 font-mono text-2xs truncate max-w-[170px]">{kind}</span>
+                <span className="text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded font-mono text-2xs">{count}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {selectedRepo.parse_coverage && Object.keys(selectedRepo.parse_coverage).length > 0 && (
+      {!multiRepo && coverage && (
         <div className="space-y-1.5">
-          <p className="text-2xs font-semibold text-[#8c949e] uppercase tracking-wider">Parse Coverage</p>
-          <div className="bg-black/20 border border-white/5 rounded-lg p-2 space-y-2">
-            {Object.entries(selectedRepo.parse_coverage).map(([lang, cov]) => {
-              const pct = cov.files_seen > 0 ? ((cov.files_parsed / cov.files_seen) * 100).toFixed(0) : 0;
-              const isFull = cov.tier === "full";
-              return (
-                <div key={lang} className="text-xs space-y-1">
-                  <div className="flex justify-between items-center text-[#e9ecef]">
-                    <span className="flex items-center gap-1.5">
-                      {lang}
-                      <span className={`text-2xs px-1.5 py-0.5 rounded ${isFull ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                        {cov.tier}
-                      </span>
-                    </span>
-                    <span className="text-[#8c949e]">{pct}%</span>
-                  </div>
-                  <div className="w-full h-1 bg-[#2b313a] rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: isFull ? "#10b981" : "#f59e0b" }} />
-                  </div>
+          <p className="text-2xs font-semibold text-slate-400 uppercase tracking-wider">Extraction Coverage</p>
+          <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-2.5 space-y-2 shadow-xs">
+            {coverage.percentage == null ? (
+              <p className="text-2xs leading-relaxed text-slate-500">
+                File coverage totals were not recorded for this ingestion.
+              </p>
+            ) : (
+              <>
+                <div className="flex justify-between text-xs text-slate-700">
+                  <span>{coverage.filesParsed} of {coverage.filesSeen} files parsed</span>
+                  <span className="font-mono">{coverage.percentage}%</span>
                 </div>
-              );
-            })}
+                <div className="h-1 overflow-hidden rounded-full bg-slate-200">
+                  <div className="h-full rounded-full bg-[#315b47]"
+                       style={{ width: `${coverage.percentage}%` }} />
+                </div>
+              </>
+            )}
+            {coverage.counters.slice(0, 6).map((counter) => (
+              <div key={counter.label} className="flex justify-between text-2xs">
+                <span className="text-slate-600">{counter.label}</span>
+                <span className="font-mono text-slate-500">{counter.value}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
       {sortedNodeTypes.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-2xs font-semibold text-[#8c949e] uppercase tracking-wider">Node Types</p>
-          {sortedNodeTypes.map(([type, count]) => (
-            <div key={type} className="flex items-center justify-between text-xs">
-              <span className="text-[#e9ecef]">{type}</span>
-              <span className="text-[#8c949e]">{count}</span>
-            </div>
-          ))}
+          <p className="text-2xs font-semibold text-slate-400 uppercase tracking-wider">Node Types</p>
+          <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-2.5 space-y-1 shadow-xs">
+            {sortedNodeTypes.map(([type, count]) => (
+              <div key={type} className="flex items-center justify-between text-xs">
+                <span className="text-slate-700">{type}</span>
+                <span className="text-slate-400 font-mono text-2xs">{count}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {sortedEdgeTypes.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-2xs font-semibold text-[#8c949e] uppercase tracking-wider">Edge Types</p>
-          {sortedEdgeTypes.map(([type, count]) => (
-            <div key={type} className="flex items-center justify-between text-xs">
-              <span className="text-[#e9ecef]">{type}</span>
-              <span className="text-[#8c949e]">{count}</span>
-            </div>
-          ))}
+          <p className="text-2xs font-semibold text-slate-400 uppercase tracking-wider">Edge Types</p>
+          <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-2.5 space-y-1 shadow-xs">
+            {sortedEdgeTypes.map(([type, count]) => (
+              <div key={type} className="flex items-center justify-between text-xs">
+                <span className="text-slate-700">{type}</span>
+                <span className="text-slate-400 font-mono text-2xs">{count}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

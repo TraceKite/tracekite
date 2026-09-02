@@ -99,6 +99,43 @@ The honest summary: this is the tool for the window between writing code and
 running it in production, and for the question a catalog can only answer if
 somebody remembered to update it.
 
+## How it works
+
+The evidence for one edge is scattered across repositories, so the answer has
+to be *assembled* rather than read off. Three moving parts do that, and the
+whole design follows from them:
+
+| | |
+|---|---|
+| **Claim** | one artifact, read on its own, stating a fact with a key: *this Go file provides `GET /v1/callers`*; *this compose service binds `REGISTRY_URL` to host `capability-registry`*. A claim never names another repository — it cannot, because nothing in the file does. |
+| **Rendezvous key** | the value two claims would have to agree on for a connection to exist. Here, the host and path a caller would have to reach. |
+| **Resolver** | joins a `consumes` claim to a `provides` claim **only when their keys match**, and emits an edge carrying both sides' `file:line`. |
+
+Reading is per-repository and answers "what does this file say". Joining
+happens once, across everything, and answers "what talks to what". Keeping them
+apart is what lets an edge exist between two repositories that never mention
+each other — the Python and Go files above connect because a third artifact,
+the environment binding, supplies the key they share.
+
+Sixteen resolvers cover the ways real systems join: compose topology,
+Kubernetes, gateway routes, HTTP, gRPC, GraphQL, message topics, packages,
+datasets, environment indirection, agent manifests, ownership, webhooks,
+operator-declared aliases, and one operation exposed over several transports.
+`adduce resolvers` prints them in the order they run; `adduce explain` shows
+which one produced a given edge, and from what.
+
+Three rules keep it honest, and they are the whole design:
+
+- **Decline, don't guess.** When a name is ambiguous the resolver refuses to
+  link and increments a counter. Unlinked signals are stored and visible, so a
+  gap is a reviewable fact rather than a silent absence.
+- **Evidence or it didn't happen.** Every edge carries `file:line` provenance
+  and a confidence in 0.6–0.99. Nothing is asserted that you cannot click
+  through and read.
+- **Honest splits over false merges.** Two services genuinely named `api` stay
+  two scope-qualified nodes. Cross-scope unification needs two corroborating
+  signals; generic names never unify on name alone.
+
 ## Installation & Interfaces
 
 Adduce is available as a **standalone CLI tool** (`adduce`), an **embeddable Python library** (`adduce-core`), and a **full Web Application** (`docker compose up`).
@@ -107,7 +144,7 @@ Adduce is available as a **standalone CLI tool** (`adduce`), an **embeddable Pyt
 |---|---|---|
 | **Standalone CLI Tool** | `uv tool install .` $\rightarrow$ `adduce link ...` | Terminal graph queries, PR impact checks, and MCP stdio |
 | **Embeddable Library** | `pip install dist/adduce_core-*.whl` | Embed `scan()` and `link()` into Python CI scripts without a server |
-| **Full Web Application** | `docker compose up -d` | Visual 2D estate exploration, Service Map & Trace UI |
+| **Full Web Application** | `docker compose up -d` | Grouped 2D/3D code exploration, Service Map and Trace UI |
 
 ### 1. One-Line Setup
 
@@ -264,31 +301,6 @@ Public, related, and exercising different join mechanisms:
 **Next:** [Using the views](docs/using-the-views.md) — the three views, the
 repository picker, search, highlighting, and how module boundaries are drawn.
 
-## How it works
-
-The scattered evidence above is why this cannot be answered by analysing one
-repository, and why the answer must be assembled rather than read off.
-
-So the graph is not built by guessing. Ingestion emits **claims** — "this file
-provides `GET /api/vets`", "this compose service consumes host `vets-service`" —
-and a separate linker resolves claims into edges only when two independent
-claims rendezvous on the same key. Fifteen resolvers cover different join
-mechanisms: compose topology, Kubernetes, gateway routes, HTTP, gRPC, GraphQL,
-message topics, packages, datasets, environment indirection, ownership,
-webhooks, and one operation exposed over several transports.
-
-Three rules keep it honest, and they are the whole design:
-
-- **Decline, don't guess.** When a name is ambiguous the resolver refuses to
-  link and increments a counter. Unlinked signals are stored and visible, so a
-  gap is a reviewable fact rather than a silent absence.
-- **Evidence or it didn't happen.** Every edge carries `file:line` provenance
-  and a confidence in 0.6–0.99. Nothing is asserted that you cannot click
-  through and read.
-- **Honest splits over false merges.** Two services genuinely named `api` stay
-  two scope-qualified nodes. Cross-scope unification needs two corroborating
-  signals; generic names never unify on name alone.
-
 ## The CLI
 
 Every command works on the library alone — no server, no database — and prints
@@ -436,8 +448,9 @@ GitHub repo ──▶ parsers ──▶ claims ──▶ linker (R0–R14) ─�
   C#, Ruby, PHP, Scala, R, SQL, JSON, YAML, HTML, CSS), plus purpose-built
   parsers for compose, Kubernetes, Helm, Kustomize, Terraform, protobuf,
   GraphQL SDL, OpenAPI, AsyncAPI, C# ASP.NET Core Minimal APIs, and MCP
-  capability manifests. Several languages carry extra extraction queries on
-  top of the AST layer.
+  capability manifests. Parsing and extraction are different reaches: 19
+  languages parse, 13 currently have claim extractors on top, and
+  `adduce coverage` prints which — per language, with what it misses.
 - **Frontend** — React 19 + Vite + Tailwind + zustand, canvas graph rendering.
 - **Linking** — ingestion and linking are separate phases. Ingesting a repo
   never rewrites another repo's nodes; `POST /api/v2/links/rebuild` reconciles.
@@ -449,7 +462,7 @@ GitHub repo ──▶ parsers ──▶ claims ──▶ linker (R0–R14) ─�
 | `backend/adduce/services/linker/` | resolvers R0–R14, fusion, rollups |
 | `config/confidence.yml` | versioned confidence table |
 | `scripts/accuracy/` | the precision and recall harness |
-| `backend/tools/check_*.py` | the four static gates a change must pass |
+| `backend/tools/` | the four static gates — three `check_*.py` plus `export_openapi.py --check` |
 | `packaging/adduce-core/` | the library distribution |
 | `docs/` | usage and design documents |
 
@@ -463,6 +476,7 @@ worth knowing:
 | `BIND_ADDR` | `127.0.0.1` | interface the ports bind to |
 | `AUTH_ENABLED` | `false` | token required on every route when true |
 | `MAX_SCOPE_REPOS` | `10` | repositories selectable at once in the UI |
+| `GRAPH_DETAIL_NODE_LIMIT` | `80` | exact nodes shown in bounded Module, Focus and Impact canvases |
 | `GITHUB_TOKEN` | *(empty)* | needed only for private repositories |
 
 **Security posture.** Ports bind to `127.0.0.1` and authentication is off,
@@ -479,6 +493,7 @@ never reach nodes, claims, or evidence.
 | [Developer use cases](docs/use-cases.md) | valid CLI, artifact, CI, MCP, and embedding examples |
 | [Agent and MCP integration](docs/plugins-and-mcp-guide.md) | client registration, skill installation, and MCP input semantics |
 | [Using the views](docs/using-the-views.md) | the three views and their shared controls |
+| [Frontend UX QA record](docs/future/navigation-and-feature-qa-2026-08-30.md) | the browser acceptance pass of 2026-08-30 — a dated record, not the live contract; *Using the views* is current |
 | [Agent plugin](plugins/adduce/) | one validated plugin source for Claude Code, Codex, and Kimi Code |
 | [Coverage gaps](docs/design/coverage-gaps.md) | what the graph still misses, ranked, with reproducible measurements |
 | [Comparison](docs/comparison.md) | against code-graph tools, catalogs and runtime maps, with measured numbers |

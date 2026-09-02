@@ -12,22 +12,6 @@ export default function GraphControls() {
     graphControlCallbacks,
   } = useGraphStore();
 
-  // Native fullscreen can legitimately be refused — an iframe without
-  // allow="fullscreen", a lost user gesture, browser policy. The old version
-  // swallowed that rejection and flipped the flag anyway, so the app entered
-  // fullscreen LAYOUT while the browser did not: header hidden, sidebar
-  // hidden (taking this very button with it), and no fullscreenchange event
-  // for Escape to trigger. The only way out was a reload. Entering in-app
-  // maximize on failure is fine now that App owns Escape and a floating exit.
-  // Fire-and-forget, deliberately. requestFullscreen() returns a promise that
-  // some embedders never settle at all — measured here: the handler ran, the
-  // request was issued, and neither resolve nor reject ever arrived. Awaiting
-  // it therefore hung forever and the button did nothing at all.
-  //
-  // Updating app state optimistically is safe now for a reason it was not
-  // before: App owns the fullscreenchange sync, an Escape handler, and a
-  // floating exit control, so entering this state can always be undone even
-  // when the native request is refused or never answers.
   const toggleFullscreen = () => {
     if (!isFullscreen) {
       document.documentElement.requestFullscreen?.().catch(() => {});
@@ -42,53 +26,61 @@ export default function GraphControls() {
 
   return (
     <div className="space-y-2">
-      <h4 className="text-xs font-semibold text-[#8c949e] uppercase tracking-wider mb-2">
+      <h4 className="text-2xs font-semibold text-slate-400 uppercase tracking-wider">
         Controls
       </h4>
 
       <div className="grid grid-cols-2 gap-1.5">
         <button
           onClick={graphControlCallbacks?.resetCamera}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-[#8c949e] hover:text-[#e9ecef] hover:bg-white/5 transition-colors"
+          disabled={!graphControlCallbacks?.resetCamera}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors disabled:cursor-wait disabled:opacity-40"
           title="Reset camera"
         >
-          <RotateCcw className="w-3 h-3" />
+          <RotateCcw className="w-3 h-3 text-slate-400" />
           <span>Reset</span>
         </button>
 
         <button
           onClick={graphControlCallbacks?.fitGraph}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-[#8c949e] hover:text-[#e9ecef] hover:bg-white/5 transition-colors"
+          disabled={!graphControlCallbacks?.fitGraph}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors disabled:cursor-wait disabled:opacity-40"
           title="Fit graph to view"
         >
-          <Maximize className="w-3 h-3" />
+          <Maximize className="w-3 h-3 text-slate-400" />
           <span>Fit</span>
         </button>
 
         <button
           onClick={graphControlCallbacks?.rotateGraph}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-[#8c949e] hover:text-[#e9ecef] hover:bg-white/5 transition-colors"
+          disabled={!graphControlCallbacks?.rotateGraph}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors disabled:cursor-wait disabled:opacity-40"
           title="Rotate layout 90 degrees"
         >
-          <RotateCw className="w-3 h-3" />
+          <RotateCw className="w-3 h-3 text-slate-400" />
           <span>Rotate</span>
         </button>
 
         <button
           onClick={graphControlCallbacks?.togglePhysics}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-[#8c949e] hover:text-[#e9ecef] hover:bg-white/5 transition-colors"
-          title={physicsOn ? "Pause physics" : "Resume physics"}
+          disabled={!graphControlCallbacks?.togglePhysics}
+          aria-pressed={!physicsOn}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            !physicsOn ? "bg-slate-900 text-white shadow-xs font-semibold" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          }`}
+          title={physicsOn ? "Settle layout forces; navigation remains active" : "Re-run layout forces"}
         >
-          {physicsOn ? <><Pause className="w-3 h-3" /><span>Pause</span></>
-            : <><Play className="w-3 h-3" /><span>Resume</span></>}
+          {physicsOn ? <><Pause className="w-3 h-3" /><span>Settle</span></>
+            : <><Play className="w-3 h-3" /><span>Re-layout</span></>}
         </button>
 
         <button
           onClick={() => setShowLabels(!showLabels)}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
-            showLabels ? "text-blue-400 bg-blue-500/10" : "text-[#8c949e] hover:text-[#e9ecef] hover:bg-white/5"
+          aria-pressed={showLabels}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            showLabels ? "bg-slate-900 text-white shadow-xs font-semibold" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
           }`}
-          title="Toggle labels"
+          title="Toggle billboard labels"
         >
           <Type className="w-3 h-3" />
           <span>Labels</span>
@@ -96,24 +88,26 @@ export default function GraphControls() {
 
         <button
           onClick={() => setShowParticles(!showParticles)}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
-            showParticles ? "text-blue-400 bg-blue-500/10" : "text-[#8c949e] hover:text-[#e9ecef] hover:bg-white/5"
+          aria-pressed={showParticles}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            showParticles ? "bg-slate-900 text-white shadow-xs font-semibold" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
           }`}
-          title="Toggle particles"
+          title="Toggle directional flow particles"
         >
           <Sparkles className="w-3 h-3" />
           <span>Particles</span>
         </button>
-
-        <button
-          onClick={toggleFullscreen}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-[#8c949e] hover:text-[#e9ecef] hover:bg-white/5 transition-colors"
-          title="Toggle fullscreen"
-        >
-          {isFullscreen ? <Minimize className="w-3 h-3" /> : <Maximize className="w-3 h-3" />}
-          <span>{isFullscreen ? "Exit" : "Full"}</span>
-        </button>
       </div>
+
+      <button
+        onClick={toggleFullscreen}
+        aria-pressed={isFullscreen}
+        title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+        className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-colors"
+      >
+        {isFullscreen ? <Minimize className="w-3 h-3" /> : <Maximize className="w-3 h-3" />}
+        <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+      </button>
     </div>
   );
 }

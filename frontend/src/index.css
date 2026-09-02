@@ -23,73 +23,64 @@
  * runtime. Verified: with a bare @theme only 8 of 30 --color-* survived the
  * build. */
 @theme static {
-  /* Surfaces — a 5-rung ladder. Adjacent steps are 1.046-1.104, perceptible
-   * but calm. Not #000: pure black kills shadow visibility and drives
-   * halation on OLED (Material's stated reason for #121212). */
-  --color-surface-canvas: #08090a;   /* graph canvas, deepest */
-  --color-surface-base: #0e1013;     /* app shell */
-  --color-surface-raised: #15181c;   /* sidebars, drawers, cards */
-  --color-surface-overlay: #1c2026;  /* popovers, menus, tooltips, modals */
-  --color-surface-hover: #232830;    /* row hover, active nav */
+  /* Surfaces — a 5-rung ladder, light mode.
+   * Warm whites with enough step to separate panels without heavy borders. */
+  --color-surface-canvas: #f5f6f8;   /* graph canvas */
+  --color-surface-base: #f8f9fb;     /* app shell */
+  --color-surface-raised: #ffffff;   /* sidebars, drawers, cards */
+  --color-surface-overlay: #ffffff;  /* popovers, menus, tooltips, modals */
+  --color-surface-hover: #f0f2f5;   /* row hover, active nav */
 
-  /* Text — every ratio below is against surface-hover, the LIGHTEST surface,
-   * so these hold everywhere. */
-  --color-text-primary: #e9ecef;     /* 12.49:1 on hover, 16.81 on canvas */
-  --color-text-secondary: #aab2bb;   /*  6.91:1 on hover */
-  --color-text-tertiary: #8c949e;    /*  4.83:1 on hover — clears AA on ALL
-                                      * five surfaces. Replaces #64748b. */
-  --color-text-disabled: #616973;    /*  2.66:1 — deliberately sub-AA;
-                                      * WCAG 1.4.3 exempts disabled controls. */
+  /* Text — ratios are against surface-raised (white), the lightest. */
+  --color-text-primary: #1a1d23;     /* 17.4:1 on white */
+  --color-text-secondary: #5c6370;   /*  6.1:1 on white */
+  --color-text-tertiary: #8b929e;    /*  3.8:1 — clears AA-large everywhere */
+  --color-text-disabled: #b0b7c3;    /*  2.1:1 — sub-AA; disabled only */
 
-  /* Borders — the shipping band is 1.3-2.0:1 against their surface. */
-  --color-border-subtle: #1f242a;
-  --color-border-default: #2b313a;
-  --color-border-strong: #3b424c;
-  --color-border-interactive: #4c5561;
+  /* Borders — gentle grays, visible without heavy contrast. */
+  --color-border-subtle: #eef0f3;
+  --color-border-default: #dfe2e8;
+  --color-border-strong: #c9cdd5;
+  --color-border-interactive: #a3aab6;
 
-  /* Accent — exactly one hue. Hover DARKENS; the old CTAs lightened on hover
-   * and dropped below AA under their white labels. */
-  --color-accent-text: #7aaeff;      /* 7.91:1 on raised */
-  --color-accent-solid: #2563eb;     /* white label 5.17:1 */
-  --color-accent-hover: #1d4ed8;     /* white label 6.70:1 */
-  --color-accent-bg: #0f1b2e;
-  --color-accent-border: #1e3a6b;
+  /* Accent — restrained forest, shared by focus and primary actions. */
+  --color-accent-text: #274a3a;
+  --color-accent-solid: #315b47;
+  --color-accent-hover: #274a3a;
+  --color-accent-bg: #edf3ef;
+  --color-accent-border: #b9cbbf;
 
-  /* Semantic — fill and text are separate tokens and never interchangeable.
-   * A *-solid is for fills under white labels; a *-text is for text on dark. */
-  --color-success-text: #4ade80;
-  --color-success-solid: #15803d;
-  --color-success-bg: #0b1f14;
-  --color-success-border: #14532d;
+  /* Semantic — adjusted for light surfaces. */
+  --color-success-text: #315b47;
+  --color-success-solid: #315b47;
+  --color-success-bg: #edf3ef;
+  --color-success-border: #b9cbbf;
 
-  --color-warning-text: #f5b33c;
-  --color-warning-solid: #b45309;
-  --color-warning-bg: #211705;
-  --color-warning-border: #5c3708;
+  --color-warning-text: #d97706;
+  --color-warning-solid: #d97706;
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
 
-  --color-danger-text: #ff8a8a;
-  --color-danger-solid: #b91c1c;
-  --color-danger-bg: #25100f;
-  --color-danger-border: #5e1a1a;
+  --color-danger-text: #dc2626;
+  --color-danger-solid: #dc2626;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
 
-  --color-neutral-text: #9ba3ad;     /* the "unknown" state — gray, not a hue */
+  --color-neutral-text: #6b7280;
 
-  /* Graph categorical ramp — 10 hues, every one >=9:1 on surface-canvas.
-   * Anything past 10 categories collapses to text-tertiary rather than
-   * inventing an 11th colour nobody can name. */
-  --color-graph-repo: #fbbf24;
-  --color-graph-folder: #7dd3fc;
-  --color-graph-file: #a8b3c0;
-  --color-graph-class: #c4b5fd;
-  --color-graph-fn: #86efac;
-  --color-graph-api: #fda4af;
-  --color-graph-dep: #fde047;
-  --color-graph-config: #5eead4;
-  --color-graph-ext: #fdba74;
-  --color-graph-infra: #a5b4fc;
+  /* Graph categorical ramp — darkened for white canvas legibility. */
+  --color-graph-repo: #a45138;
+  --color-graph-folder: #315b47;
+  --color-graph-file: #6b6f65;
+  --color-graph-class: #4b5148;
+  --color-graph-fn: #49705d;
+  --color-graph-api: #a45138;
+  --color-graph-dep: #9b7a31;
+  --color-graph-config: #756342;
+  --color-graph-ext: #8b4d39;
+  --color-graph-infra: #3c4038;
 
-  /* Type — 14px body. 11px is the floor; the old UI shipped 9px and 10px.
-   * Tracking is zero at <=15px and tiers negative only from 17px up. */
+  /* Type */
   --font-sans: "Inter var", Inter, system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono",
                Menlo, Consolas, monospace;
@@ -127,17 +118,16 @@
 }
 
 :root {
-  /* Elevation is a surface step plus a 1px ring; the ring does the work,
-   * because a black drop-shadow is invisible on a near-black surface. */
+  /* Elevation: subtle gray shadows for light backgrounds. */
   --elev-1: 0 0 0 1px var(--color-border-default),
-            0 1px 2px rgba(0, 0, 0, 0.4);
+            0 1px 3px rgba(0, 0, 0, 0.08);
   --elev-2: 0 0 0 1px var(--color-border-default),
-            0 4px 8px -2px rgba(0, 0, 0, 0.5),
-            0 2px 4px -2px rgba(0, 0, 0, 0.4);
+            0 4px 12px -2px rgba(0, 0, 0, 0.1),
+            0 2px 4px -2px rgba(0, 0, 0, 0.06);
   --elev-3: 0 0 0 1px var(--color-border-strong),
-            0 12px 24px -6px rgba(0, 0, 0, 0.6),
-            0 4px 8px -4px rgba(0, 0, 0, 0.5);
-  --scrim: rgba(0, 0, 0, 0.72);
+            0 12px 28px -6px rgba(0, 0, 0, 0.12),
+            0 4px 10px -4px rgba(0, 0, 0, 0.08);
+  --scrim: rgba(0, 0, 0, 0.3);
 
   --dur-instant: 80ms;
   --dur-fast: 120ms;
@@ -208,7 +198,7 @@ input[type="checkbox"] {
   height: 14px;
   border: 1px solid var(--color-border-interactive);
   border-radius: var(--radius-xs);
-  background: var(--color-surface-overlay);
+  background: #ffffff;
   cursor: pointer;
   transition: background var(--dur-fast), border-color var(--dur-fast);
   flex-shrink: 0;

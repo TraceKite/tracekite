@@ -23,8 +23,8 @@ VIEW_MODES = {
         "node_types": ["Repo", "Folder", "File", "Class", "Dependency", "ApiEndpoint"],
         "edge_types": ["CONTAINS", "DECLARES", "DEPENDS_ON", "EXPOSES_API"],
         "limit": 300,
-        "priority": {"Repo": 1, "Dependency": 2, "ApiEndpoint": 2,
-                     "Class": 3, "File": 4, "Folder": 5},
+        "priority": {"Repo": 1, "Folder": 2, "ApiEndpoint": 2,
+                     "Class": 3, "File": 4, "Dependency": 6},
     },
     "architecture": {
         "node_types": ["Repo", "Folder", "File", "Class", "Interface", "ApiEndpoint",

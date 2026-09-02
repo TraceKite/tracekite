@@ -58,47 +58,47 @@ export default function ServicePickerModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+      <div className="fixed inset-0 z-50 bg-black/30"
            onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
         className="fixed left-1/2 top-20 z-50 w-[min(92vw,34rem)] -translate-x-1/2
-                   rounded-xl bg-[#15181c] border border-[#2b313a] shadow-2xl
+                   rounded-xl bg-white border border-[#dfe2e8] shadow-sm
                    overflow-hidden"
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#2b313a]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#dfe2e8]">
           <div>
-            <h2 className="text-sm font-bold text-[#e9ecef]">{title}</h2>
-            <p className="text-2xs text-[#8c949e] mt-0.5">
+            <h2 className="text-sm font-bold text-[#1a1d23]">{title}</h2>
+            <p className="text-2xs text-[#8b929e] mt-0.5">
               Select a repository-backed service.
             </p>
           </div>
           <button onClick={onClose} aria-label="Close"
-                  className="text-[#8c949e] hover:text-white p-1">
+                  className="text-[#8b929e] hover:text-[#1a1d23] p-1">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="px-4 py-2 border-b border-[#2b313a]">
-          <div className="flex items-center gap-2 bg-black/30 rounded-lg px-2.5
-                          py-1.5 border border-white/5 focus-within:border-violet-500/50">
-            <Search className="w-3.5 h-3.5 text-[#8c949e] shrink-0" />
+        <div className="px-4 py-2 border-b border-[#dfe2e8]">
+          <div className="flex items-center gap-2 bg-slate-50 rounded-lg px-2.5
+                          py-1.5 border border-slate-200 focus-within:border-[#315b47]">
+            <Search className="w-3.5 h-3.5 text-[#8b929e] shrink-0" />
             <input
               ref={searchRef}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Filter by service, node ID, or repository…"
-              className="flex-1 bg-transparent text-sm text-[#e9ecef] outline-none
-                         placeholder:text-[#5c636d]"
+              className="flex-1 bg-transparent text-sm text-[#1a1d23] outline-none
+                         placeholder:text-[#9ca3af]"
             />
           </div>
         </div>
 
         <div className="max-h-[50vh] overflow-y-auto py-1">
           {filtered.length === 0 && (
-            <p className="px-4 py-6 text-center text-xs text-[#8c949e]">
+            <p className="px-4 py-6 text-center text-xs text-[#8b929e]">
               No service matches “{query}”.
             </p>
           )}
@@ -110,33 +110,33 @@ export default function ServicePickerModal({
                 onClose();
               }}
               className={`w-full flex items-center gap-3 px-4 py-2.5 text-left
-                          transition-colors hover:bg-white/5 ${
+                          transition-colors hover:bg-slate-50 ${
                             selectedService === service.id
-                              ? "bg-violet-500/10 border-l-2 border-violet-400"
+                              ? "bg-[#315b47]/10 border-l-2 border-[#315b47]"
                               : ""
                           }`}
             >
-              <Server className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+              <Server className="w-3.5 h-3.5 text-[#315b47] shrink-0" />
               <span className="min-w-0 flex-1">
-                <span className="block text-xs font-medium text-[#e9ecef] truncate">
+                <span className="block text-xs font-medium text-[#1a1d23] truncate">
                   {service.name}
                 </span>
-                <span className="block text-2xs text-[#8c949e] truncate">
+                <span className="block text-2xs text-[#8b929e] truncate">
                   {service.repoNames.join(", ") || service.id}
                 </span>
               </span>
               <span className="text-3xs uppercase font-semibold px-2 py-0.5
-                               rounded bg-white/5 text-[#8c949e]">
+                               rounded bg-slate-100 text-[#8b929e]">
                 service
               </span>
             </button>
           ))}
         </div>
 
-        <div className="px-4 py-2.5 border-t border-[#2b313a] flex items-center
-                        justify-between text-2xs text-[#8c949e]">
+        <div className="px-4 py-2.5 border-t border-[#dfe2e8] flex items-center
+                        justify-between text-2xs text-[#8b929e]">
           <span>{filtered.length} services available</span>
-          <button onClick={onClose} className="hover:text-white">Cancel</button>
+          <button onClick={onClose} className="hover:text-[#1a1d23]">Cancel</button>
         </div>
       </div>
     </>

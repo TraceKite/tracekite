@@ -1,0 +1,31 @@
+:root {
+  --adduce-graphite: #20241f;
+  --adduce-graphite-raised: #3c4038;
+  --adduce-mineral: #f4f1e9;
+  --adduce-bone: #efebe1;
+  --adduce-paper: #fbf9f3;
+  --adduce-border: #c9c3b7;
+  --adduce-border-soft: #d6d0c3;
+  --adduce-smoke: #6b6f65;
+  --adduce-smoke-muted: #8a8e84;
+  --adduce-forest: #315b47;
+  --adduce-rust: #a45138;
+  --adduce-ochre: #9b7a31;
+
+  --adduce-font-sans: "IBM Plex Sans", "Helvetica Neue", Helvetica, sans-serif;
+  --adduce-font-mono: "IBM Plex Mono", monospace;
+
+  --adduce-space-1: 4px;
+  --adduce-space-2: 8px;
+  --adduce-space-3: 12px;
+  --adduce-space-4: 16px;
+  --adduce-space-5: 24px;
+  --adduce-space-6: 32px;
+
+  --adduce-radius-control: 4px;
+  --adduce-radius-panel: 6px;
+  --adduce-border-width: 1px;
+  --adduce-header-height: 52px;
+  --adduce-sidebar-width: 248px;
+  --adduce-inspector-width: 320px;
+}

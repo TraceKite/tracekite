@@ -115,10 +115,11 @@ So if you are building a view that should show two repositories relating to
 each other, joining their per-repo graphs will silently give you two islands
 and no error. Query the rendezvous instead.
 
-`/api/config` serves operator limits — `MAX_SCOPE_REPOS` and the service map's
-edge ceiling — so the UI enforces the same numbers the deployment sets, without
-a rebuild. If you add a limit the frontend must respect, add it there rather
-than hardcoding it in a component.
+`/api/config` serves operator limits — `MAX_SCOPE_REPOS`,
+`GRAPH_DETAIL_NODE_LIMIT`, and the service map's edge ceiling — so the UI
+enforces the same numbers the deployment sets, without a rebuild. If you add a
+limit the frontend must respect, add it there rather than hardcoding it in a
+component.
 
 ## Traps in the multi-repo code
 
@@ -167,9 +168,10 @@ Note that the harness reads the **stored** graph. Re-ingest after changing an
 extractor, or you will be measuring the old code's output and chasing a bug
 that no longer exists.
 
-## Local and container dependencies currently differ
+## One environment, local and container
 
-One environment, so a green test run means something:
+They match, so a green test run means something. This is worth stating because
+it used not to be true:
 
 | | Python | fastapi | pydantic | neo4j driver |
 |---|---|---|---|---|

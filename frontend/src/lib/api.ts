@@ -1,6 +1,7 @@
 import {
   GraphResponse, RepoSummary, JobStatus, SearchResult,
-  NodeDetail, IngestRepoRequest, ServiceMapResponse, TraceResponse, LinkerStatus
+  NodeDetail, IngestRepoRequest, ServiceMapResponse, TraceResponse, LinkerStatus,
+  ClientConfig,
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
@@ -158,7 +159,7 @@ export const api = {
       `${API_BASE}/api/v2/code-bridges?repos=${encodeURIComponent(repoIds.join(","))}`),
 
   getClientConfig: () =>
-    fetchJson<{ max_scope_repos: number; service_map_edge_limit: number }>(
+    fetchJson<ClientConfig>(
       `${API_BASE}/api/config`),
   
   getServiceMap: (minConfidence: number = 0.6, limit: number = 500) => 

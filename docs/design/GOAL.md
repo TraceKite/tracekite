@@ -13,7 +13,7 @@ inference, with a file and line cited on *both* sides of every edge.
 
 ## Where it stands
 
-Working today on six real repositories: 13 resolvers, 21 claim kinds, 19
+Working today on six real repositories: 16 resolvers, 19 claim kinds, 19
 tree-sitter languages, 21 config/IaC parsers. 38,696 nodes, 62,854 edges, 141
 service connections, **189 true positives and 0 false positives** across seven
 strata. A full link takes ~10 seconds.
