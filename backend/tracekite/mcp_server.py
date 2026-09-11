@@ -14,14 +14,16 @@ first bad message punishes the wrong party.
 
 import json
 import logging
-import os
 import sys
 
-from tracekite.answer import SnapshotIdentity
+from tracekite.answer import CONFIG_VERSION, ENGINE_VERSION, SnapshotIdentity
 from tracekite.facade import collect_claims as _collect_claims
 from tracekite.mcp_envelope import wrap_answer
-from tracekite.scan_meta import ScanMeta, repo_scan_meta_from_sink
-from tracekite.source_meta import collect_artifact_meta, collect_dir_meta
+from tracekite.scan_meta import (
+    ScanMeta,
+    repo_scan_meta_from_sink,
+)
+from tracekite.source_meta import collect_input_meta
 from tracekite.utils import rendezvous_ids as rid
 from tracekite.utils.evidence import as_spans
 
@@ -149,7 +151,8 @@ class GraphTools:
         if not 1 <= hops <= 8:
             raise ValueError("max_hops must be between 1 and 8")
         paths = find_paths(self._result.edges, src, dst, max_hops=hops)
-        return {"from": from_id, "to": to_id, "paths": paths,
+        return {"from": from_id, "to": to_id,
+                "resolved_from": src, "resolved_to": dst, "paths": paths,
                 "found": bool(paths)}
 
     def deprecations(self) -> dict:
@@ -218,34 +221,27 @@ def handle(message: object, tools: GraphTools | None) -> dict | None:
 def _load_tools(paths: list[str]) -> GraphTools:
     """Scan or load each input once, when the first graph query arrives."""
     from tracekite import engine_config
-    from tracekite.answer import RepoRevision
     from tracekite.scan_meta import config_digest
     from tracekite.services.linker.engine import link
 
     claims: list = []
     commits: dict = {}
-    revisions: list[RepoRevision] = []
+    revisions, scan_meta = collect_input_meta(paths)
     sinks: dict = {}
+    cfg = engine_config.get_config()
     for path in paths:
-        if os.path.isfile(path) and path.endswith(".tracekite"):
-            from tracekite.db.artifact import read_meta
-            meta = read_meta(path)
-            repo_ids = ([meta["repo_id"]] if meta.get("repo_id") else
-                        list(meta.get("repos") or []))
-            for rid_ in repo_ids:
-                revisions.append(collect_artifact_meta(meta, rid_))
-        elif os.path.isdir(path):
-            repo_id = os.path.basename(os.path.abspath(path))
-            revisions.append(collect_dir_meta(path, repo_id))
         _collect_claims(path, claims, commits, sinks=sinks)
-    scan_meta = ScanMeta()
     for repo_id, sink in sinks.items():
-        scan_meta.add(repo_scan_meta_from_sink(sink, repo_id))
+        scan_meta.add(repo_scan_meta_from_sink(
+            sink, repo_id, budgets={
+                "files": cfg.max_files_per_repo,
+                "claims": cfg.max_claims_per_repo,
+            }))
     result = link(claims, run_id="linkrun_mcp",
                   now="2026-01-01T00:00:00+00:00")
-    cfg = engine_config.get_config()
     snapshot = SnapshotIdentity(
-        repos=revisions, engine_version="2.0.0", config_version="1.0",
+        repos=revisions, engine_version=ENGINE_VERSION,
+        config_version=CONFIG_VERSION,
         config_digest=config_digest(cfg))
     return GraphTools(result, commits=commits, snapshot=snapshot,
                       scan_meta=scan_meta)

@@ -27,6 +27,8 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
 ANSWER_VERSION = "1.0.0"
+ENGINE_VERSION = "2.0.0"
+CONFIG_VERSION = "1.0"
 
 
 class AnswerStatus(str, Enum):
@@ -61,8 +63,9 @@ class RepoRevision(BaseModel):
 
     ``head_sha`` and ``content_digest`` are independently optional because a
     directory scan may have no Git history (``unversioned``) or a dirty tree
-    whose working-copy digest does not match any commit.  An empty string is
-    not a valid revision; ``None`` means "unknown", and unknown stays
+    whose working-copy digest does not match any commit.  Artifact inputs
+    also carry their content digest and producer metadata.  An empty string
+    is not a valid revision; ``None`` means "unknown", and unknown stays
     unknown — it is never filled with a placeholder.
     """
 
@@ -71,6 +74,7 @@ class RepoRevision(BaseModel):
     content_digest: str | None = None
     dirty: bool = False
     unversioned: bool = False
+    producer: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("head_sha", "content_digest")
     @classmethod

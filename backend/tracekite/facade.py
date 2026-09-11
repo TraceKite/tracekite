@@ -31,10 +31,11 @@ from typing import Any
 from tracekite.answer import (
     AnswerEnvelope,
     AnswerStatus,
+    CONFIG_VERSION,
     CompletenessAssessment,
+    ENGINE_VERSION,
     FreshnessState,
     QueryScope,
-    RepoRevision,
     SnapshotIdentity,
     TruncationInfo,
 )
@@ -44,11 +45,8 @@ from tracekite.scan_meta import (
     config_digest,
     repo_scan_meta_from_sink,
 )
-from tracekite.source_meta import collect_artifact_meta, collect_dir_meta
+from tracekite.source_meta import collect_input_meta
 from tracekite.status_classify import classify_consumers, classify_trace
-
-_ENGINE_VERSION = "2.0.0"
-
 
 def collect_claims(path: str, claims: list, commits: dict,
                    sinks: dict | None = None) -> None:
@@ -110,28 +108,20 @@ def load_graph(paths: list[str], *,
         engine_config.configure(graph_hmac_key=graph_hmac_key)
 
     claims: list = []
-    revisions: list[RepoRevision] = []
-    scan_meta = ScanMeta()
+    revisions, scan_meta = collect_input_meta(paths)
     commits: dict = {}
     sinks: dict[str, Any] = {}
-
-    for path in paths:
-        if os.path.isfile(path) and path.endswith(".tracekite"):
-            from tracekite.db.artifact import read_meta
-            meta = read_meta(path)
-            repo_ids = ([meta["repo_id"]] if meta.get("repo_id") else
-                        list(meta.get("repos") or []))
-            for rid in repo_ids:
-                revisions.append(collect_artifact_meta(meta, rid))
-        elif os.path.isdir(path):
-            repo_id = os.path.basename(os.path.abspath(path))
-            revisions.append(collect_dir_meta(path, repo_id))
 
     for path in paths:
         collect_claims(path, claims, commits, sinks=sinks)
 
     for repo_id, sink in sinks.items():
-        scan_meta.add(repo_scan_meta_from_sink(sink, repo_id))
+        cfg = engine_config.get_config()
+        scan_meta.add(repo_scan_meta_from_sink(
+            sink, repo_id, budgets={
+                "files": cfg.max_files_per_repo,
+                "claims": cfg.max_claims_per_repo,
+            }))
 
     result = link(claims, run_id="linkrun_facade",
                   now="2026-01-01T00:00:00+00:00")
@@ -140,8 +130,8 @@ def load_graph(paths: list[str], *,
     cfg = engine_config.get_config()
     snapshot = SnapshotIdentity(
         repos=revisions,
-        engine_version=_ENGINE_VERSION,
-        config_version="1.0",
+        engine_version=ENGINE_VERSION,
+        config_version=CONFIG_VERSION,
         config_digest=config_digest(cfg),
     )
     return tools, snapshot, scan_meta
@@ -283,14 +273,7 @@ class TraceKite:
     def _truncation(self) -> TruncationInfo:
         scan_meta = getattr(self, "_scan_meta", None)
         if scan_meta is not None:
-            from tracekite import engine_config
-
-            budget = None
-            if scan_meta.cap_types == {"files"}:
-                budget = engine_config.get_config().max_files_per_repo
-            elif scan_meta.cap_types == {"claims"}:
-                budget = engine_config.get_config().max_claims_per_repo
-            return scan_meta.truncation_info(budget=budget)
+            return scan_meta.truncation_info()
         return TruncationInfo()
 
     def _repo_ids(self) -> list[str]:

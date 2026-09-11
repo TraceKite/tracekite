@@ -27,11 +27,13 @@ class RepoScanMeta:
     absence_complete: bool = True
     absence_reasons: list[str] = field(default_factory=list)
     parse_failures: int = 0
+    budgets: dict[str, int] = field(default_factory=dict)
+    metadata_complete: bool = True
 
     @property
     def scan_completed(self) -> bool:
         """A returned sink proves the scan ran; caps affect completeness."""
-        return True
+        return self.metadata_complete
 
     @property
     def truncated(self) -> bool:
@@ -80,6 +82,14 @@ class ScanMeta:
         if not self.any_truncated:
             return TruncationInfo()
         cap_types = sorted(self.cap_types)
+        if budget is None and len(cap_types) == 1:
+            values = {
+                meta.budgets[cap_types[0]]
+                for meta in self.repos.values()
+                if cap_types[0] in meta.budgets
+            }
+            if len(values) == 1:
+                budget = values.pop()
         return TruncationInfo(
             truncated=True,
             reason="scan truncated by resource cap(s): " + ", ".join(cap_types),
@@ -88,7 +98,9 @@ class ScanMeta:
         )
 
 
-def repo_scan_meta_from_sink(sink, repo_id: str) -> RepoScanMeta:
+def repo_scan_meta_from_sink(
+    sink, repo_id: str, budgets: dict[str, int] | None = None
+) -> RepoScanMeta:
     """Build ``RepoScanMeta`` from an ``IngestSink``.
 
     Reads ``capped``, ``absence``, and per-language parse error counts —
@@ -109,6 +121,50 @@ def repo_scan_meta_from_sink(sink, repo_id: str) -> RepoScanMeta:
         absence_complete=absence_complete,
         absence_reasons=absence_reasons,
         parse_failures=parse_failures,
+        budgets=dict(budgets or {}),
+    )
+
+
+def repo_scan_meta_from_artifact(meta: dict, repo_id: str) -> RepoScanMeta:
+    """Recover scan coverage retained in a ``.tracekite`` artifact."""
+    capped = {
+        str(key): int(value)
+        for key, value in (meta.get("capped") or {}).items()
+    }
+    absence = meta.get("absence") or {}
+    reasons = list(absence.get("incomplete_because", []) or [])
+    absence_complete = bool(absence.get("complete", False))
+    for path in sorted(meta.get("unfetched_submodules") or []):
+        reason = f"submodule {path} was never fetched"
+        if reason not in reasons:
+            reasons.append(reason)
+    if not absence_complete and not reasons:
+        reasons.append("artifact absence metadata is incomplete")
+
+    parse_failures = 0
+    for counters in (meta.get("coverage") or {}).values():
+        if isinstance(counters, dict):
+            parse_failures += int(counters.get("parse_errors", 0) or 0)
+
+    producer = meta.get("producer") or {}
+    budgets = {}
+    if isinstance(producer, dict):
+        for cap in ("files", "claims"):
+            value = producer.get(f"max_{cap}_per_repo")
+            if value is not None:
+                budgets[cap] = int(value)
+    metadata_complete = all(
+        field in meta
+        for field in ("coverage", "capped", "absence", "unfetched_submodules")
+    )
+    return RepoScanMeta(
+        repo_id=repo_id,
+        capped=capped,
+        absence_complete=absence_complete,
+        absence_reasons=reasons,
+        parse_failures=parse_failures,
+        budgets=budgets,
+        metadata_complete=metadata_complete,
     )
 
 

@@ -16,6 +16,7 @@ import os
 import subprocess
 
 from tracekite.answer import RepoRevision
+from tracekite.scan_meta import ScanMeta
 
 
 def _git(path: str, *args: str) -> str | None:
@@ -112,15 +113,46 @@ def _dirty_digest(path: str) -> str | None:
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
 
 
-def collect_artifact_meta(meta: dict, repo_id: str) -> RepoRevision:
+def collect_artifact_meta(
+    meta: dict, repo_id: str, artifact_path: str | None = None
+) -> RepoRevision:
     """Build a RepoRevision from artifact metadata.
 
     Artifacts carry ``head_sha`` in their meta; a missing or empty value
     means the scan could not determine the revision, and that stays None
-    rather than becoming a placeholder.
+    rather than becoming a placeholder.  The artifact file digest is the
+    content identity when its path is available.
     """
     head = meta.get("head_sha") or None
+    artifact_digest = None
+    if artifact_path:
+        from tracekite.db.artifact import digest_of
+
+        artifact_digest = digest_of(artifact_path)
     return RepoRevision(
         repo_id=repo_id,
         head_sha=head if head else None,
+        content_digest=artifact_digest,
+        producer=dict(meta.get("producer") or {}),
     )
+
+
+def collect_input_meta(paths: list[str]) -> tuple[list[RepoRevision], ScanMeta]:
+    """Collect revisions and retained scan metadata for input paths."""
+    from tracekite.db.artifact import read_meta
+    from tracekite.scan_meta import repo_scan_meta_from_artifact
+
+    revisions: list[RepoRevision] = []
+    scan_meta = ScanMeta()
+    for path in paths:
+        if os.path.isfile(path) and path.endswith(".tracekite"):
+            meta = read_meta(path)
+            repo_ids = ([meta["repo_id"]] if meta.get("repo_id") else
+                        list(meta.get("repos") or []))
+            for repo_id in repo_ids:
+                revisions.append(collect_artifact_meta(meta, repo_id, path))
+                scan_meta.add(repo_scan_meta_from_artifact(meta, repo_id))
+        elif os.path.isdir(path):
+            repo_id = os.path.basename(os.path.abspath(path))
+            revisions.append(collect_dir_meta(path, repo_id))
+    return revisions, scan_meta

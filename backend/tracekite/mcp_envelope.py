@@ -86,14 +86,7 @@ def wrap_answer(answer: dict, tool_name: str, args: dict,
     )
     truncation = None
     if scan_meta is not None:
-        from tracekite import engine_config
-
-        budget = None
-        if scan_meta.cap_types == {"files"}:
-            budget = engine_config.get_config().max_files_per_repo
-        elif scan_meta.cap_types == {"claims"}:
-            budget = engine_config.get_config().max_claims_per_repo
-        truncation = scan_meta.truncation_info(budget=budget)
+        truncation = scan_meta.truncation_info()
     scope = QueryScope(
         query_kind=tool_name,
         parameters=dict(args),
@@ -112,21 +105,10 @@ def wrap_answer(answer: dict, tool_name: str, args: dict,
         candidates=candidates,
         reason=reason,
     )
-    dumped = envelope.model_dump()
-    # Preserve the top-level fields old clients read.  The envelope's
-    # ``result`` already carries them, but some clients index the top
-    # level directly, so they stay there too.
-    for key, value in answer.items():
-        dumped[key] = value
-    dumped["answer_version"] = ANSWER_VERSION
-    dumped["status"] = status.value
-    dumped["snapshot"] = {
-        "repos": [r.model_dump() for r in snapshot.repos],
-        "engine_version": snapshot.engine_version,
-        "config_digest": snapshot.config_digest,
-    }
-    dumped["completeness"] = comp.model_dump()
-    dumped["completeness"]["safe_to_delete"] = False
-    dumped["freshness"] = FreshnessState.UNKNOWN.value
-    dumped["scope"] = scope.model_dump()
+    # Preserve the top-level fields old clients read, but let validated
+    # envelope fields win when a raw result uses the same key. This prevents
+    # ambiguous trace candidates (a mapping) from replacing the envelope's
+    # validated list.
+    dumped = dict(answer)
+    dumped.update(envelope.model_dump())
     return dumped

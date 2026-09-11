@@ -55,8 +55,10 @@ def classify_trace(raw: dict, known_ids: set[str] | None = None) -> (
     if from_cands or to_cands:
         return AnswerStatus.AMBIGUOUS, from_cands + to_cands, "ambiguous service name"
     if known_ids is not None:
-        from_id = raw.get("from", "")
-        to_id = raw.get("to", "")
+        from_id = raw.get("resolved_from",
+                          raw.get("from_id", raw.get("from", "")))
+        to_id = raw.get("resolved_to",
+                        raw.get("to_id", raw.get("to", "")))
         if from_id not in known_ids or to_id not in known_ids:
             return AnswerStatus.UNKNOWN_TARGET, [], "endpoint not in graph"
     return AnswerStatus.KNOWN_EMPTY, [], "no path between known nodes"
