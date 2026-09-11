@@ -208,6 +208,24 @@ Then scan repositories and join them in memory:
 python -m tracekite.cli link path/to/repo-a path/to/repo-b
 ```
 
+For the versioned answer contract, initialize the public facade with the
+redaction key supplied by the host environment:
+
+```python
+import os
+from tracekite.facade import TraceKite
+
+tk = TraceKite(
+    ["path/to/repo-a", "path/to/repo-b"],
+    graph_hmac_key=os.environ["GRAPH_HMAC_KEY"],
+)
+answer = tk.services()
+```
+
+The key is required because configuration values are redacted before they
+enter the graph. The facade fails closed rather than producing a graph with
+an unsafe or invented redaction identity.
+
 ```json
 { "wire_version": "1.0.0",
   "claims_loaded": 7,
@@ -383,6 +401,12 @@ cite callers in `billing-service` and routes in `gateway`.
 | **`trace`** | Up to 3 shortest active paths between two node IDs | `from_id`, `to_id`, `max_hops` |
 | **`deprecations`** | Deprecated contract endpoints and their live active consumers | *(none)* |
 
+Every tool response includes per-edge confidence values (0.6–0.99) and
+`file:line` evidence spans for each connection. An empty result for
+`consumers_of` means no active consumers were found in the linked graph —
+it does not mean the target is safe to delete, because extraction may not
+cover every framework or language in the estate.
+
 MCP client configuration is deliberately not rewritten by the installer.
 See [Agent and MCP integration](docs/plugins-and-mcp-guide.md) for the
 client-specific commands, supported global skill paths, and input semantics.
@@ -498,6 +522,8 @@ never reach nodes, claims, or evidence.
 | [Coverage gaps](docs/design/coverage-gaps.md) | what the graph still misses, ranked, with reproducible measurements |
 | [Comparison](docs/comparison.md) | against code-graph tools, catalogs and runtime maps, with measured numbers |
 | [CONTRIBUTING](CONTRIBUTING.md) | setup, the one rule that matters, adding a parser or resolver |
+| [Intelligence release plan](docs/design/intelligence-release-plan.md) | the reviewed plan for context intelligence, UI density, integration API and public release |
+| [Release tasks](tasks.csv) | the public task tracker — 32 prioritized tasks with dependencies, acceptance criteria and source references |
 
 
 ## Contributing

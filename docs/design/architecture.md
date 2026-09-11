@@ -736,7 +736,7 @@ means a 1,000-repo estate re-parses only what changed.
 | Shard key | backend-specific |
 | Scaling | reads scale by replica; writes by artifact |
 | Ceiling | backend-specific |
-| State | Neo4j only, no protocol. `QuerySpec` must be a typed description, never a query string |
+| State | Protocol defined in `db/graph_store.py`; `SQLiteGraphStore`, `Neo4jGraphStore` and `InMemoryGraphStore` implement it. `LinkerStore` (`ports.py`) remains the active narrow port for one link run |
 
 ### 11.14 QUERY / TRAVERSAL — `graph_reader.py`, `routes/trace.py`
 

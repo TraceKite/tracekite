@@ -13,6 +13,7 @@ interface Props {
   visibleNodeCount: number;
   visibleEdgeCount: number;
   loadedNodeCount: number;
+  loadedEdgeCount: number;
   eligibleNodeCount: number;
   totalNodeCount: number;
   activePath?: boolean;
@@ -20,14 +21,14 @@ interface Props {
 }
 
 function modeLabel(mode: ViewMode): string {
-  if (mode === "impact") return "Impact · 2 hops";
+  if (mode === "impact") return "Impact";
   return mode[0].toUpperCase() + mode.slice(1);
 }
 
 export default function GraphContextBar({
   projectionMode, viewMode, expandedGroup, openedLabel, hasSelection,
-  visibleNodeCount, visibleEdgeCount, loadedNodeCount, activePath = false,
-  eligibleNodeCount, totalNodeCount,
+  visibleNodeCount, visibleEdgeCount, loadedNodeCount, loadedEdgeCount,
+  activePath = false, eligibleNodeCount, totalNodeCount,
   onBack,
 }: Props) {
   const canGoBack = activePath || hasSelection || Boolean(openedLabel) ||
@@ -42,13 +43,13 @@ export default function GraphContextBar({
         ? expandedGroup ?? "Module"
         : modeLabel(viewMode);
   const detail = viewMode === "impact" && projectionMode === "focus"
-    ? `2 hops · ${visibleNodeCount}${totalNodeCount > visibleNodeCount ? ` of ${totalNodeCount}` : ""} nodes · ${visibleEdgeCount} exact edges`
+    ? `2-hop outgoing · ${visibleNodeCount}${totalNodeCount > visibleNodeCount ? ` of ${totalNodeCount}` : ""} nodes · ${visibleEdgeCount} edges`
     : projectionMode === "overview"
     ? `${visibleNodeCount} groups · ${eligibleNodeCount < loadedNodeCount
       ? `${eligibleNodeCount} eligible of ${loadedNodeCount}`
-      : loadedNodeCount} loaded`
+      : loadedNodeCount} loaded nodes · ${loadedEdgeCount} loaded edges`
     : totalNodeCount > visibleNodeCount
-      ? `${visibleNodeCount} of ${totalNodeCount} nodes · ${visibleEdgeCount} exact edges`
+      ? `${visibleNodeCount} of ${totalNodeCount} nodes · ${visibleEdgeCount} edges`
       : `${visibleNodeCount} nodes · ${visibleEdgeCount} edges`;
   const Icon = projectionMode === "focus" ? Crosshair
     : projectionMode === "group" ? Box : Layers3;

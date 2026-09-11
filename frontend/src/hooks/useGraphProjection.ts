@@ -94,7 +94,7 @@ export function useGraphProjection({
     if (openedLoaded) {
       return {
         projection: viewMode === "impact"
-          ? buildBoundedImpact(base.nodes, base.links, openedNodeId, detailNodeLimit)
+          ? buildBoundedImpact(base.nodes, base.links, openedNodeId, detailNodeLimit, 2, "outgoing")
           : buildOneHopNeighborhood(base.nodes, base.links, openedNodeId, detailNodeLimit),
         mode: "focus" as ProjectionMode,
       };

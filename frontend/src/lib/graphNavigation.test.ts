@@ -31,9 +31,9 @@ test("graph context survives a 2D/3D renderer switch but resets for a new view",
   });
 });
 
-test("repository selection is staged without an ambiguous empty custom scope", () => {
+test("repository selection can be cleared back to every repository", () => {
   assert.deepEqual(toggleDraftRepoScope([], "a", 2), ["a"]);
-  assert.deepEqual(toggleDraftRepoScope(["a"], "a", 2), ["a"]);
+  assert.deepEqual(toggleDraftRepoScope(["a"], "a", 2), []);
   assert.deepEqual(toggleDraftRepoScope(["a"], "b", 2), ["a", "b"]);
   assert.deepEqual(toggleDraftRepoScope(["a", "b"], "c", 2), ["a", "b"]);
   assert.deepEqual(toggleDraftRepoScope(["a", "b"], "a", 2), ["b"]);
