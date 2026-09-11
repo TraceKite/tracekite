@@ -7,7 +7,7 @@ ingested clone, a repo to point at, and cypher-shell output parsed into rows.
 This is that, in one place, so neither script grows its own copy.
 
 Nothing here is specific to any estate. The repo under test comes from argv
-or $EVIGRAPH_REPO, and defaults to every repo the graph knows about, so the
+or $TRACEKITE_REPO, and defaults to every repo the graph knows about, so the
 harness runs against whatever you have ingested.
 """
 import os
@@ -16,10 +16,10 @@ import sys
 
 # Overridable so the harness works against a stack renamed in compose, or one
 # run under a project prefix.
-NEO4J_CONTAINER = os.environ.get("EVIGRAPH_NEO4J_CONTAINER", "evigraph-neo4j")
-BACKEND_CONTAINER = os.environ.get("EVIGRAPH_BACKEND_CONTAINER", "evigraph-backend")
+NEO4J_CONTAINER = os.environ.get("TRACEKITE_NEO4J_CONTAINER", "tracekite-neo4j")
+BACKEND_CONTAINER = os.environ.get("TRACEKITE_BACKEND_CONTAINER", "tracekite-backend")
 NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
-REPO_ROOT = os.environ.get("EVIGRAPH_REPO_ROOT", "/app/data/repos")
+REPO_ROOT = os.environ.get("TRACEKITE_REPO_ROOT", "/app/data/repos")
 
 
 def _password() -> str:
@@ -114,12 +114,12 @@ def ingested_repos() -> list[str]:
 
 
 def target_repos() -> list[str]:
-    """Repos to measure: argv, else $EVIGRAPH_REPO, else everything ingested."""
+    """Repos to measure: argv, else $TRACEKITE_REPO, else everything ingested."""
     args = [a for a in sys.argv[1:] if not a.startswith("-")]
     if args:
         return args
-    if os.environ.get("EVIGRAPH_REPO"):
-        return [r.strip() for r in os.environ["EVIGRAPH_REPO"].split(",") if r.strip()]
+    if os.environ.get("TRACEKITE_REPO"):
+        return [r.strip() for r in os.environ["TRACEKITE_REPO"].split(",") if r.strip()]
     found = ingested_repos()
     if not found:
         print("no repos in the graph -- ingest one first, or pass a repo id",

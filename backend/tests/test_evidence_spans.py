@@ -7,8 +7,8 @@ artifact. The identity tests below compute the expected id with the
 historical inline formula and assert the module reproduces it exactly.
 """
 
-from evigraph.services.claims import ContractClaim
-from evigraph.utils.evidence import (
+from tracekite.services.claims import ContractClaim
+from tracekite.utils.evidence import (
     EvidenceSpan, as_spans, evidence_path, format_evidence, parse_evidence,
 )
 

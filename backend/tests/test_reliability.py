@@ -7,7 +7,7 @@ constant and the derivation demands the constant follow it down. Volume of
 clean labels never inflates a number.
 """
 
-from evigraph.services.linker.reliability import (
+from tracekite.services.linker.reliability import (
     derive_constants, derived_block_lines, pool_labels,
 )
 

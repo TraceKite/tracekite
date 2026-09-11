@@ -1,0 +1,83 @@
+# The library distribution: the engine, and nothing that serves it.
+#
+# `dependencies` below is not hand-maintained guesswork — it is the measured
+# import closure of the core and parsers layers, and
+# `backend/tests/test_packaging.py` fails if the two drift apart. A dependency
+# list that is merely aspirational is how "no heavy deps" quietly stops being
+# true.
+#
+# Deliberately absent: neo4j, fastapi, starlette, uvicorn, pydantic-settings.
+# A host that already runs a graph database must not be made to install a
+# second one, and a host with no web server must not acquire one.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tracekite-core"
+version = "0.1.0"
+description = "Establish what is connected across repositories, and how you know."
+readme = "README.md"
+requires-python = ">=3.13"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "TraceKite" }]
+keywords = ["code-intelligence", "dependencies", "graph", "mcp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+
+dependencies = [
+    "pydantic>=2.13.4",
+    "pyyaml>=6.0.3",
+    "tree-sitter>=0.26.0",
+    "tree-sitter-c==0.23.6",
+    "tree-sitter-c-sharp==0.23.1",
+    "tree-sitter-cpp==0.23.4",
+    "tree-sitter-go>=0.25.0",
+    "tree-sitter-java>=0.23.5",
+    "tree-sitter-javascript>=0.25.0",
+    "tree-sitter-json==0.24.8",
+    "tree-sitter-kotlin==1.1.0",
+    "tree-sitter-php==0.23.11",
+    "tree-sitter-python>=0.25.0",
+    "tree-sitter-ruby==0.23.1",
+    "tree-sitter-rust>=0.24.2",
+    "tree-sitter-scala==0.24.0",
+    "tree-sitter-typescript>=0.23.2",
+    "tree-sitter-yaml==0.7.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/TraceKite/tracekite"
+Repository = "https://github.com/TraceKite/tracekite"
+Issues = "https://github.com/TraceKite/tracekite/issues"
+
+# The application's extras, so one repository serves both surfaces without a
+# second copy of the engine (the "no duplicate code" rule, at package level).
+[project.optional-dependencies]
+# Grammars whose imports are guarded: parsing degrades with a log line when
+# they are absent, so they are opt-in rather than a cost every host pays.
+languages = ["tree-sitter-html>=0.23.2", "tree-sitter-css>=0.23.2"]
+neo4j = ["neo4j>=6.2.0"]
+server = ["fastapi>=0.140.0", "uvicorn[standard]>=0.51.0",
+          "pydantic-settings>=2.14.2", "python-multipart>=0.0.32",
+          "gitpython>=3.1.57", "httpx>=0.28.1"]
+
+[project.scripts]
+tracekite = "tracekite.cli:main"
+
+[tool.hatch.build.targets.wheel]
+bypass-selection = true
+
+# Source still lives under `backend/tracekite`. The build hook maps that tree and
+# the calibrated control plane into both the wheel and the sdist. For a wheel
+# rebuilt from the sdist, it uses the sdist's own `src/tracekite` copy instead of
+# reaching outside the extracted archive.
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
+package = "tracekite"

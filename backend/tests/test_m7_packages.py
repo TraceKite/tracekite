@@ -9,18 +9,18 @@ from types import SimpleNamespace
 
 import pytest
 
-import evigraph.services.ingest_deps as ingest_deps
-from evigraph.parsers.dependency_parser import DependencyInfo
-from evigraph.services.claims import is_internal_lib, lib_key
-from evigraph.services.ingest_deps import (
+import tracekite.services.ingest_deps as ingest_deps
+from tracekite.parsers.dependency_parser import DependencyInfo
+from tracekite.services.claims import is_internal_lib, lib_key
+from tracekite.services.ingest_deps import (
     emit_dependency_claims, emit_publish_claims,
 )
-from evigraph.services.ingest_source import IngestSink
-from evigraph.services.linker import r3_library
-from evigraph.services.linker.base import (
+from tracekite.services.ingest_source import IngestSink
+from tracekite.services.linker import r3_library
+from tracekite.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, ResolverOutput, load_confidence,
 )
-from evigraph.utils.hashing import generate_repo_id
+from tracekite.utils.hashing import generate_repo_id
 
 INTERNAL = {"maven": {"namespaces": ["org.acme"]},
             "npm": {"scopes": ["@acme"]},

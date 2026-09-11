@@ -1,6 +1,6 @@
 """Gateway route-table parsing."""
 
-from evigraph.parsers.gateway_parser import (
+from tracekite.parsers.gateway_parser import (
     parse_envoy_config, parse_js_proxies, parse_kong_config,
     parse_next_config, parse_nginx_conf, parse_traefik_file,
     parse_traefik_labels, sniff_gateway_file,

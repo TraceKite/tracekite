@@ -16,10 +16,10 @@ they are checked by `backend/tools/check_invariants.py` and driven from here.
 
 import pytest
 
-from evigraph import engine_config
-from evigraph.db.memory_store import InMemoryLinkerStore
-from evigraph.services.linker.engine import link
-from evigraph.services.scan import scan
+from tracekite import engine_config
+from tracekite.db.memory_store import InMemoryLinkerStore
+from tracekite.services.linker.engine import link
+from tracekite.services.scan import scan
 
 import os
 
@@ -123,7 +123,7 @@ class TestServerDoesNotCompute:
     """
 
     def test_module_boundary_is_computable_without_the_server(self):
-        from evigraph.services.linker.modules import module_of
+        from tracekite.services.linker.modules import module_of
 
         assert module_of("projects/foyer/src/main.py") == "projects/foyer"
         assert module_of("billing/app.py") == "billing"
@@ -134,16 +134,16 @@ class TestServerDoesNotCompute:
         route no longer touches the primitive at all — it calls the
         crossings assembly, which is where the module-boundary decision
         lives now."""
-        from evigraph.services.linker import crossings, modules
+        from tracekite.services.linker import crossings, modules
 
         assert crossings.module_of is modules.module_of
-        import evigraph.routes.links as links
+        import tracekite.routes.links as links
         assert not hasattr(links, "module_of")
 
     def test_a_container_directory_is_not_itself_a_module(self):
         """`src/` holds modules; it is not one. Treating it as a module would
         collapse every file in a repo into one boundary."""
-        from evigraph.services.linker.modules import module_of
+        from tracekite.services.linker.modules import module_of
 
         assert module_of("src/billing/handler.go") == "src/billing"
 
@@ -151,13 +151,13 @@ class TestServerDoesNotCompute:
         """It has no directory to belong to. Returning its own name mints
         `Module:config.properties` — a file wearing a module's label, which
         is only harmless while nothing queries it."""
-        from evigraph.services.linker.modules import module_of
+        from tracekite.services.linker.modules import module_of
 
         assert module_of("config.properties") == ""
         assert module_of("README.md") == ""
 
     def test_a_container_holding_only_a_file_is_not_a_module_path(self):
-        from evigraph.services.linker.modules import module_of
+        from tracekite.services.linker.modules import module_of
 
         assert module_of("src/main.py") == "src"
         assert module_of("projects/foyer/main.py") == "projects/foyer"
@@ -172,15 +172,15 @@ class TestCardinality:
     """
 
     def _annotated(self, edges, node_ids):
-        from evigraph.services.linker.base import RendezvousSpec
-        from evigraph.services.linker.engine import annotate_cardinality
+        from tracekite.services.linker.base import RendezvousSpec
+        from tracekite.services.linker.engine import annotate_cardinality
 
         specs = [RendezvousSpec("HttpContract", nid, {}) for nid in node_ids]
         annotate_cardinality(specs, edges)
         return {s.node_id: s.props for s in specs}
 
     def _edge(self, src, dst, status="active"):
-        from evigraph.models.graph_models import GraphEdge
+        from tracekite.models.graph_models import GraphEdge
 
         e = GraphEdge(source_id=src, target_id=dst, repo_id="r",
                       type="CALLS_SERVICE", evidence=["f:1"],
@@ -236,8 +236,8 @@ class TestI4KeyDiscipline:
         only safe because it is a no-op on canonical input. Pinned rather than
         assumed: the day the two disagree, keys minted through one stop
         matching keys minted through the other."""
-        from evigraph.services.linker.base import positional
-        from evigraph.utils.canonical import canonicalize_path_template
+        from tracekite.services.linker.base import positional
+        from tracekite.utils.canonical import canonicalize_path_template
 
         for template in self.TEMPLATES:
             canonical = canonicalize_path_template(template)

@@ -6,7 +6,7 @@ spec — images, env bindings, Service selectors, Ingress backends — was dropp
 
 import pytest
 
-from evigraph.parsers.kubernetes_parser import (
+from tracekite.parsers.kubernetes_parser import (
     flatten_values, parse_helm_chart, parse_helm_values, parse_k8s_file,
     parse_kubernetes_yaml,
 )

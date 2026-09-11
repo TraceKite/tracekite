@@ -9,15 +9,15 @@ checks a date twice.
 
 import os
 
-from evigraph import engine_config
-from evigraph.db.artifact import write_artifact
-from evigraph.db.artifact_reader import read_artifact
-from evigraph.db.memory_store import InMemoryLinkerStore
-from evigraph.models.graph_models import GraphEdge
-from evigraph.services.linker.history import (
+from tracekite import engine_config
+from tracekite.db.artifact import write_artifact
+from tracekite.db.artifact_reader import read_artifact
+from tracekite.db.memory_store import InMemoryLinkerStore
+from tracekite.models.graph_models import GraphEdge
+from tracekite.services.linker.history import (
     changed_between, consumers_over_time, edge_history, edge_key,
 )
-from evigraph.services.scan import scan
+from tracekite.services.scan import scan
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 SAMPLE = os.path.join(FIXTURES, "callgraph-sample")

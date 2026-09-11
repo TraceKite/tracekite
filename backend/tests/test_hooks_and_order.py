@@ -9,11 +9,11 @@ mostly about what is *reported*.
 
 import pytest
 
-from evigraph.services.linker import hooks
-from evigraph.services.linker.base import (
+from tracekite.services.linker import hooks
+from tracekite.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, ResolverOutput,
 )
-from evigraph.services.linker.engine import (
+from tracekite.services.linker.engine import (
     SHIPPED_PRECEDENCE, clear_registered_resolvers, declared_order,
     link, register_resolver, resolver_order, run_resolvers,
 )

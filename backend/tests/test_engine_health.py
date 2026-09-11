@@ -10,8 +10,8 @@ import dataclasses
 
 import pytest
 
-from evigraph import engine_config
-from evigraph.engine_health import DEGRADED, FAILED, OK, health
+from tracekite import engine_config
+from tracekite.engine_health import DEGRADED, FAILED, OK, health
 
 
 @pytest.fixture
@@ -70,7 +70,7 @@ class TestHealthCall:
         assert not any(c.name == "store" for c in health().checks)
 
     def test_a_working_store_is_reported(self, configured):
-        from evigraph.db.memory_store import InMemoryGraphStore
+        from tracekite.db.memory_store import InMemoryGraphStore
 
         configured(graph_hmac_key="k")
         report = health(store=InMemoryGraphStore())

@@ -17,12 +17,12 @@ from unittest.mock import patch
 
 import pytest
 
-from evigraph import engine_config
-from evigraph.db.memory_store import InMemoryLinkerStore
-from evigraph.mcp_server import GraphTools, _collect_claims, handle, serve
-from evigraph.services.linker.engine import link
-from evigraph.services.linker.traverse import find_paths
-from evigraph.services.scan import scan
+from tracekite import engine_config
+from tracekite.db.memory_store import InMemoryLinkerStore
+from tracekite.mcp_server import GraphTools, _collect_claims, handle, serve
+from tracekite.services.linker.engine import link
+from tracekite.services.linker.traverse import find_paths
+from tracekite.services.scan import scan
 
 CORPUS = os.path.join(os.path.dirname(__file__), "..", "..", "corpus")
 BACKEND = os.path.join(os.path.dirname(__file__), "..")
@@ -181,7 +181,7 @@ class TestEndToEnd:
         """The exit criterion, literally: artifacts in, protocol frames
         exchanged, an evidence-cited answer out."""
         engine_config.configure(graph_hmac_key="mcp-e2e")
-        from evigraph.db.artifact import write_artifact
+        from tracekite.db.artifact import write_artifact
 
         paths = [write_artifact(
             scan(os.path.join(CORPUS, name), name), name, str(tmp_path)).path
@@ -196,7 +196,7 @@ class TestEndToEnd:
                  "node_id": "global:Service:billing-service"}}},
         ]
         proc = subprocess.run(
-            [sys.executable, "-m", "evigraph.cli", "mcp", *paths],
+            [sys.executable, "-m", "tracekite.cli", "mcp", *paths],
             input="\n".join(json.dumps(f) for f in frames) + "\n",
             cwd=BACKEND, capture_output=True, text=True, timeout=300,
             env={**os.environ, "GRAPH_HMAC_KEY": "mcp-e2e"})
@@ -223,7 +223,7 @@ class TestEndToEnd:
                         "method": "tools/list"}) + "\n")
         stdout = StringIO()
 
-        with patch("evigraph.mcp_server._load_tools") as load_tools:
+        with patch("tracekite.mcp_server._load_tools") as load_tools:
             assert serve([os.path.join(CORPUS, "orders-service")],
                          stdin=stdin, stdout=stdout) == 0
         load_tools.assert_not_called()
@@ -238,7 +238,7 @@ class TestEndToEnd:
         }) + "\n")
         stdout = StringIO()
 
-        with patch("evigraph.mcp_server._load_tools") as load_tools:
+        with patch("tracekite.mcp_server._load_tools") as load_tools:
             assert serve(["."], stdin=stdin, stdout=stdout) == 0
 
         load_tools.assert_not_called()
@@ -251,7 +251,7 @@ class TestEndToEnd:
         }) + "\n")
         stdout = StringIO()
 
-        with patch("evigraph.mcp_server._load_tools",
+        with patch("tracekite.mcp_server._load_tools",
                    side_effect=FileNotFoundError("missing")):
             assert serve(["missing"], stdin=stdin, stdout=stdout) == 0
 

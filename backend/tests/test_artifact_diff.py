@@ -11,10 +11,10 @@ import shutil
 
 import pytest
 
-from evigraph import engine_config
-from evigraph.db.artifact import write_artifact
-from evigraph.db.artifact_diff import diff_artifacts
-from evigraph.services.scan import scan
+from tracekite import engine_config
+from tracekite.db.artifact import write_artifact
+from tracekite.db.artifact_diff import diff_artifacts
+from tracekite.services.scan import scan
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 SAMPLE = os.path.join(FIXTURES, "callgraph-sample")

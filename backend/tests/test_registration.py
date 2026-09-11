@@ -13,12 +13,12 @@ finding nothing, which is the failure this project treats as worst.
 
 import pytest
 
-from evigraph.parsers.parser_registry import (
+from tracekite.parsers.parser_registry import (
     clear_registered_parsers, get_parser_for_file, register_parser,
     registered_parsers,
 )
-from evigraph.services.linker.base import ClaimIndex, ClaimRecord, LinkContext
-from evigraph.services.linker.engine import (
+from tracekite.services.linker.base import ClaimIndex, ClaimRecord, LinkContext
+from tracekite.services.linker.engine import (
     clear_registered_resolvers, register_resolver, registered_resolvers,
     run_resolvers,
 )
@@ -90,7 +90,7 @@ class ThirdPartyResolver:
         self.ran = False
 
     def resolve(self, index, ctx):
-        from evigraph.services.linker.base import ResolverOutput
+        from tracekite.services.linker.base import ResolverOutput
 
         self.ran = True
         for claim in index.kind("svcname"):

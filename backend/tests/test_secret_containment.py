@@ -16,10 +16,10 @@ import json
 import logging
 import os
 
-from evigraph import engine_config
-from evigraph.db.memory_store import InMemoryLinkerStore
-from evigraph.services.linker.service import LinkerService
-from evigraph.services.scan import scan
+from tracekite import engine_config
+from tracekite.db.memory_store import InMemoryLinkerStore
+from tracekite.services.linker.service import LinkerService
+from tracekite.services.scan import scan
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 PLANTED = os.path.join(FIXTURES, "planted-secret")

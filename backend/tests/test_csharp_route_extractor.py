@@ -1,6 +1,6 @@
 """Tests for precision-first C# ASP.NET Core Minimal API extraction."""
 
-from evigraph.services.csharp_route_extractor import (
+from tracekite.services.csharp_route_extractor import (
     extract_csharp_routes,
     extract_csharp_routes_with_declines,
 )

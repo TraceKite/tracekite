@@ -1,5 +1,5 @@
 import pytest
-from evigraph.utils.hashing import (
+from tracekite.utils.hashing import (
     generate_repo_id, generate_node_id, normalize_github_url, sanitize_path,
 )
 
@@ -24,16 +24,16 @@ class TestNormalizeGithubUrl:
         assert repo == "linux"
 
     def test_scp_ssh_url(self):
-        url, owner, repo = normalize_github_url("git@github.com:evigraph-labs/evigraph")
-        assert url == "https://github.com/evigraph-labs/evigraph"
-        assert owner == "evigraph-labs"
-        assert repo == "evigraph"
+        url, owner, repo = normalize_github_url("git@github.com:TraceKite/tracekite")
+        assert url == "https://github.com/TraceKite/tracekite"
+        assert owner == "TraceKite"
+        assert repo == "tracekite"
 
     def test_scp_ssh_url_with_git_suffix(self):
-        url, owner, repo = normalize_github_url("git@github.com:evigraph-labs/evigraph.git")
-        assert url == "https://github.com/evigraph-labs/evigraph"
-        assert owner == "evigraph-labs"
-        assert repo == "evigraph"
+        url, owner, repo = normalize_github_url("git@github.com:TraceKite/tracekite.git")
+        assert url == "https://github.com/TraceKite/tracekite"
+        assert owner == "TraceKite"
+        assert repo == "tracekite"
     
     def test_invalid_url(self):
         with pytest.raises(ValueError):

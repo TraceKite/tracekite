@@ -9,15 +9,15 @@ annotation, or an nginx.conf.
 
 from types import SimpleNamespace
 
-from evigraph.parsers.gateway_parser import parse_nginx_conf
-from evigraph.parsers.kubernetes_parser import parse_kubernetes_yaml
-from evigraph.services.claims import PROVIDES, ContractClaim
-from evigraph.services.ingest_claims import (
+from tracekite.parsers.gateway_parser import parse_nginx_conf
+from tracekite.parsers.kubernetes_parser import parse_kubernetes_yaml
+from tracekite.services.claims import PROVIDES, ContractClaim
+from tracekite.services.ingest_claims import (
     add_claim, emit_gateway_claims, emit_k8s_claims,
 )
-from evigraph.services.ingest_source import IngestSink
-from evigraph.services.linker import r0_alias, r4_gateway
-from evigraph.services.linker.base import (
+from tracekite.services.ingest_source import IngestSink
+from tracekite.services.linker import r0_alias, r4_gateway
+from tracekite.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, ResolverOutput, load_confidence,
 )
 

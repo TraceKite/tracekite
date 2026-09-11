@@ -12,7 +12,7 @@ against encodings I wrote myself proves that I am self-consistent rather
 than that I read the format correctly.
 """
 
-from evigraph.services.grpc_gateway_routes import (
+from tracekite.services.grpc_gateway_routes import (
     decode_pattern, extract_gateway_routes,
 )
 

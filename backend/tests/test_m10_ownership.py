@@ -9,17 +9,17 @@ topology.
 
 from types import SimpleNamespace
 
-from evigraph.parsers.ownership_parser import (
+from tracekite.parsers.ownership_parser import (
     extract_observability_identity, parse_catalog_info, parse_codeowners,
 )
-from evigraph.services.claims import PROVIDES, ContractClaim
-from evigraph.services.ingest_claims import (
+from tracekite.services.claims import PROVIDES, ContractClaim
+from tracekite.services.ingest_claims import (
     add_claim, emit_catalog_claims, emit_codeowners_claims,
     emit_observability_claims,
 )
-from evigraph.services.ingest_source import IngestSink
-from evigraph.services.linker import r0_alias, r12_owner
-from evigraph.services.linker.base import (
+from tracekite.services.ingest_source import IngestSink
+from tracekite.services.linker import r0_alias, r12_owner
+from tracekite.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, ResolverOutput, load_confidence,
 )
 

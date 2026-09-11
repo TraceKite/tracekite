@@ -6,11 +6,11 @@ the second would let a permissive policy inflate the call graph, so the
 tests pin the distinction and the two declines that keep it precise.
 """
 
-from evigraph import engine_config
-from evigraph.db.memory_store import InMemoryLinkerStore
-from evigraph.parsers.kubernetes_parser import parse_kubernetes_yaml
-from evigraph.services.linker.engine import link
-from evigraph.services.scan import scan
+from tracekite import engine_config
+from tracekite.db.memory_store import InMemoryLinkerStore
+from tracekite.parsers.kubernetes_parser import parse_kubernetes_yaml
+from tracekite.services.linker.engine import link
+from tracekite.services.scan import scan
 
 NOW = "2026-01-01T00:00:00+00:00"
 

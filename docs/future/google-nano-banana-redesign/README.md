@@ -5,7 +5,7 @@
 > [runtime QA matrix](../navigation-and-feature-qa-2026-08-30.md).
 
 This alternate visual direction was generated in Google Stitch Redesign using
-Nano Banana Pro after reviewing the current Evigraph application in the browser.
+Nano Banana Pro after reviewing the current TraceKite application in the browser.
 All four delivered raster screens came from Redesign / Nano Banana Pro; the
 Gemini Flash intermediates were excluded. The direction keeps the real Repo,
 Service Map, Trace, 3D/2D, repository-scope, and Ingest structure while testing
@@ -33,7 +33,7 @@ a slightly denser, more operational graph treatment.
   contrast without glow.
 - Make selected paths and nodes crisp while background relationships recede.
 - Preserve the operational controls visible in the current product instead of
-  replacing Evigraph with a generic analytics dashboard.
+  replacing TraceKite with a generic analytics dashboard.
 
 These raster mocks are visual references. Visible copy and counts in the
 implemented product must come from the current frontend contracts and runtime

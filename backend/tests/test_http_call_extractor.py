@@ -1,5 +1,5 @@
 """Outbound HTTP call-site extraction across JVM, .NET, Python, Node, Go, and
-Rust client libraries (evigraph/services/http_call_extractor).
+Rust client libraries (tracekite/services/http_call_extractor).
 
 Existing RestTemplate/WebClient/fetch/axios/requests coverage lives in
 test_claims_and_extractors.py and test_ingest_gap_fill.py; this file covers the
@@ -8,7 +8,7 @@ client families added on top, reusing the same _add/_classify_url semantics.
 
 import pytest
 
-from evigraph.services.http_call_extractor import extract_http_calls
+from tracekite.services.http_call_extractor import extract_http_calls
 
 
 def _by_client(sites):

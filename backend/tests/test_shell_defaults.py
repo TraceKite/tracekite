@@ -10,7 +10,7 @@ The precision hazard is that a host-shaped default need not be a host:
 Only keys whose NAME says they carry a network target contribute one.
 """
 
-from evigraph.services.env_extractor import shell_default
+from tracekite.services.env_extractor import shell_default
 
 
 class TestShellDefault:
@@ -44,9 +44,9 @@ class TestOnlyEndpointKeysContributeAHost:
     """The claim-level gate, exercised through the real compose emitter."""
 
     def emit(self, env_line):
-        from evigraph.parsers.docker_parser import parse_docker_compose
-        from evigraph.services.ingest_claims import emit_compose_claims
-        from evigraph.services.ingest_source import IngestSink
+        from tracekite.parsers.docker_parser import parse_docker_compose
+        from tracekite.services.ingest_claims import emit_compose_claims
+        from tracekite.services.ingest_source import IngestSink
         from types import SimpleNamespace
         compose = f"""
 name: shopstack
@@ -111,9 +111,9 @@ spec:
 """
 
     def claims(self):
-        from evigraph.parsers.kubernetes_parser import parse_kubernetes_yaml
-        from evigraph.services.ingest_claims import emit_k8s_claims
-        from evigraph.services.ingest_source import IngestSink
+        from tracekite.parsers.kubernetes_parser import parse_kubernetes_yaml
+        from tracekite.services.ingest_claims import emit_k8s_claims
+        from tracekite.services.ingest_source import IngestSink
         from types import SimpleNamespace
         sink = IngestSink()
         resources = parse_kubernetes_yaml("k8s/visits.yaml", self.MANIFEST)
@@ -164,9 +164,9 @@ services:
 """
 
     def claims(self):
-        from evigraph.parsers.docker_parser import parse_docker_compose
-        from evigraph.services.ingest_claims import emit_compose_claims
-        from evigraph.services.ingest_source import IngestSink
+        from tracekite.parsers.docker_parser import parse_docker_compose
+        from tracekite.services.ingest_claims import emit_compose_claims
+        from tracekite.services.ingest_source import IngestSink
         from types import SimpleNamespace
         sink = IngestSink()
         resources = parse_docker_compose("docker-compose.yml", self.COMPOSE)
@@ -224,7 +224,7 @@ services:
 """
 
     def test_the_provides_claim_carries_the_build_line(self):
-        from evigraph.parsers.docker_parser import parse_docker_compose
+        from tracekite.parsers.docker_parser import parse_docker_compose
         lines = self.COMPOSE.split("\n")
         [svc] = [r for r in parse_docker_compose("docker-compose.yml",
                                                  self.COMPOSE)
@@ -234,7 +234,7 @@ services:
 
     def test_the_built_from_edge_cites_it(self):
         from tests.test_alias_suggestions import claim
-        from evigraph.services.linker.engine import link
+        from tracekite.services.linker.engine import link
         estate = [claim("svcname", "provides", "shop:orders-api",
                         repo="repo_o",
                         attrs={"source": "compose", "build_context": "./orders",
@@ -253,7 +253,7 @@ class TestFusedGatewayEdgeKeepsTheRouteReceipt:
         only evidence[:1], so the fused edge cited a receipt the reader
         could not confirm."""
         from tests.test_path_algebra import two_hop_estate
-        from evigraph.services.linker.engine import link
+        from tracekite.services.linker.engine import link
         result = link(two_hop_estate(), now="2026-01-01T00:00:00+00:00",
                       aliases={}, promotions=[])
         [cs] = [e for e in result.edges if e.type == "CALLS_SERVICE"
@@ -285,7 +285,7 @@ services:
 """
 
     def test_the_dep_after_a_build_block_is_still_located(self):
-        from evigraph.parsers.docker_parser import parse_docker_compose
+        from tracekite.parsers.docker_parser import parse_docker_compose
         lines = self.COMPOSE.split("\n")
         [web] = [r for r in parse_docker_compose("docker-compose.yml",
                                                  self.COMPOSE)
@@ -316,7 +316,7 @@ services:
 """
 
     def test_the_merged_pair_cites_the_anchor_line(self):
-        from evigraph.parsers.docker_parser import parse_docker_compose
+        from tracekite.parsers.docker_parser import parse_docker_compose
         lines = self.COMPOSE.split("\n")
         [svc] = [r for r in parse_docker_compose("docker-compose.yml",
                                                  self.COMPOSE)
@@ -326,7 +326,7 @@ services:
         assert lines[cited - 1].strip().startswith("DB_HOST:")
 
     def test_inline_pairs_still_cite_their_own_block(self):
-        from evigraph.parsers.docker_parser import parse_docker_compose
+        from tracekite.parsers.docker_parser import parse_docker_compose
         lines = self.COMPOSE.split("\n")
         [svc] = [r for r in parse_docker_compose("docker-compose.yml",
                                                  self.COMPOSE)
@@ -341,7 +341,7 @@ class TestFixtureEndpointsAreNotApiSurface:
     receiver-name blocklist — no list can enumerate every variable name."""
 
     def _records(self, path):
-        from evigraph.services.ingest_source import _process_endpoints, IngestSink
+        from tracekite.services.ingest_source import _process_endpoints, IngestSink
         from types import SimpleNamespace
         src = SimpleNamespace(api_endpoints=[SimpleNamespace(
             method="DELETE", path="/path", framework="fastapi",

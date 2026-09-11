@@ -11,9 +11,9 @@ resolver at all.
 
 import pytest
 
-from evigraph.services.linker.base import ClaimIndex, ClaimRecord, LinkContext
-from evigraph.services.linker.engine import run_resolvers
-from evigraph.services.linker.vendors import (
+from tracekite.services.linker.base import ClaimIndex, ClaimRecord, LinkContext
+from tracekite.services.linker.engine import run_resolvers
+from tracekite.services.linker.vendors import (
     Vendor, classify, load_vendors, looks_external,
 )
 

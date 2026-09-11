@@ -1,5 +1,5 @@
 import pytest
-from evigraph.parsers.java_parser import JavaParser
+from tracekite.parsers.java_parser import JavaParser
 
 
 class TestJavaParser:
@@ -71,7 +71,7 @@ public class UserController {
 
 class TestPythonParser:
     def test_extract_functions(self):
-        from evigraph.parsers.python_parser import PythonParser
+        from tracekite.parsers.python_parser import PythonParser
         parser = PythonParser()
         code = """
 def hello_world():
@@ -88,7 +88,7 @@ def process_data(items: list) -> dict:
         assert functions[1].name == "process_data"
     
     def test_extract_classes(self):
-        from evigraph.parsers.python_parser import PythonParser
+        from tracekite.parsers.python_parser import PythonParser
         parser = PythonParser()
         code = """
 class UserService:
@@ -108,7 +108,7 @@ class UserService:
         assert len(methods) == 2  # __init__ and get_user
     
     def test_fastapi_routes(self):
-        from evigraph.parsers.python_parser import PythonParser
+        from tracekite.parsers.python_parser import PythonParser
         parser = PythonParser()
         code = """
 from fastapi import FastAPI
@@ -130,7 +130,7 @@ def create_user(user: User):
         assert get_ep[0].path == "/users"
     
     def test_extract_imports(self):
-        from evigraph.parsers.python_parser import PythonParser
+        from tracekite.parsers.python_parser import PythonParser
         parser = PythonParser()
         code = """
 import os

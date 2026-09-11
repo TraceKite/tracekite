@@ -17,8 +17,8 @@ import os
 
 import pytest
 
-from evigraph.services import repo_service
-from evigraph.services.repo_service import CloneError, clone_repository
+from tracekite.services import repo_service
+from tracekite.services.repo_service import CloneError, clone_repository
 
 
 @pytest.fixture

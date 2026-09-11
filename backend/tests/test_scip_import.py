@@ -12,9 +12,9 @@ functions that no longer exist.
 
 import os
 
-from evigraph import engine_config
-from evigraph.parsers.scip_parser import parse_scip
-from evigraph.services.scan import scan
+from tracekite import engine_config
+from tracekite.parsers.scip_parser import parse_scip
+from tracekite.services.scan import scan
 
 SYM = "scip-python python demo 1 app/{}()."
 
@@ -117,7 +117,7 @@ class TestScanIngestsTheIndex:
         assert len(calls) == 1
 
     def test_confidence_comes_from_config_not_a_literal(self, tmp_path):
-        from evigraph.services.linker.base import load_confidence
+        from tracekite.services.linker.base import load_confidence
         sink = repo(tmp_path)
         [edge] = scip_edges(sink)
         tier = load_confidence()["resolvers"]["scip_import"]["reference"]

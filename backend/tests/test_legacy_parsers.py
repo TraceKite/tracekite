@@ -8,12 +8,12 @@ line and branch coverage (including empty/error branches).
 import pytest
 from unittest.mock import patch
 
-from evigraph.parsers.base import ParsedImport, ParseResult
-from evigraph.parsers.java_parser import JavaParser
-from evigraph.parsers.python_parser import PythonParser
-from evigraph.parsers.javascript_parser import JavaScriptParser
-from evigraph.parsers.kotlin_parser import KotlinParser
-from evigraph.parsers.config_parser import (
+from tracekite.parsers.base import ParsedImport, ParseResult
+from tracekite.parsers.java_parser import JavaParser
+from tracekite.parsers.python_parser import PythonParser
+from tracekite.parsers.javascript_parser import JavaScriptParser
+from tracekite.parsers.kotlin_parser import KotlinParser
+from tracekite.parsers.config_parser import (
     ConfigEntry,
     ConfigParseResult,
     EXTERNAL_SYSTEM_PATTERNS,
@@ -26,7 +26,7 @@ from evigraph.parsers.config_parser import (
     _extract_yaml_keys,
     _extract_yaml_value,
 )
-from evigraph.parsers.dependency_parser import (
+from tracekite.parsers.dependency_parser import (
     DependencyInfo,
     detect_dependency_type,
     parse_build_gradle,
@@ -36,13 +36,13 @@ from evigraph.parsers.dependency_parser import (
     parse_pom_xml,
     parse_requirements_txt,
 )
-from evigraph.parsers.docker_parser import (
+from tracekite.parsers.docker_parser import (
     DockerResource,
     parse_docker_compose,
     parse_docker_file,
     parse_dockerfile,
 )
-from evigraph.parsers.kubernetes_parser import (
+from tracekite.parsers.kubernetes_parser import (
     K8sResource,
     K8S_KINDS,
     parse_helm_values,
@@ -650,7 +650,7 @@ DEBUG=true
         assert parse_config_file("unknown.bin", "x").entries == []
 
     def test_parse_config_file_exception(self):
-        with patch.dict("evigraph.parsers.config_parser.CONFIG_PARSERS", {".yml": lambda fp, c: (_ for _ in ()).throw(IOError("fail"))}):
+        with patch.dict("tracekite.parsers.config_parser.CONFIG_PARSERS", {".yml": lambda fp, c: (_ for _ in ()).throw(IOError("fail"))}):
             result = parse_config_file("app.yml", "server:\n  port: 1")
         assert result.entries == []
 
@@ -713,7 +713,7 @@ pytest~=7.0
         assert deps[1].scope == "test"
 
     def test_parse_pom_xml_exception(self):
-        with patch("evigraph.parsers.dependency_parser.re.finditer", side_effect=RuntimeError("boom")):
+        with patch("tracekite.parsers.dependency_parser.re.finditer", side_effect=RuntimeError("boom")):
             deps = parse_pom_xml("pom.xml", "<x/>")
         assert deps == []
 
@@ -759,7 +759,7 @@ require github.com/a/b v1.0.0
         assert parse_dependency_file("unknown.txt", "x") == []
 
     def test_parse_dependency_file_exception(self):
-        with patch.dict("evigraph.parsers.dependency_parser.DEPENDENCY_PARSERS", {"requirements.txt": lambda fp, c: (_ for _ in ()).throw(IOError("fail"))}):
+        with patch.dict("tracekite.parsers.dependency_parser.DEPENDENCY_PARSERS", {"requirements.txt": lambda fp, c: (_ for _ in ()).throw(IOError("fail"))}):
             deps = parse_dependency_file("requirements.txt", "x")
         assert deps == []
 

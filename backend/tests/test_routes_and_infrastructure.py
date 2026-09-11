@@ -6,9 +6,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from evigraph.config import settings
-from evigraph.main import app
-from evigraph.models.api_models import (
+from tracekite.config import settings
+from tracekite.main import app
+from tracekite.models.api_models import (
     GraphLink, GraphNode, GraphResponse, GraphStats, NodeDetail, RepoSummary,
 )
 
@@ -53,7 +53,7 @@ class TestAuth:
         assert response.status_code == 503
 
     def test_health_is_public(self):
-        with patch("evigraph.routes.health.check_neo4j_health", return_value=True):
+        with patch("tracekite.routes.health.check_neo4j_health", return_value=True):
             response = client.get("/health")
         assert response.status_code == 200
 
@@ -63,7 +63,7 @@ class TestAuth:
         assert "version" in response.json()
 
     def test_valid_token_passes(self, auth_headers):
-        with patch("evigraph.routes.repos.list_repos", return_value=[]):
+        with patch("tracekite.routes.repos.list_repos", return_value=[]):
             response = client.get("/api/repos", headers=auth_headers)
         assert response.status_code == 200
 
@@ -71,7 +71,7 @@ class TestAuth:
     # split it depends on is security-critical: reads open, writes never.
     def test_anonymous_read_allowed_when_enabled(self):
         with patch.object(settings, "allow_anonymous_reads", True), \
-             patch("evigraph.routes.repos.list_repos", return_value=[]):
+             patch("tracekite.routes.repos.list_repos", return_value=[]):
             response = client.get("/api/repos")
         assert response.status_code == 200
 
@@ -99,7 +99,7 @@ class TestAuth:
 
     def test_health_reports_anonymous_read_mode(self):
         with patch.object(settings, "allow_anonymous_reads", True), \
-             patch("evigraph.routes.health.check_neo4j_health", return_value=True):
+             patch("tracekite.routes.health.check_neo4j_health", return_value=True):
             body = client.get("/health").json()
         assert body["anonymous_reads"] is True
         assert body["auth_required_for_writes"] is True
@@ -107,7 +107,7 @@ class TestAuth:
     def test_auth_disabled_allows_everything(self):
         # The escape hatch the local stack ships with: no token for any route.
         with patch.object(settings, "auth_enabled", False), \
-             patch("evigraph.routes.repos.list_repos", return_value=[]):
+             patch("tracekite.routes.repos.list_repos", return_value=[]):
             read = client.get("/api/repos")
         assert read.status_code == 200
         with patch.object(settings, "auth_enabled", False):
@@ -116,13 +116,13 @@ class TestAuth:
 
     def test_health_reports_auth_disabled(self):
         with patch.object(settings, "auth_enabled", False), \
-             patch("evigraph.routes.health.check_neo4j_health", return_value=True):
+             patch("tracekite.routes.health.check_neo4j_health", return_value=True):
             body = client.get("/health").json()
         assert body["auth_required_for_writes"] is False
         assert body["anonymous_reads"] is True
 
     def test_rate_limiter_blocks_after_burst(self):
-        from evigraph.middleware.auth import _limiter
+        from tracekite.middleware.auth import _limiter
         results = [_limiter.allow("burst-test-key") for _ in range(40)]
         assert False in results
 
@@ -131,7 +131,7 @@ class TestHealthRoute:
     def test_health_ok(self):
         # The posture is asserted, so it is also pinned: /health reports live
         # settings, and a local `.env` would otherwise decide the expectation.
-        with patch("evigraph.routes.health.check_neo4j_health", return_value=True), \
+        with patch("tracekite.routes.health.check_neo4j_health", return_value=True), \
                 patch.object(settings, "auth_enabled", True), \
                 patch.object(settings, "allow_anonymous_reads", False):
             body = client.get("/health").json()
@@ -140,14 +140,14 @@ class TestHealthRoute:
                         "auth_required_for_writes": True}
 
     def test_health_degraded(self):
-        with patch("evigraph.routes.health.check_neo4j_health", return_value=False):
+        with patch("tracekite.routes.health.check_neo4j_health", return_value=False):
             body = client.get("/health").json()
         assert body["status"] == "degraded"
 
 
 class TestReposRoutes:
     def test_ingest_queues_job(self, auth_headers):
-        with patch("evigraph.routes.repos.job_queue") as queue:
+        with patch("tracekite.routes.repos.job_queue") as queue:
             queue.submit.return_value = "job-123"
             response = client.post(
                 "/api/repos/ingest",
@@ -164,7 +164,7 @@ class TestReposRoutes:
             "https://github.com/foo/bar")
 
     def test_ingest_refresh_flag_uses_refresh_lane(self, auth_headers):
-        with patch("evigraph.routes.repos.job_queue") as queue:
+        with patch("tracekite.routes.repos.job_queue") as queue:
             queue.submit.return_value = "job-124"
             client.post(
                 "/api/repos/ingest",
@@ -189,26 +189,26 @@ class TestReposRoutes:
         assert response.status_code == 400
 
     def test_list_repositories(self, auth_headers):
-        with patch("evigraph.routes.repos.list_repos",
+        with patch("tracekite.routes.repos.list_repos",
                    return_value=[_summary()]):
             body = client.get("/api/repos", headers=auth_headers).json()
         assert len(body["repos"]) == 1
         assert body["repos"][0]["lifecycle_state"] == "ingested"
 
     def test_get_repository_found(self, auth_headers):
-        with patch("evigraph.routes.repos.get_repo", return_value=_summary()):
+        with patch("tracekite.routes.repos.get_repo", return_value=_summary()):
             response = client.get("/api/repos/r1", headers=auth_headers)
         assert response.status_code == 200
         assert response.json()["head_commit_sha"] == "abc"
 
     def test_get_repository_missing(self, auth_headers):
-        with patch("evigraph.routes.repos.get_repo", return_value=None):
+        with patch("tracekite.routes.repos.get_repo", return_value=None):
             response = client.get("/api/repos/nope", headers=auth_headers)
         assert response.status_code == 404
 
     def test_delete_queues_job(self, auth_headers):
-        with patch("evigraph.routes.repos.get_repo", return_value=_summary()), \
-             patch("evigraph.routes.repos.job_queue") as queue:
+        with patch("tracekite.routes.repos.get_repo", return_value=_summary()), \
+             patch("tracekite.routes.repos.job_queue") as queue:
             queue.submit.return_value = "job-del"
             response = client.delete("/api/repos/r1", headers=auth_headers)
         assert response.status_code == 202
@@ -216,8 +216,8 @@ class TestReposRoutes:
         assert queue.submit.call_args[0][0] == "repo_delete"
 
     def test_refresh_queues_job(self, auth_headers):
-        with patch("evigraph.routes.repos.get_repo", return_value=_summary()), \
-             patch("evigraph.routes.repos.job_queue") as queue:
+        with patch("tracekite.routes.repos.get_repo", return_value=_summary()), \
+             patch("tracekite.routes.repos.job_queue") as queue:
             queue.submit.return_value = "job-ref"
             response = client.post("/api/repos/r1/refresh",
                                    headers=auth_headers)
@@ -235,7 +235,7 @@ class TestJobsRoute:
         session.run.return_value.single.return_value = record
         ctx = MagicMock()
         ctx.__enter__.return_value = session
-        with patch("evigraph.routes.jobs.get_session", return_value=ctx):
+        with patch("tracekite.routes.jobs.get_session", return_value=ctx):
             body = client.get("/api/jobs/j1", headers=auth_headers).json()
         assert body["status"] == "running"
         assert body["progress"] == 50
@@ -245,7 +245,7 @@ class TestJobsRoute:
         session.run.return_value.single.return_value = None
         ctx = MagicMock()
         ctx.__enter__.return_value = session
-        with patch("evigraph.routes.jobs.get_session", return_value=ctx):
+        with patch("tracekite.routes.jobs.get_session", return_value=ctx):
             response = client.get("/api/jobs/nope", headers=auth_headers)
         assert response.status_code == 404
 
@@ -259,20 +259,20 @@ class TestGraphRoutes:
             links=[GraphLink(source="r1", target="n1", type="CONTAINS",
                              label="contains", confidence=1.0)],
         )
-        with patch("evigraph.routes.graph.get_graph", return_value=fake):
+        with patch("tracekite.routes.graph.get_graph", return_value=fake):
             body = client.get("/api/repos/r1/graph",
                               headers=auth_headers).json()
         assert body["links"][0]["confidence"] == 1.0
         assert body["links"][0]["type"] == "CONTAINS"
 
     def test_search(self, auth_headers):
-        with patch("evigraph.routes.graph.search_nodes", return_value=[]):
+        with patch("tracekite.routes.graph.search_nodes", return_value=[]):
             response = client.get("/api/repos/r1/search?q=foo",
                                   headers=auth_headers)
         assert response.status_code == 200
 
     def test_node_detail_missing(self, auth_headers):
-        with patch("evigraph.routes.graph.get_node_details", return_value=None):
+        with patch("tracekite.routes.graph.get_node_details", return_value=None):
             response = client.get("/api/repos/r1/nodes/x",
                                   headers=auth_headers)
         assert response.status_code == 404
@@ -282,7 +282,7 @@ class TestGraphRoutes:
             node=GraphNode(id="n1", type="Method", label="m", name="m"),
             incoming=[], outgoing=[], neighbors=[],
         )
-        with patch("evigraph.routes.graph.get_node_details", return_value=detail):
+        with patch("tracekite.routes.graph.get_node_details", return_value=detail):
             response = client.get("/api/repos/r1/nodes/n1",
                                   headers=auth_headers)
         assert response.status_code == 200

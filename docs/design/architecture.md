@@ -1,6 +1,6 @@
-# Evigraph architecture
+# TraceKite architecture
 
-The design Evigraph must have to be (a) embeddable as a library, (b) correct at
+The design TraceKite must have to be (a) embeddable as a library, (b) correct at
 1,000 repositories, and (c) maintainable by people who did not write it.
 
 This document is normative: it fixes *how the pieces fit together*, and
@@ -10,12 +10,12 @@ where any other document disagrees with it, this one wins.
 
 ## 1. Scope
 
-Evigraph establishes **what is connected across repositories, and how we know**.
+TraceKite establishes **what is connected across repositories, and how we know**.
 It does not decide what to do about it. Incident triage, chat interfaces,
 ranking, and retrieval belong to hosts.
 
 Everything below follows from one constraint: **a host must be able to use
-Evigraph without adopting Evigraph's infrastructure.**
+TraceKite without adopting TraceKite's infrastructure.**
 
 ---
 
@@ -23,15 +23,15 @@ Evigraph without adopting Evigraph's infrastructure.**
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  evigraph-ui          React                                 │  separate artifact
+│  tracekite-ui          React                                 │  separate artifact
 ├──────────────────────────────────────────────────────────┤
-│  evigraph-server      FastAPI, jobs, auth, scheduling       │  optional extra
+│  tracekite-server      FastAPI, jobs, auth, scheduling       │  optional extra
 ├──────────────────────────────────────────────────────────┤
-│  evigraph-store       GraphStore protocol + backends        │  the ONLY I/O
+│  tracekite-store       GraphStore protocol + backends        │  the ONLY I/O
 ├──────────────────────────────────────────────────────────┤
-│  evigraph-parsers     bytes + path → claims                 │  pure
+│  tracekite-parsers     bytes + path → claims                 │  pure
 ├──────────────────────────────────────────────────────────┤
-│  evigraph-core        claims, resolvers, evidence, confidence│  pure, no deps
+│  tracekite-core        claims, resolvers, evidence, confidence│  pure, no deps
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -68,20 +68,20 @@ silent rather than loud:
 | `export_openapi.py --check` | `lib/api-spec/openapi.yaml` drifting from the routes it is generated from |
 
 **What the layer check does and does not do.** The boundaries are declared and checked;
-the files still live under `backend/evigraph/`. Physically separating them into
-installable distributions is a separate goal (`pip install evigraph-core` pulling
+the files still live under `backend/tracekite/`. Physically separating them into
+installable distributions is a separate goal (`pip install tracekite-core` pulling
 no neo4j and no fastapi), and nothing above is a substitute for it.
 
 The remaining coupling was, in the end, one module: **every
-violation was `evigraph/config.py`**, reached by ten modules across core and
+violation was `tracekite/config.py`**, reached by ten modules across core and
 store.
 Core now owns `engine_config.EngineConfig` (config dir, workspace dir, HMAC
 key) and store owns `db/store_config.StoreConfig` (bolt URI, credentials,
 batch size) — both frozen dataclasses on stdlib alone, with working defaults.
-`evigraph/config.py` is the one place that binds an environment to them.
+`tracekite/config.py` is the one place that binds an environment to them.
 
 **The cost of that, stated plainly:** core no longer reads the environment, so
-an entry point that never imports `evigraph.config` runs on defaults. `main.py` and
+an entry point that never imports `tracekite.config` runs on defaults. `main.py` and
 `tools/calibrate.py` bind explicitly; anything new that does not will hash
 config values under an empty HMAC key. This is loud rather than silent —
 `redaction` raises `RedactionKeyMissing` — and the calibration CLI test pins
@@ -94,7 +94,7 @@ This section previously listed three violating files. Two of them never were:
 |---|---|
 | `parsers/config_parser.py` imports storage | false positive — matches `"neo4j"`, a string in the table that detects which technologies a *scanned* repo uses. Its only imports are `logging`, `re`, `yaml`, `dataclasses`, `typing`. |
 | `parsers/tree_sitter/adapter.py` imports storage | false positive — matches `"fastapi"` in `_framework_for_language()`, a language→framework map used to recognise routes in scanned code |
-| `services/linker/service.py` reads Neo4j directly | real — imported `evigraph.db.constraints` and `evigraph.db.neo4j_client` for claims, fingerprints and orphan GC |
+| `services/linker/service.py` reads Neo4j directly | real — imported `tracekite.db.constraints` and `tracekite.db.neo4j_client` for claims, fingerprints and orphan GC |
 
 The real one is fixed by inversion rather than relocation: the linker declares
 the storage a run needs as a Protocol it owns (`linker/ports.py`),
@@ -142,7 +142,7 @@ formed it and the transformations it applied (gateway prefix strip, env
 substitution, alias resolution).
 
 The rendezvous is materialised, not implicit. That is the difference between
-Evigraph and a collision-hash design: because the join is a real object, it can
+TraceKite and a collision-hash design: because the join is a real object, it can
 carry provenance, be explained, be declined, and be scored.
 
 ### 3.3 Edge — "these two things are connected, and here is the receipt"
@@ -353,7 +353,7 @@ Cypher only.
 
 ### 5.4 Embedding: no store at all
 
-A host that embeds Evigraph supplies its own storage, or none:
+A host that embeds TraceKite supplies its own storage, or none:
 
 ```python
 claims = [scan(path=p, repo_id=r) for r, p in repos]
@@ -362,7 +362,7 @@ host.write(result.edges)       # host owns persistence
 ```
 
 This is not a convenience. A host that already runs a graph database must not
-be made to run a second one to use Evigraph.
+be made to run a second one to use TraceKite.
 
 ---
 
@@ -547,7 +547,7 @@ The first row is better than the docs claimed; the middle rows are the gap.
 
 **B · CI-push** — for large estates.
 
-Each repository's own CI runs `evigraph scan` on merge and uploads its artifact;
+Each repository's own CI runs `tracekite scan` on merge and uploads its artifact;
 a compactor merges them. No central watcher, no polling, no rate limit — the
 work happens where the code already is.
 

@@ -1,14 +1,14 @@
 """The service map is assembled in core, so both surfaces agree.
 
 Two decisions used to live inside the `/api/v2/service-map` handler and
-one inside the rollup handler, which meant `pip install evigraph` and
+one inside the rollup handler, which meant `pip install tracekite` and
 `docker compose up` could render the same estate differently. They are
 pinned here because that is the point of moving them — not that the code
 relocated, but that there is now one answer.
 """
 
-from evigraph.services.linker.map_view import assemble_service_map, node_kind
-from evigraph.services.linker.rollup_view import ownership_from_rows
+from tracekite.services.linker.map_view import assemble_service_map, node_kind
+from tracekite.services.linker.rollup_view import ownership_from_rows
 
 
 def node(nid, name=None, **extra):

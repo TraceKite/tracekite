@@ -32,7 +32,7 @@ import builtins
 import os
 import sys
 
-ROOTS = ("evigraph", "tools")
+ROOTS = ("tracekite", "tools")
 
 
 def _module_bindings(tree: ast.Module) -> set[str]:

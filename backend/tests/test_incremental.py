@@ -12,9 +12,9 @@ import dataclasses
 
 import pytest
 
-from evigraph.services.calibration import build_estates
-from evigraph.services.linker.engine import link
-from evigraph.services.linker.incremental import changed_kinds, relink
+from tracekite.services.calibration import build_estates
+from tracekite.services.linker.engine import link
+from tracekite.services.linker.incremental import changed_kinds, relink
 
 NOW = "2026-01-01T00:00:00+00:00"
 
@@ -129,10 +129,10 @@ class TestOnlyTouchedPartitionsReResolve:
     def test_a_registered_host_resolver_forces_full(self):
         """A host resolver's input kinds are unknown here; keeping anything
         would guess at what it reads. Guessing wrong keeps a stale edge."""
-        from evigraph.services.linker.engine import (
+        from tracekite.services.linker.engine import (
             clear_registered_resolvers, register_resolver,
         )
-        from evigraph.services.linker.values import ResolverOutput
+        from tracekite.services.linker.values import ResolverOutput
 
         class Hosted:
             def resolve(self, index, ctx):

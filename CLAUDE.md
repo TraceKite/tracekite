@@ -11,8 +11,8 @@ It does not restate the rules.
 ## Read before changing anything
 
 `docs/design/architecture.md` is normative for layering and the data model, and
-is worth reading in full before touching `backend/evigraph/services/linker/` or
-`backend/evigraph/db/`. `CONTRIBUTING.md` §"Traps in the multi-repo code" documents
+is worth reading in full before touching `backend/tracekite/services/linker/` or
+`backend/tracekite/db/`. `CONTRIBUTING.md` §"Traps in the multi-repo code" documents
 failure modes that each cost real debugging time — the per-repo graph silently
 returning two islands instead of an error is the one that catches everyone.
 
@@ -49,7 +49,7 @@ Prefer the narrow check while iterating and the full one before reporting done:
 ```
 
 ```bash
-pnpm --filter @evigraph/web run typecheck
+pnpm --filter @tracekite/web run typecheck
 ```
 
 The accuracy harness under `scripts/accuracy/` reads the **stored** graph, not

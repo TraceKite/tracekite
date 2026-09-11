@@ -6,11 +6,11 @@ last sound hop, and a same-length prefix tie naming two targets matches
 nothing — the old code silently took whichever tied rule parsed first.
 """
 
-from evigraph.services.linker.base import (
+from tracekite.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, RouteRule, load_confidence,
 )
-from evigraph.services.linker.engine import link
-from evigraph.services.linker.path_algebra import (
+from tracekite.services.linker.engine import link
+from tracekite.services.linker.path_algebra import (
     apply_rule, match_table, resolve_chain,
 )
 

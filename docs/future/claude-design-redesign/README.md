@@ -5,7 +5,7 @@
 > [runtime QA matrix](../navigation-and-feature-qa-2026-08-30.md).
 
 This is the recommended implementation direction. Claude Design generated the
-editable source after the current Evigraph application had been reviewed in the
+editable source after the current TraceKite application had been reviewed in the
 browser. The layout preserves the real shell and turns Repo, Service Map, and
 Trace into one continuous investigation workflow.
 
@@ -13,7 +13,7 @@ Claude Design wrote all five screens before its session quota paused the final
 chat response. The exported source was rendered locally and every screen below
 was visually verified from that source.
 
-[Open the Claude Design project](https://claude.ai/design/p/c0b40f89-5e1a-4f26-a97c-084e0ec2d535?file=Evigraph+-+Graph+Investigation+Workspace.dc.html)
+[Open the Claude Design project](https://claude.ai/design/p/c0b40f89-5e1a-4f26-a97c-084e0ec2d535?file=TraceKite+-+Graph+Investigation+Workspace.dc.html)
 
 ## Assets
 
@@ -24,7 +24,7 @@ was visually verified from that source.
 | [mock-repo-3d-knowledge-atlas.png](mock-repo-3d-knowledge-atlas.png) | Bounded 3D atlas with stable repository groups, focus controls, neighbor context, and selected-edge details |
 | [mock-service-map.png](mock-service-map.png) | Directional service topology with relationship counts and a relevant service inspector |
 | [mock-distributed-trace.png](mock-distributed-trace.png) | Ranked direct and alternate paths with confidence and `file:line` evidence |
-| [evigraph-graph-investigation.dc.html](evigraph-graph-investigation.dc.html) | Editable five-screen source artifact |
+| [tracekite-graph-investigation.dc.html](tracekite-graph-investigation.dc.html) | Editable five-screen source artifact |
 | [support.js](support.js) | Local runtime used by the source artifact |
 | [design-tokens.css](design-tokens.css) | Portable color, type, spacing, and geometry tokens |
 
@@ -37,7 +37,7 @@ python -m http.server 8000 --directory docs/future/claude-design-redesign
 ```
 
 Then open
-`http://localhost:8000/evigraph-graph-investigation.dc.html`.
+`http://localhost:8000/tracekite-graph-investigation.dc.html`.
 
 ## Why this direction is stronger
 

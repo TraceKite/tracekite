@@ -13,7 +13,7 @@ Invariant I5: a decline is data.
 
 from types import SimpleNamespace
 
-from evigraph.services.framework_routes import computed_go_paths, framework_routes
+from tracekite.services.framework_routes import computed_go_paths, framework_routes
 
 # Shaped after src/frontend/main.go in that repository.
 FRONTEND = """\

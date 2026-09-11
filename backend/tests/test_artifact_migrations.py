@@ -7,10 +7,10 @@ already decides: minor is additive with known defaults, major changed meaning.
 
 import pytest
 
-from evigraph.db.artifact_migrations import (
+from tracekite.db.artifact_migrations import (
     MIGRATIONS, UnmigratableArtifact, can_read, migrate, register_migration,
 )
-from evigraph.wire import WIRE_VERSION
+from tracekite.wire import WIRE_VERSION
 
 
 class TestPolicy:
@@ -48,7 +48,7 @@ class TestPolicy:
 class TestMigrating:
     def test_a_declared_migration_is_applied(self):
         """Simulates a 1.0 -> 1.1 bump that added a field with a default."""
-        from evigraph.db import artifact_migrations as m
+        from tracekite.db import artifact_migrations as m
 
         original = m.WIRE_VERSION
         try:

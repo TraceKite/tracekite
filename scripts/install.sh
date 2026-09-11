@@ -8,7 +8,7 @@ usage() {
   printf '%s\n' "Usage: scripts/install.sh [--yes] [--client CLIENT]" \
     "       scripts/install.sh [--claude] [--codex] [--kimi] [--antigravity]" \
     "" \
-    "Installs the evigraph CLI and selected global skill files." \
+    "Installs the tracekite CLI and selected global skill files." \
     "MCP server registration remains an explicit per-client step."
 }
 
@@ -68,9 +68,9 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 printf '%s\n' \
-  "Evigraph setup will:" \
-  "  1. Install the evigraph CLI as a uv tool." \
-  "  2. Install the selected global Evigraph skill files." \
+  "TraceKite setup will:" \
+  "  1. Install the tracekite CLI as a uv tool." \
+  "  2. Install the selected global TraceKite skill files." \
   "  3. Leave existing skill files and all MCP client configuration untouched."
 
 if [[ "$auto_confirm" == false ]]; then
@@ -84,17 +84,17 @@ fi
 cd "$repo_root"
 uv tool install --no-cache --force .
 
-if command -v evigraph >/dev/null 2>&1; then
-  evigraph install-skill "${client_flags[@]}"
+if command -v tracekite >/dev/null 2>&1; then
+  tracekite install-skill "${client_flags[@]}"
 else
-  uv tool run --from "$repo_root" evigraph install-skill "${client_flags[@]}"
+  uv tool run --from "$repo_root" tracekite install-skill "${client_flags[@]}"
 fi
 
 printf '%s\n' \
   "" \
-  "Evigraph CLI and skills are ready." \
+  "TraceKite CLI and skills are ready." \
   "Register the MCP server for each client using the commands in:" \
   "  docs/plugins-and-mcp-guide.md" \
   "" \
-  "Verify: evigraph --help" \
-  "Serve:  evigraph mcp /absolute/path/to/repo-a /absolute/path/to/repo-b"
+  "Verify: tracekite --help" \
+  "Serve:  tracekite mcp /absolute/path/to/repo-a /absolute/path/to/repo-b"

@@ -9,7 +9,7 @@ that nobody owns them.
 
 import pytest
 
-from evigraph.services.linker.rollup_view import (
+from tracekite.services.linker.rollup_view import (
     aggregate_service_map, domain_of,
 )
 

@@ -9,19 +9,19 @@ from types import SimpleNamespace
 
 import pytest
 
-from evigraph.services.claims import ContractClaim, claim_to_node
-from evigraph.services.graph_factories import create_docker_node, create_k8s_node
-from evigraph.services.http_call_extractor import extract_http_calls
-from evigraph.services.ingest_artifacts import (
+from tracekite.services.claims import ContractClaim, claim_to_node
+from tracekite.services.graph_factories import create_docker_node, create_k8s_node
+from tracekite.services.http_call_extractor import extract_http_calls
+from tracekite.services.ingest_artifacts import (
     process_config, process_dependencies, process_docker, process_k8s,
 )
-from evigraph.services.ingest_claims import emit_compose_claims, emit_config_claims
-from evigraph.services.ingest_source import IngestSink, process_source_file
-from evigraph.services.ingest_claims import (
+from tracekite.services.ingest_claims import emit_compose_claims, emit_config_claims
+from tracekite.services.ingest_source import IngestSink, process_source_file
+from tracekite.services.ingest_claims import (
     _filename_service_stem, _gateway_service_hint, _route_target, _split_image,
 )
-from evigraph.services.redaction import redact, shannon_entropy_bits
-from evigraph.utils.canonical import canonicalize_path_template
+from tracekite.services.redaction import redact, shannon_entropy_bits
+from tracekite.utils.canonical import canonicalize_path_template
 
 
 def _file(path, language="java"):
@@ -54,7 +54,7 @@ def _src_file(path="src/App.java", language="Java"):
 
 
 # ---------------------------------------------------------------------------
-# evigraph/services/claims.py — 54, 56, 58, 102
+# tracekite/services/claims.py — 54, 56, 58, 102
 # ---------------------------------------------------------------------------
 class TestClaimsValidation:
     def test_unknown_kind_raises(self):
@@ -78,7 +78,7 @@ class TestClaimsValidation:
 
 
 # ---------------------------------------------------------------------------
-# evigraph/services/graph_factories.py — 121, 135-136
+# tracekite/services/graph_factories.py — 121, 135-136
 # ---------------------------------------------------------------------------
 class TestGraphFactoryNodes:
     def test_create_docker_node(self):
@@ -107,7 +107,7 @@ class TestGraphFactoryNodes:
 
 
 # ---------------------------------------------------------------------------
-# evigraph/services/http_call_extractor.py
+# tracekite/services/http_call_extractor.py
 # ---------------------------------------------------------------------------
 class TestHttpCallExtractorGaps:
     def test_java_put_delete_literal(self):
@@ -173,7 +173,7 @@ class TestHttpCallExtractorGaps:
 
 
 # ---------------------------------------------------------------------------
-# evigraph/services/ingest_artifacts.py — 25, 40, 50-64, 69-77
+# tracekite/services/ingest_artifacts.py — 25, 40, 50-64, 69-77
 # ---------------------------------------------------------------------------
 class TestIngestArtifactsGaps:
     def test_process_dependencies_skips_nameless(self):
@@ -222,7 +222,7 @@ class TestIngestArtifactsGaps:
         # k8s resources -> nodes/edges/claims, skipping missing name/kind.
         # Uses real K8sResource objects: the parser is the only producer, and
         # the claim emitters read spec fields that a bare stub does not have.
-        from evigraph.parsers.kubernetes_parser import K8sResource
+        from tracekite.parsers.kubernetes_parser import K8sResource
         sink = IngestSink()
         resources = [
             K8sResource(name="", kind="Deployment"),
@@ -242,12 +242,12 @@ class TestIngestArtifactsGaps:
 
 
 # ---------------------------------------------------------------------------
-# evigraph/services/ingest_claims.py
+# tracekite/services/ingest_claims.py
 # ---------------------------------------------------------------------------
 class TestIngestClaimsGaps:
     def test_base_url_service_hint_svcname_only(self):
         # lines 50-57: base_url site with a service hint -> svcname consumes
-        from evigraph.services.ingest_claims import emit_source_claims
+        from tracekite.services.ingest_claims import emit_source_claims
         sink = IngestSink()
         content = 'WebClient.create("http://accounts-service")'
         emit_source_claims("r1", _file("A.java"), content, [], "file1", sink)
@@ -261,7 +261,7 @@ class TestIngestClaimsGaps:
 
     def test_base_url_without_hint_emits_nothing(self):
         # line 57: base_url but no service_hint -> continue, no claim
-        from evigraph.services.ingest_claims import emit_source_claims
+        from tracekite.services.ingest_claims import emit_source_claims
         sink = IngestSink()
         content = 'WebClient.create("http://localhost:8080")'
         emit_source_claims("r1", _file("A.java"), content, [], "file1", sink)
@@ -388,7 +388,7 @@ class TestIngestClaimsGaps:
 
 
 # ---------------------------------------------------------------------------
-# evigraph/services/ingest_source.py — 75, 94, 115
+# tracekite/services/ingest_source.py — 75, 94, 115
 # ---------------------------------------------------------------------------
 class TestIngestSourceGaps:
     def test_unknown_entity_type_skipped(self):
@@ -444,7 +444,7 @@ class TestIngestSourceGaps:
 
 
 # ---------------------------------------------------------------------------
-# evigraph/services/redaction.py — 62, 85, 107, 133, 135-139, 143
+# tracekite/services/redaction.py — 62, 85, 107, 133, 135-139, 143
 # ---------------------------------------------------------------------------
 class TestRedactionGaps:
     def test_empty_value_opaque(self):
@@ -492,7 +492,7 @@ class TestRedactionGaps:
 
 
 # ---------------------------------------------------------------------------
-# evigraph/utils/canonical.py — 32
+# tracekite/utils/canonical.py — 32
 # ---------------------------------------------------------------------------
 class TestCanonicalGaps:
     def test_embedded_param_within_segment(self):

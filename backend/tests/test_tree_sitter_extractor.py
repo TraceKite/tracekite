@@ -11,13 +11,13 @@ from unittest.mock import patch
 
 import pytest
 
-from evigraph.parsers.tree_sitter.core.extractor import (
+from tracekite.parsers.tree_sitter.core.extractor import (
     TREE_SITTER_AVAILABLE as EXTRACTOR_TS_AVAILABLE,
     TreeSitterExtractor,
 )
-from evigraph.parsers.tree_sitter.core.models import LanguageType, SymbolInfo
-from evigraph.parsers.tree_sitter.core.parser import TreeSitterParser
-from evigraph.parsers.tree_sitter.core.queries.query_engine import (
+from tracekite.parsers.tree_sitter.core.models import LanguageType, SymbolInfo
+from tracekite.parsers.tree_sitter.core.parser import TreeSitterParser
+from tracekite.parsers.tree_sitter.core.queries.query_engine import (
     TREE_SITTER_AVAILABLE as ENGINE_TS_AVAILABLE,
     QueryEngine,
 )
@@ -234,7 +234,7 @@ class UserController {
     def test_extract_symbols_when_tree_sitter_unavailable(self):
         extractor = TreeSitterExtractor()
         root, ts_language = _parse(LanguageType.PYTHON, "def f(): pass")
-        with patch("evigraph.parsers.tree_sitter.core.extractor.TREE_SITTER_AVAILABLE", False):
+        with patch("tracekite.parsers.tree_sitter.core.extractor.TREE_SITTER_AVAILABLE", False):
             symbols = extractor.extract_symbols(root, ts_language, LanguageType.PYTHON, "no_ts.py")
         assert symbols == []
 
@@ -375,7 +375,7 @@ class UserController {
     def test_extract_method_calls_when_tree_sitter_unavailable(self):
         extractor = TreeSitterExtractor()
         root, ts_language = _parse(LanguageType.PYTHON, "obj.foo()\n")
-        with patch("evigraph.parsers.tree_sitter.core.extractor.TREE_SITTER_AVAILABLE", False):
+        with patch("tracekite.parsers.tree_sitter.core.extractor.TREE_SITTER_AVAILABLE", False):
             calls = extractor.extract_method_calls(root, ts_language, LanguageType.PYTHON, "no_ts.py", "obj.foo()\n")
         assert calls == []
 
@@ -526,7 +526,7 @@ def get_users():
     def test_extract_sql_queries_when_tree_sitter_unavailable(self):
         extractor = TreeSitterExtractor()
         root, ts_language = _parse(LanguageType.PYTHON, 'sql = "SELECT * FROM users"\n')
-        with patch("evigraph.parsers.tree_sitter.core.extractor.TREE_SITTER_AVAILABLE", False):
+        with patch("tracekite.parsers.tree_sitter.core.extractor.TREE_SITTER_AVAILABLE", False):
             queries = extractor.extract_sql_queries(root, ts_language, LanguageType.PYTHON, "no_ts.py", [])
         assert queries == []
 
@@ -625,7 +625,7 @@ impl UserController {
         extractor = TreeSitterExtractor()
         root, ts_language = _parse(LanguageType.PYTHON, "x = 1\n")
         dummy = SymbolInfo(name="x", symbol_type="variable", file_path="dummy.py", line_number=1, column=0, end_line=1, end_column=1)
-        with patch("evigraph.parsers.tree_sitter.core.extractor.TREE_SITTER_AVAILABLE", False):
+        with patch("tracekite.parsers.tree_sitter.core.extractor.TREE_SITTER_AVAILABLE", False):
             refs = extractor.extract_symbol_references(root, ts_language, LanguageType.PYTHON, "no_ts.py", [dummy])
         assert refs == []
 
@@ -816,7 +816,7 @@ public class C {
     def test_query_engine_when_tree_sitter_unavailable(self):
         engine = QueryEngine()
         root, ts_language = _parse(LanguageType.PYTHON, "def foo(): pass\n")
-        with patch("evigraph.parsers.tree_sitter.core.queries.query_engine.TREE_SITTER_AVAILABLE", False):
+        with patch("tracekite.parsers.tree_sitter.core.queries.query_engine.TREE_SITTER_AVAILABLE", False):
             assert engine.execute_query("(identifier) @x", root, ts_language) == []
             assert engine.execute_query_grouped("(identifier) @x", root, ts_language) == []
             assert engine.find_method_calls_grouped(root, ts_language, LanguageType.PYTHON) == []

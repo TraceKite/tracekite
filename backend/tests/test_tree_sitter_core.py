@@ -2,9 +2,9 @@
 Unit tests for the Tree-sitter core modules.
 
 Modules covered:
-- evigraph.parsers.tree_sitter.core.base_parser
-- evigraph.parsers.tree_sitter.core.queries.query_loader
-- evigraph.parsers.tree_sitter.core.parser
+- tracekite.parsers.tree_sitter.core.base_parser
+- tracekite.parsers.tree_sitter.core.queries.query_loader
+- tracekite.parsers.tree_sitter.core.parser
 
 External dependencies (filesystem / tree-sitter / neo4j) are mocked so the
 suite can run in any environment.
@@ -18,10 +18,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from evigraph.parsers.tree_sitter.core.base_parser import BaseExtractor, BaseParser
-from evigraph.parsers.tree_sitter.core.models import LanguageType, ParsingResult
-from evigraph.parsers.tree_sitter.core.parser import TreeSitterParser
-from evigraph.parsers.tree_sitter.core.queries.query_loader import QueryLoader
+from tracekite.parsers.tree_sitter.core.base_parser import BaseExtractor, BaseParser
+from tracekite.parsers.tree_sitter.core.models import LanguageType, ParsingResult
+from tracekite.parsers.tree_sitter.core.parser import TreeSitterParser
+from tracekite.parsers.tree_sitter.core.queries.query_loader import QueryLoader
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +137,7 @@ class TestBaseExtractor:
 class TestQueryLoader:
     def test_default_queries_dir(self):
         loader = QueryLoader()
-        expected = Path(__file__).parent.parent / "evigraph" / "parsers" / "tree_sitter" / "core" / "queries" / "files"
+        expected = Path(__file__).parent.parent / "tracekite" / "parsers" / "tree_sitter" / "core" / "queries" / "files"
         assert loader.queries_dir == expected
 
     def test_custom_queries_dir(self, tmp_path):
@@ -226,7 +226,7 @@ class TestTreeSitterParserImportFallback:
 import sys
 from unittest.mock import patch
 with patch.dict(sys.modules, {"tree_sitter": None}):
-    import evigraph.parsers.tree_sitter.core.parser as fallback_parser
+    import tracekite.parsers.tree_sitter.core.parser as fallback_parser
 
 assert fallback_parser.TREE_SITTER_AVAILABLE is False
 assert fallback_parser.Language is not None
@@ -310,7 +310,7 @@ class TestSerializeNode:
 
 class TestParseContent:
     def test_parse_content_success(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         root = MockNode("module", 0, 15, (0, 0), (1, 0), [])
         monkeypatch.setattr(parser, "_get_parser", lambda lang, fp: MockParserFactory(root)(None))
@@ -322,21 +322,21 @@ class TestParseContent:
         assert result.metadata["content"] == "def foo(): pass"
 
     def test_parse_content_tree_sitter_unavailable(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", False)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", False)
         parser = TreeSitterParser()
         result = parser.parse_content("x", "test.py", LanguageType.PYTHON)
         assert result.success is False
         assert "Tree-Sitter not available" in result.error_message
 
     def test_parse_content_unsupported_language(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         result = parser.parse_content("x", "test.proto", LanguageType.PROTO)
         assert result.success is False
         assert "not supported" in result.error_message
 
     def test_parse_content_parser_fail_sql(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         monkeypatch.setattr(parser, "_get_parser", lambda lang, fp: None)
         result = parser.parse_content("SELECT 1", "test.sql", LanguageType.SQL)
@@ -344,7 +344,7 @@ class TestParseContent:
         assert result.error_message == "SQL_TEXT_PARSER_EXPECTED"
 
     def test_parse_content_parser_fail_general(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         monkeypatch.setattr(parser, "_get_parser", lambda lang, fp: None)
         result = parser.parse_content("x", "test.py", LanguageType.PYTHON)
@@ -352,7 +352,7 @@ class TestParseContent:
         assert "Could not create parser" in result.error_message
 
     def test_parse_content_exception(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
 
         def raise_error(*args, **kwargs):
@@ -371,17 +371,17 @@ class TestParseContent:
 
 class TestSupportsLanguage:
     def test_supports_language_true(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         assert parser.supports_language(LanguageType.PYTHON) is True
 
     def test_supports_language_false_no_tree_sitter(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", False)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", False)
         parser = TreeSitterParser()
         assert parser.supports_language(LanguageType.PYTHON) is False
 
     def test_supports_language_false_no_ast_parser(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         assert parser.supports_language(LanguageType.PROTO) is False
 
@@ -393,30 +393,30 @@ class TestSupportsLanguage:
 
 class TestParseAstRoot:
     def test_parse_ast_root_success(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         root = MockNode("module", 0, 15, (0, 0), (1, 0), [])
         monkeypatch.setattr(parser, "_get_parser", lambda lang, fp: MockParserFactory(root)(None))
         assert parser.parse_ast_root("def foo(): pass", LanguageType.PYTHON) is root
 
     def test_parse_ast_root_tree_sitter_unavailable(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", False)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", False)
         parser = TreeSitterParser()
         assert parser.parse_ast_root("x", LanguageType.PYTHON) is None
 
     def test_parse_ast_root_unsupported_language(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         assert parser.parse_ast_root("x", LanguageType.PROTO) is None
 
     def test_parse_ast_root_parser_fail(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         monkeypatch.setattr(parser, "_get_parser", lambda lang, fp: None)
         assert parser.parse_ast_root("x", LanguageType.PYTHON) is None
 
     def test_parse_ast_root_exception(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
 
         def raise_error(*args, **kwargs):
@@ -433,85 +433,85 @@ class TestParseAstRoot:
 
 class TestGetParser:
     def test_get_parser_tree_sitter_unavailable(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", False)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", False)
         parser = TreeSitterParser()
         assert parser._get_parser(LanguageType.PYTHON, "test.py") is None
 
     def test_get_parser_cached(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         cached = MagicMock()
         parser._parser_cache["python"] = cached
         assert parser._get_parser(LanguageType.PYTHON, "test.py") is cached
 
     def test_get_parser_tsx_cached(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         cached = MagicMock()
         parser._parser_cache["typescript_tsx"] = cached
         assert parser._get_parser(LanguageType.TYPESCRIPT, "test.tsx") is cached
 
     def test_get_parser_create_new(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.Language", FakeLanguage)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.Language", FakeLanguage)
         parser = TreeSitterParser()
         root = MockNode("module", 0, 1, (0, 0), (0, 1), [])
         monkeypatch.setattr(parser, "_get_language", lambda lang, fp: FakeLanguage(object()))
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.Parser", MockParserFactory(root))
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.Parser", MockParserFactory(root))
         result = parser._get_parser(LanguageType.PYTHON, "test.py")
         assert result is not None
         assert "python" in parser._parser_cache
 
     def test_get_parser_no_language(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         monkeypatch.setattr(parser, "_get_language", lambda lang, fp: None)
         assert parser._get_parser(LanguageType.PYTHON, "test.py") is None
 
     def test_get_parser_version_incompatibility(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         monkeypatch.setattr(parser, "_get_language", lambda lang, fp: FakeLanguage(object()))
 
         def raise_incompatible(language):
             raise ValueError("incompatible language version")
 
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.Parser", raise_incompatible)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.Parser", raise_incompatible)
         assert parser._get_parser(LanguageType.PYTHON, "test.py") is None
 
     def test_get_parser_other_value_error_is_caught_outer(self, monkeypatch):
         # The inner except ValueError re-raises, but the outer except Exception
         # catches it and returns None. This test exercises that code path.
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         monkeypatch.setattr(parser, "_get_language", lambda lang, fp: FakeLanguage(object()))
 
         def raise_other(language):
             raise ValueError("something else")
 
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.Parser", raise_other)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.Parser", raise_other)
         assert parser._get_parser(LanguageType.PYTHON, "test.py") is None
 
     def test_get_parser_create_exception(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         monkeypatch.setattr(parser, "_get_language", lambda lang, fp: FakeLanguage(object()))
 
         def raise_runtime(language):
             raise RuntimeError("parser creation failed")
 
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.Parser", raise_runtime)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.Parser", raise_runtime)
         assert parser._get_parser(LanguageType.PYTHON, "test.py") is None
 
     def test_get_parser_outer_exception(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
 
         def raise_outer(*args, **kwargs):
             raise RuntimeError("outer failure")
 
         monkeypatch.setattr(
-            "evigraph.parsers.tree_sitter.core.parser.get_tree_sitter_name", raise_outer
+            "tracekite.parsers.tree_sitter.core.parser.get_tree_sitter_name", raise_outer
         )
         assert parser._get_parser(LanguageType.PYTHON, "test.py") is None
 
@@ -523,18 +523,18 @@ class TestGetParser:
 
 class TestGetLanguage:
     def test_get_language_tree_sitter_unavailable(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", False)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", False)
         parser = TreeSitterParser()
         assert parser._get_language(LanguageType.PYTHON, "test.py") is None
 
     def test_get_language_cached(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         parser._language_cache["python"] = "cached_lang"
         assert parser._get_language(LanguageType.PYTHON, "test.py") == "cached_lang"
 
     def test_get_language_tsx_cached(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         parser._language_cache["typescript_tsx"] = "cached_tsx"
         assert parser._get_language(LanguageType.TYPESCRIPT, "test.tsx") == "cached_tsx"
@@ -559,8 +559,8 @@ class TestGetLanguage:
         ],
     )
     def test_get_language_supported(self, language, module_name, lang_method, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.Language", FakeLanguage)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.Language", FakeLanguage)
         parser = TreeSitterParser()
         fake_ptr = object()
         fake_module = types.ModuleType(module_name)
@@ -570,8 +570,8 @@ class TestGetLanguage:
         assert isinstance(result, FakeLanguage)
 
     def test_get_language_typescript_regular(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.Language", FakeLanguage)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.Language", FakeLanguage)
         parser = TreeSitterParser()
         fake_ptr = object()
         fake_module = types.ModuleType("tree_sitter_typescript")
@@ -583,8 +583,8 @@ class TestGetLanguage:
         assert "typescript" in parser._language_cache
 
     def test_get_language_typescript_tsx(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.Language", FakeLanguage)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.Language", FakeLanguage)
         parser = TreeSitterParser()
         fake_ptr = object()
         fake_module = types.ModuleType("tree_sitter_typescript")
@@ -596,8 +596,8 @@ class TestGetLanguage:
         assert "typescript_tsx" in parser._language_cache
 
     def test_get_language_html_installed(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.Language", FakeLanguage)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.Language", FakeLanguage)
         parser = TreeSitterParser()
         fake_ptr = object()
         fake_module = types.ModuleType("tree_sitter_html")
@@ -607,14 +607,14 @@ class TestGetLanguage:
         assert isinstance(result, FakeLanguage)
 
     def test_get_language_html_not_installed(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         with patch.dict(sys.modules, {"tree_sitter_html": None}):
             assert parser._get_language(LanguageType.HTML, "test.html") is None
 
     def test_get_language_css_installed(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.Language", FakeLanguage)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.Language", FakeLanguage)
         parser = TreeSitterParser()
         fake_ptr = object()
         fake_module = types.ModuleType("tree_sitter_css")
@@ -624,29 +624,29 @@ class TestGetLanguage:
         assert isinstance(result, FakeLanguage)
 
     def test_get_language_css_not_installed(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         with patch.dict(sys.modules, {"tree_sitter_css": None}):
             assert parser._get_language(LanguageType.CSS, "test.css") is None
 
     def test_get_language_r_unsupported(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         assert parser._get_language(LanguageType.R, "test.r") is None
 
     def test_get_language_sql_unsupported(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         assert parser._get_language(LanguageType.SQL, "test.sql") is None
 
     def test_get_language_import_error(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         with patch.dict(sys.modules, {"tree_sitter_java": None}):
             assert parser._get_language(LanguageType.JAVA, "test.java") is None
 
     def test_get_language_general_exception(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
         fake_module = types.ModuleType("tree_sitter_java")
         fake_module.language = lambda: (_ for _ in ()).throw(RuntimeError("grammar failed"))
@@ -654,8 +654,8 @@ class TestGetLanguage:
             assert parser._get_language(LanguageType.JAVA, "test.java") is None
 
     def test_get_language_lang_ptr_none(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.Language", FakeLanguage)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.Language", FakeLanguage)
         parser = TreeSitterParser()
         fake_module = types.ModuleType("tree_sitter_java")
         fake_module.language = lambda: None
@@ -663,8 +663,8 @@ class TestGetLanguage:
             assert parser._get_language(LanguageType.JAVA, "test.java") is None
 
     def test_get_language_abi_version(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.Language", FakeLanguage)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.Language", FakeLanguage)
         parser = TreeSitterParser()
         fake_module = types.ModuleType("tree_sitter_java")
         fake_module.language = lambda: object()
@@ -674,9 +674,9 @@ class TestGetLanguage:
         assert result.abi_version == 14
 
     def test_get_language_version_fallback(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         monkeypatch.setattr(
-            "evigraph.parsers.tree_sitter.core.parser.Language", FakeLanguageVersionFallback
+            "tracekite.parsers.tree_sitter.core.parser.Language", FakeLanguageVersionFallback
         )
         parser = TreeSitterParser()
         fake_module = types.ModuleType("tree_sitter_java")
@@ -687,14 +687,14 @@ class TestGetLanguage:
         assert result.version == 13
 
     def test_get_language_outer_exception(self, monkeypatch):
-        monkeypatch.setattr("evigraph.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
+        monkeypatch.setattr("tracekite.parsers.tree_sitter.core.parser.TREE_SITTER_AVAILABLE", True)
         parser = TreeSitterParser()
 
         def raise_outer(*args, **kwargs):
             raise RuntimeError("outer failure")
 
         monkeypatch.setattr(
-            "evigraph.parsers.tree_sitter.core.parser.get_tree_sitter_name", raise_outer
+            "tracekite.parsers.tree_sitter.core.parser.get_tree_sitter_name", raise_outer
         )
         assert parser._get_language(LanguageType.PYTHON, "test.py") is None
 

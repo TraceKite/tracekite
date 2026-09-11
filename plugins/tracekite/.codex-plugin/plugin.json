@@ -1,0 +1,35 @@
+{
+  "name": "tracekite",
+  "version": "0.1.0",
+  "description": "Evidence-backed dependency tracing across source repositories.",
+  "author": {
+    "name": "TraceKite",
+    "url": "https://github.com/TraceKite"
+  },
+  "homepage": "https://github.com/TraceKite/tracekite",
+  "repository": "https://github.com/TraceKite/tracekite",
+  "license": "Apache-2.0",
+  "keywords": ["code-intelligence", "dependencies", "mcp"],
+  "skills": "./skills/",
+  "mcpServers": {
+    "tracekite": {
+      "command": "tracekite",
+      "args": ["mcp"]
+    }
+  },
+  "interface": {
+    "displayName": "TraceKite",
+    "shortDescription": "Trace dependencies with source evidence",
+    "longDescription": "Query repository-backed service dependencies and active call paths with file and line evidence.",
+    "developerName": "TraceKite",
+    "category": "Developer Tools",
+    "capabilities": ["Read"],
+    "websiteURL": "https://github.com/TraceKite/tracekite",
+    "defaultPrompt": [
+      "List the services TraceKite found in this repository.",
+      "Show active consumers of the billing service.",
+      "Trace the path from the gateway to billing."
+    ],
+    "brandColor": "#3B82F6"
+  }
+}

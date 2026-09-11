@@ -90,7 +90,7 @@ docs/design/*-roadmap.csv
 # about a running system — and are nobody's source.
 attached_assets/
 
-# Assistant runtime state is not project source. The release-owned Evigraph
+# Assistant runtime state is not project source. The release-owned TraceKite
 # plugin and its two marketplace manifests are narrow exceptions below.
 # `AGENTS.md` and `CLAUDE.md` are deliberately not ignored: they are written
 # repository rules, not runtime state.
@@ -108,4 +108,4 @@ attached_assets/
 !.agents/plugins/
 .agents/plugins/*
 !.agents/plugins/marketplace.json
-!plugins/evigraph/skills/evigraph/SKILL.md
+!plugins/tracekite/skills/tracekite/SKILL.md

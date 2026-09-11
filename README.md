@@ -1,6 +1,6 @@
-# Evigraph
+# TraceKite
 
-*evidence* + *graph* — a graph in which no edge exists without a citation.
+*trace* + *kite* — follow every dependency line back to the source that proves it.
 
 Point it at your repositories. It builds a typed graph of what your services
 actually are and how they actually reach each other — and every edge cites the
@@ -44,7 +44,7 @@ code2flow, AST-to-Neo4j importers, SCIP/LSIF indexes. They graph what is
 **lexically present in the code**: this file imports that one, this function
 calls that function. The edge exists because one symbol names another.
 
-Evigraph's edges are not present in any source file. Here is a real call, and
+TraceKite's edges are not present in any source file. Here is a real call, and
 the endpoint that serves it:
 
 ```python
@@ -69,7 +69,7 @@ language in another module.
 
 **That is the distinction: syntactic reachability versus contract
 rendezvous.** A code-graph tool answers "what does this code refer to".
-Evigraph answers "what does this system talk to" — and those two diverge
+TraceKite answers "what does this system talk to" — and those two diverge
 precisely at the process boundary, which is where a distributed system lives.
 
 Measured on the corpus here: of **141** service-level connections in the
@@ -78,7 +78,7 @@ evidence from outside it — a compose file, a Kubernetes manifest, a gateway
 route table, or an environment binding. That is not a tuning difference; it
 is a different kind of graph.
 
-Evigraph takes the third position: **derived from code and config rather than
+TraceKite takes the third position: **derived from code and config rather than
 declared, static rather than runtime, and at the altitude of service contracts
 rather than symbols.** It answers "if I change this endpoint, who breaks?"
 from a git clone, before anything is deployed, with a file and line behind
@@ -121,7 +121,7 @@ Sixteen resolvers cover the ways real systems join: compose topology,
 Kubernetes, gateway routes, HTTP, gRPC, GraphQL, message topics, packages,
 datasets, environment indirection, agent manifests, ownership, webhooks,
 operator-declared aliases, and one operation exposed over several transports.
-`evigraph resolvers` prints them in the order they run; `evigraph explain` shows
+`tracekite resolvers` prints them in the order they run; `tracekite explain` shows
 which one produced a given edge, and from what.
 
 Three rules keep it honest, and they are the whole design:
@@ -138,12 +138,12 @@ Three rules keep it honest, and they are the whole design:
 
 ## Installation & Interfaces
 
-Evigraph is available as a **standalone CLI tool** (`evigraph`), an **embeddable Python library** (`evigraph-core`), and a **full Web Application** (`docker compose up`).
+TraceKite is available as a **standalone CLI tool** (`tracekite`), an **embeddable Python library** (`tracekite-core`), and a **full Web Application** (`docker compose up`).
 
 | Interface | Installation & Execution | Primary Use Case |
 |---|---|---|
-| **Standalone CLI Tool** | `uv tool install .` $\rightarrow$ `evigraph link ...` | Terminal graph queries, PR impact checks, and MCP stdio |
-| **Embeddable Library** | `pip install dist/evigraph_core-*.whl` | Embed `scan()` and `link()` into Python CI scripts without a server |
+| **Standalone CLI Tool** | `uv tool install .` $\rightarrow$ `tracekite link ...` | Terminal graph queries, PR impact checks, and MCP stdio |
+| **Embeddable Library** | `pip install dist/tracekite_core-*.whl` | Embed `scan()` and `link()` into Python CI scripts without a server |
 | **Full Web Application** | `docker compose up -d` | Grouped 2D/3D code exploration, Service Map and Trace UI |
 
 ### 1. One-Line Setup
@@ -152,8 +152,8 @@ The interactive installer builds the CLI tool, provisions global AI agent
 skills, and leaves MCP client configuration untouched:
 
 ```bash
-git clone https://github.com/evigraph-labs/evigraph.git
-cd evigraph
+git clone https://github.com/TraceKite/tracekite.git
+cd tracekite
 ./scripts/install.sh            # shows plan, asks Y/n, then installs
 ```
 
@@ -168,11 +168,11 @@ Or install manually without the script:
 
 ```bash
 uv tool install .
-evigraph install-skill             # all clients, or --client claude
-evigraph --help
+tracekite install-skill             # all clients, or --client claude
+tracekite --help
 ```
 
-> **Agent plugin** — The cross-client [Evigraph plugin](plugins/evigraph/)
+> **Agent plugin** — The cross-client [TraceKite plugin](plugins/tracekite/)
 > bundles the skill and MCP server declarations for Claude Code, Codex, and
 > Kimi Code. Its README has verified setup commands for each client.
 
@@ -180,23 +180,23 @@ evigraph --help
 
 ```bash
 # Link local repositories and print JSON graph payload
-evigraph link path/to/repo-a path/to/repo-b
+tracekite link path/to/repo-a path/to/repo-b
 
 # Compare complete base and head artifact sets
-evigraph pr --base base/orders-<digest>.evigraph \
-  --head head/orders-<digest>.evigraph --changed-repo orders
+tracekite pr --base base/orders-<digest>.tracekite \
+  --head head/orders-<digest>.tracekite --changed-repo orders
 
 # Serve source repositories over MCP stdio
-evigraph mcp /absolute/path/repo-a /absolute/path/repo-b
+tracekite mcp /absolute/path/repo-a /absolute/path/repo-b
 ```
 
-### 3. As an Embeddable Core Library (`evigraph-core`)
+### 3. As an Embeddable Core Library (`tracekite-core`)
 
 No container, no database. Install the pure engine on its own:
 
 ```bash
-uv build --wheel --project packaging/evigraph-core --out-dir dist
-pip install dist/evigraph_core-0.1.0-py3-none-any.whl
+uv build --wheel --project packaging/tracekite-core --out-dir dist
+pip install dist/tracekite_core-0.1.0-py3-none-any.whl
 ```
 
 See [Developer use cases](docs/use-cases.md#embed-the-engine) for a direct
@@ -205,7 +205,7 @@ embedding example.
 Then scan repositories and join them in memory:
 
 ```bash
-python -m evigraph.cli link path/to/repo-a path/to/repo-b
+python -m tracekite.cli link path/to/repo-a path/to/repo-b
 ```
 
 ```json
@@ -218,17 +218,17 @@ python -m evigraph.cli link path/to/repo-a path/to/repo-b
 ```
 
 `counters` ships with every answer on purpose: a decline is recorded data, not
-silence. `python -m evigraph.cli schema` prints the JSON Schema those payloads
+silence. `python -m tracekite.cli schema` prints the JSON Schema those payloads
 validate against — published under [`schemas/`](schemas/) and frozen, so a
 non-Python consumer can validate without a binding.
 
 In Python, the same two calls the CLI makes:
 
 ```python
-from evigraph import engine_config
-from evigraph.db.memory_store import InMemoryLinkerStore
-from evigraph.services.linker.engine import link
-from evigraph.services.scan import scan
+from tracekite import engine_config
+from tracekite.db.memory_store import InMemoryLinkerStore
+from tracekite.services.linker.engine import link
+from tracekite.services.scan import scan
 
 engine_config.configure(graph_hmac_key="your-key")   # no env, no server
 
@@ -239,10 +239,10 @@ host.write(result.edges)             # you own persistence, or keep none
 
 **Status.** The engine runs with no server and no database — enforced by a
 test that blocks `fastapi` and `neo4j` from importing at all, not merely
-checks they are absent. The `evigraph-core` wheel builds from
-[`packaging/evigraph-core`](packaging/evigraph-core) and installs into a clean
+checks they are absent. The `tracekite-core` wheel builds from
+[`packaging/tracekite-core`](packaging/tracekite-core) and installs into a clean
 environment pulling neither; `scan()` and `link()` both work from it. It
-installs one top-level package, `evigraph`, so it coexists with a host that
+installs one top-level package, `tracekite`, so it coexists with a host that
 has its own `app/` — a test pins that. It is not yet published to PyPI.
 
 ## Quickstart
@@ -250,8 +250,8 @@ has its own `app/` — a test pins that. It is not yet published to PyPI.
 Requires Docker and about 4 GB of free memory.
 
 ```bash
-git clone https://github.com/evigraph-labs/evigraph.git
-cd evigraph
+git clone https://github.com/TraceKite/tracekite.git
+cd tracekite
 ./scripts/setup.sh          # generates .env with fresh secrets
 docker compose up -d --build
 ```
@@ -311,39 +311,39 @@ time dimension, which is what makes two runs diffable.
 
 | Command | Answers |
 |---|---|
-| `evigraph scan <path>` | what claims one repository emits |
-| `evigraph link <path>...` | the edges several repositories produce together |
-| `evigraph artifact <path> --out DIR` | scan into a content-addressed `.evigraph` file, the unit CI publishes |
-| `evigraph explain <path>... --edge SRC DST` | why one edge exists — the resolver, the tier, the receipts |
+| `tracekite scan <path>` | what claims one repository emits |
+| `tracekite link <path>...` | the edges several repositories produce together |
+| `tracekite artifact <path> --out DIR` | scan into a content-addressed `.tracekite` file, the unit CI publishes |
+| `tracekite explain <path>... --edge SRC DST` | why one edge exists — the resolver, the tier, the receipts |
 
 **Ask the graph questions**
 
 | Command | Answers |
 |---|---|
-| `evigraph mcp <artifact>...` | serve the graph to an agent over MCP stdio |
-| `evigraph install-skill [--client CLIENT]` | install a supported global agent skill without changing MCP configuration |
-| `evigraph coverage` | what each language's extractors cover, and what they miss |
-| `evigraph resolvers` | the declared resolver order |
-| `evigraph schema` | the published JSON Schema the payloads validate against |
-| `evigraph health` | whether the engine is degraded |
+| `tracekite mcp <artifact>...` | serve the graph to an agent over MCP stdio |
+| `tracekite install-skill [--client CLIENT]` | install a supported global agent skill without changing MCP configuration |
+| `tracekite coverage` | what each language's extractors cover, and what they miss |
+| `tracekite resolvers` | the declared resolver order |
+| `tracekite schema` | the published JSON Schema the payloads validate against |
+| `tracekite health` | whether the engine is degraded |
 
 **Watch an estate change over time** — each takes artifacts, oldest first
 
 | Command | Answers |
 |---|---|
-| `evigraph diff <before> <after>` | what changed in the graph between two artifacts |
-| `evigraph history <artifact>...` | when each edge existed across a series |
-| `evigraph pr --base ... --head ...` | which consumers a branch breaks, with a citation for each |
-| `evigraph drift <head>... --base <base>...` | operations a provider dropped that consumers still call |
-| `evigraph deprecations <artifact>...` | deprecated contracts that still have live consumers |
+| `tracekite diff <before> <after>` | what changed in the graph between two artifacts |
+| `tracekite history <artifact>...` | when each edge existed across a series |
+| `tracekite pr --base ... --head ...` | which consumers a branch breaks, with a citation for each |
+| `tracekite drift <head>... --base <base>...` | operations a provider dropped that consumers still call |
+| `tracekite deprecations <artifact>...` | deprecated contracts that still have live consumers |
 
 **Keep it honest**
 
 | Command | Answers |
 |---|---|
-| `evigraph reverify <artifact> --repo-root DIR` | does the cited line still say that? Stale evidence downgrades confidence, never deletes |
-| `evigraph suggest-aliases <artifact>...` | draft `service_aliases.yml` entries from unmatched hints — prints only, never applies |
-| `evigraph reviews` | operator review decisions as labelled true/false-positive data |
+| `tracekite reverify <artifact> --repo-root DIR` | does the cited line still say that? Stale evidence downgrades confidence, never deletes |
+| `tracekite suggest-aliases <artifact>...` | draft `service_aliases.yml` entries from unmatched hints — prints only, never applies |
+| `tracekite reviews` | operator review decisions as labelled true/false-positive data |
 
 `suggest-aliases` and `reverify` are deliberately advisory: an alias is an
 operator's assertion of identity, and rot ages an assertion rather than
@@ -351,14 +351,14 @@ refuting it. Neither ever writes.
 
 ## Model Context Protocol (MCP)
 
-Evigraph serves source repositories or portable artifacts to AI clients over
+TraceKite serves source repositories or portable artifacts to AI clients over
 MCP stdio. It completes the MCP handshake immediately, then scans or loads
 every input once on the first graph query and answers subsequent calls from
 the linked in-memory graph.
 
 ### Automatic indexing
 
-On the first graph query, `evigraph mcp` scans each input directory once.
+On the first graph query, `tracekite mcp` scans each input directory once.
 Subsequent queries answer from the in-memory graph with no re-scan. To pick up
 source changes, restart the MCP server or create fresh artifacts.
 
@@ -367,10 +367,10 @@ source changes, restart the MCP server or create fresh artifacts.
 Pass every repository as its own argument:
 
 ```bash
-evigraph mcp /path/to/order-service /path/to/billing-service /path/to/gateway
+tracekite mcp /path/to/order-service /path/to/billing-service /path/to/gateway
 ```
 
-Evigraph parses all inputs, links their claims, and answers cross-repository
+TraceKite parses all inputs, links their claims, and answers cross-repository
 questions from the unified graph — a query from inside `order-service` can
 cite callers in `billing-service` and routes in `gateway`.
 
@@ -450,20 +450,20 @@ GitHub repo ──▶ parsers ──▶ claims ──▶ linker (R0–R14) ─�
   GraphQL SDL, OpenAPI, AsyncAPI, C# ASP.NET Core Minimal APIs, and MCP
   capability manifests. Parsing and extraction are different reaches: 19
   languages parse, 13 currently have claim extractors on top, and
-  `evigraph coverage` prints which — per language, with what it misses.
+  `tracekite coverage` prints which — per language, with what it misses.
 - **Frontend** — React 19 + Vite + Tailwind + zustand, canvas graph rendering.
 - **Linking** — ingestion and linking are separate phases. Ingesting a repo
   never rewrites another repo's nodes; `POST /api/v2/links/rebuild` reconciles.
 
 | Path | Contents |
 |---|---|
-| `backend/evigraph/parsers/` | language and manifest parsers |
-| `backend/evigraph/services/claims.py` | the claim registry — start here |
-| `backend/evigraph/services/linker/` | resolvers R0–R14, fusion, rollups |
+| `backend/tracekite/parsers/` | language and manifest parsers |
+| `backend/tracekite/services/claims.py` | the claim registry — start here |
+| `backend/tracekite/services/linker/` | resolvers R0–R14, fusion, rollups |
 | `config/confidence.yml` | versioned confidence table |
 | `scripts/accuracy/` | the precision and recall harness |
 | `backend/tools/` | the four static gates — three `check_*.py` plus `export_openapi.py --check` |
-| `packaging/evigraph-core/` | the library distribution |
+| `packaging/tracekite-core/` | the library distribution |
 | `docs/` | usage and design documents |
 
 ## Configuration
@@ -494,7 +494,7 @@ never reach nodes, claims, or evidence.
 | [Agent and MCP integration](docs/plugins-and-mcp-guide.md) | client registration, skill installation, and MCP input semantics |
 | [Using the views](docs/using-the-views.md) | the three views and their shared controls |
 | [Frontend UX QA record](docs/future/navigation-and-feature-qa-2026-08-30.md) | the browser acceptance pass of 2026-08-30 — a dated record, not the live contract; *Using the views* is current |
-| [Agent plugin](plugins/evigraph/) | one validated plugin source for Claude Code, Codex, and Kimi Code |
+| [Agent plugin](plugins/tracekite/) | one validated plugin source for Claude Code, Codex, and Kimi Code |
 | [Coverage gaps](docs/design/coverage-gaps.md) | what the graph still misses, ranked, with reproducible measurements |
 | [Comparison](docs/comparison.md) | against code-graph tools, catalogs and runtime maps, with measured numbers |
 | [CONTRIBUTING](CONTRIBUTING.md) | setup, the one rule that matters, adding a parser or resolver |

@@ -7,9 +7,9 @@ decision becomes a labelled example without the reviewer knowing they
 were labelling.
 """
 
-from evigraph.services.linker.base import ClaimRecord
-from evigraph.services.linker.engine import link
-from evigraph.services.linker.review_labels import review_labels
+from tracekite.services.linker.base import ClaimRecord
+from tracekite.services.linker.engine import link
+from tracekite.services.linker.review_labels import review_labels
 
 
 def claim(cid, repo, key, hint):
@@ -29,7 +29,7 @@ class TestNeverBlock:
                                                            monkeypatch):
         """The graph outranks the review tooling: a bad promotions.yml
         yields a complete link run with the failure on the record."""
-        from evigraph import engine_config
+        from tracekite import engine_config
 
         (tmp_path / "promotions.yml").write_text("{{{ not yaml")
         monkeypatch.setenv("KG_CONFIG_DIR", str(tmp_path))

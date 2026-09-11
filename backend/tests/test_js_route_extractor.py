@@ -4,7 +4,7 @@ Plain Express verb calls are the legacy parser's job; this module must emit
 nothing for them (only mount-prefixed re-emissions with attrs.mounted).
 """
 
-from evigraph.services.js_route_extractor import JsRoute, extract_js_routes
+from tracekite.services.js_route_extractor import JsRoute, extract_js_routes
 
 
 def _find(routes, method, path, framework=None):

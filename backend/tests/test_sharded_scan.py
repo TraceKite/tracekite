@@ -10,11 +10,11 @@ assert and the only one B7's reuse and the diffing actually depend on.
 import os
 import sys
 
-from evigraph import engine_config
-from evigraph.db.artifact import write_artifact
-from evigraph.services.scan import scan
-from evigraph.services.sharded_scan import scan_sharded
-from evigraph.services.sink_merge import merge_chunk
+from tracekite import engine_config
+from tracekite.db.artifact import write_artifact
+from tracekite.services.scan import scan
+from tracekite.services.sharded_scan import scan_sharded
+from tracekite.services.sink_merge import merge_chunk
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
@@ -32,8 +32,8 @@ def monorepo(tmp_path) -> str:
     # the shard threshold, so the digest test compared the serial fallback
     # with itself and proved nothing. If the threshold or the generator
     # moves, fail here rather than pass vacuously.
-    from evigraph.services.file_scanner import scan_repository
-    from evigraph.services.sharded_scan import SHARD_THRESHOLD_FILES
+    from tracekite.services.file_scanner import scan_repository
+    from tracekite.services.sharded_scan import SHARD_THRESHOLD_FILES
 
     found = len(scan_repository(repo).files)
     assert found >= SHARD_THRESHOLD_FILES, (
@@ -62,7 +62,7 @@ class TestByteEquivalence:
 
     def test_below_the_threshold_it_is_literally_the_serial_scan(
             self, tmp_path, monkeypatch):
-        from evigraph.services import sharded_scan as module
+        from tracekite.services import sharded_scan as module
 
         repo = monorepo(tmp_path)
         engine_config.configure(graph_hmac_key=KEY)
@@ -104,7 +104,7 @@ class TestByteEquivalence:
 
 class TestMergeChunk:
     def test_coverage_sums_and_tier_upgrades(self):
-        from evigraph.services.ingest_source import IngestSink
+        from tracekite.services.ingest_source import IngestSink
 
         target, chunk = IngestSink(), IngestSink()
         target.lang("Python")["files_parsed"] = 2
@@ -119,8 +119,8 @@ class TestMergeChunk:
         assert target.claims == {"http": 1}
 
     def test_a_node_minted_by_two_chunks_collapses(self):
-        from evigraph.models.graph_models import GraphNode
-        from evigraph.services.ingest_source import IngestSink
+        from tracekite.models.graph_models import GraphNode
+        from tracekite.services.ingest_source import IngestSink
 
         def node():
             return GraphNode(id="n1", repo_id="r", type="File",

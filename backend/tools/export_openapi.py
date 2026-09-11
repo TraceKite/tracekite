@@ -26,7 +26,7 @@ import sys
 
 import yaml
 
-# Settled before importing the app: `evigraph.config` reads the environment at
+# Settled before importing the app: `tracekite.config` reads the environment at
 # import time and refuses to boot without these.
 os.environ.setdefault("GRAPH_HMAC_KEY", "openapi-export")
 os.environ.setdefault("API_TOKEN", "openapi-export")
@@ -50,7 +50,7 @@ _HEADER = (
 
 def build_spec() -> dict:
     """The app's own document, with the title orval expects."""
-    from evigraph.main import app
+    from tracekite.main import app
 
     spec = app.openapi()
     spec = yaml.safe_load(yaml.safe_dump(spec))   # plain types, stable order

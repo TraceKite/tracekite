@@ -1,6 +1,6 @@
 """Ownership + observability identity parsing."""
 
-from evigraph.parsers.ownership_parser import (
+from tracekite.parsers.ownership_parser import (
     extract_observability_identity, is_catalog_file, is_codeowners_file,
     parse_catalog_info, parse_codeowners,
 )

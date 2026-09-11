@@ -7,11 +7,11 @@ appears in every HTTP call ever written, and a callback whose receiver
 declares no matching route might be a typo with a timer on it.
 """
 
-from evigraph import engine_config
-from evigraph.db.memory_store import InMemoryLinkerStore
-from evigraph.services.http_call_extractor import extract_webhook_registrations
-from evigraph.services.linker.engine import link
-from evigraph.services.scan import scan
+from tracekite import engine_config
+from tracekite.db.memory_store import InMemoryLinkerStore
+from tracekite.services.http_call_extractor import extract_webhook_registrations
+from tracekite.services.linker.engine import link
+from tracekite.services.scan import scan
 
 NOW = "2026-01-01T00:00:00+00:00"
 

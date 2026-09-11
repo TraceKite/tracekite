@@ -1,11 +1,11 @@
 import pytest
-from evigraph.parsers.config_parser import (
+from tracekite.parsers.config_parser import (
     parse_properties_file,
     parse_yaml_file,
     parse_env_file,
     parse_config_file,
 )
-from evigraph.parsers.parser_registry import is_config_file
+from tracekite.parsers.parser_registry import is_config_file
 
 
 class TestPropertiesParser:

@@ -13,11 +13,11 @@ import sys
 import pytest
 import yaml
 
-from evigraph.services.calibration import build_estates, run_calibration
-from evigraph.services.calibration_io import (
+from tracekite.services.calibration import build_estates, run_calibration
+from tracekite.services.calibration_io import (
     MEASURED_MARKER, coverage_gaps, write_measured,
 )
-from evigraph.services.linker.base import config_dir
+from tracekite.services.linker.base import config_dir
 
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(config_dir(), "confidence.yml")

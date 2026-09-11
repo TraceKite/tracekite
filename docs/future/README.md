@@ -1,4 +1,4 @@
-# Evigraph front-end redesign studies
+# TraceKite front-end redesign studies
 
 These two packages replace the earlier concept-first drafts. Both were created
 after reviewing the running application at `http://localhost:28080/`, including

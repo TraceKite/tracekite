@@ -28,21 +28,21 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _STAGE_PROGRAM = """
 import json, resource, sys, time
 sys.path.insert(0, {backend!r})
-from evigraph import engine_config
+from tracekite import engine_config
 engine_config.configure(graph_hmac_key="benchmark-key")
 
 stage = {stage!r}
 started = time.perf_counter()
 if stage == "scan":
-    from evigraph.services.parallel_map import scan_many
+    from tracekite.services.parallel_map import scan_many
     repos = json.load(open({repos_file!r}))
     result = scan_many([tuple(r) for r in repos], {out_dir!r}, workers=0,
                        hmac_key="benchmark-key")
     assert result.ok, result.failed
     payload = {{"artifacts": len(result.artifacts)}}
 else:
-    from evigraph.db.artifact_reader import read_claims
-    from evigraph.services.linker.engine import link
+    from tracekite.db.artifact_reader import read_claims
+    from tracekite.services.linker.engine import link
     paths = json.load(open({repos_file!r}))
     claims = [c for p in paths for c in read_claims(p)]
     result = link(claims, run_id="benchmark",
@@ -83,7 +83,7 @@ def count_loc(root: str) -> int:
 def benchmark(repos: int, seed: int) -> dict:
     from tools.synth_estate import generate
 
-    workdir = tempfile.mkdtemp(prefix="evigraph-bench-")
+    workdir = tempfile.mkdtemp(prefix="tracekite-bench-")
     try:
         estate_dir = os.path.join(workdir, "estate")
         manifest = generate(estate_dir, repos=repos, seed=seed)

@@ -7,7 +7,7 @@ counters shipped with the result.
 ## Inspect one repository
 
 ```bash
-evigraph scan /absolute/path/orders --repo-id orders
+tracekite scan /absolute/path/orders --repo-id orders
 ```
 
 This prints claim counts, parser coverage, and explicit absence information.
@@ -16,7 +16,7 @@ It does not create cross-repository edges.
 ## Link related repositories
 
 ```bash
-evigraph link /absolute/path/orders /absolute/path/billing \
+tracekite link /absolute/path/orders /absolute/path/billing \
   --now 2026-01-01T00:00:00+00:00
 ```
 
@@ -25,10 +25,10 @@ resolver counters. A fixed `--now` makes time-dependent output reproducible.
 
 ## Explain one edge
 
-First copy the exact source and target IDs from `evigraph link`, then run:
+First copy the exact source and target IDs from `tracekite link`, then run:
 
 ```bash
-evigraph explain /absolute/path/orders /absolute/path/billing \
+tracekite explain /absolute/path/orders /absolute/path/billing \
   --edge 'SOURCE_NODE_ID' 'TARGET_NODE_ID'
 ```
 
@@ -38,7 +38,7 @@ explanation.
 ## Publish portable artifacts
 
 ```bash
-evigraph artifact /absolute/path/orders \
+tracekite artifact /absolute/path/orders \
   --repo-id orders --head-sha "$GIT_COMMIT" --out ./artifacts
 ```
 
@@ -50,9 +50,9 @@ repository.
 Create base and head artifacts for every repository in scope, then run:
 
 ```bash
-evigraph pr \
-  --base ./base/orders-<digest>.evigraph ./base/billing-<digest>.evigraph \
-  --head ./head/orders-<digest>.evigraph ./head/billing-<digest>.evigraph \
+tracekite pr \
+  --base ./base/orders-<digest>.tracekite ./base/billing-<digest>.tracekite \
+  --head ./head/orders-<digest>.tracekite ./head/billing-<digest>.tracekite \
   --changed-repo orders --comment
 ```
 
@@ -62,11 +62,11 @@ The base and head options take artifact lists, not git branch names. The
 ## Find contract drift and live deprecations
 
 ```bash
-evigraph drift ./head/orders-<digest>.evigraph \
-  --base ./base/orders-<digest>.evigraph
+tracekite drift ./head/orders-<digest>.tracekite \
+  --base ./base/orders-<digest>.tracekite
 
-evigraph deprecations ./head/orders-<digest>.evigraph \
-  ./head/billing-<digest>.evigraph
+tracekite deprecations ./head/orders-<digest>.tracekite \
+  ./head/billing-<digest>.tracekite
 ```
 
 Drift compares declared and observed contracts. Deprecations reports only
@@ -79,7 +79,7 @@ Register the stdio server as described in
 directories or artifacts:
 
 ```bash
-evigraph mcp /absolute/path/orders /absolute/path/billing
+tracekite mcp /absolute/path/orders /absolute/path/billing
 ```
 
 Useful questions map directly to tools:
@@ -96,19 +96,19 @@ making a method-level claim.
 
 ## Embed the engine
 
-The standalone core wheel is built from `packaging/evigraph-core`:
+The standalone core wheel is built from `packaging/tracekite-core`:
 
 ```bash
-uv build --wheel --project packaging/evigraph-core --out-dir dist
+uv build --wheel --project packaging/tracekite-core --out-dir dist
 ```
 
 A host can call the same pure scan and link surfaces:
 
 ```python
-from evigraph import engine_config
-from evigraph.db.memory_store import InMemoryLinkerStore
-from evigraph.services.linker.engine import link
-from evigraph.services.scan import scan
+from tracekite import engine_config
+from tracekite.db.memory_store import InMemoryLinkerStore
+from tracekite.services.linker.engine import link
+from tracekite.services.scan import scan
 
 engine_config.configure(graph_hmac_key="host-owned-redaction-key")
 sinks = [

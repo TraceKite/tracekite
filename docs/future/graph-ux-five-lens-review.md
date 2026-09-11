@@ -1,4 +1,4 @@
-# Evigraph graph UX: five-lens review and hybrid direction
+# TraceKite graph UX: five-lens review and hybrid direction
 
 Reviewed and implemented on 2026-08-30 against the running application at
 `http://localhost:28080/`.
@@ -84,7 +84,7 @@ What must change:
 - 3D initially treated hidden node/edge filters as allowlists, so hiding one
   type could leave only that type visible.
 - The previous local Shift-click path traversed edges in either direction,
-  which could visually imply a reverse relationship Evigraph never asserted.
+  which could visually imply a reverse relationship TraceKite never asserted.
 
 ### Claude Design
 

@@ -5,15 +5,15 @@ import json
 import os
 from types import SimpleNamespace
 
-from evigraph.config import settings
-from evigraph.parsers.base import ParsedApiEndpoint, ParsedEntity, ParseResult
-from evigraph.parsers.config_parser import ConfigEntry, ConfigParseResult
-from evigraph.parsers.dependency_parser import DependencyInfo
-from evigraph.services.file_scanner import scan_repository
-from evigraph.services.ingest_artifacts import process_config, process_dependencies
-from evigraph.services.ingest_source import IngestSink, process_source_file
-from evigraph import engine_config
-from evigraph.services.scan import build_graph
+from tracekite.config import settings
+from tracekite.parsers.base import ParsedApiEndpoint, ParsedEntity, ParseResult
+from tracekite.parsers.config_parser import ConfigEntry, ConfigParseResult
+from tracekite.parsers.dependency_parser import DependencyInfo
+from tracekite.services.file_scanner import scan_repository
+from tracekite.services.ingest_artifacts import process_config, process_dependencies
+from tracekite.services.ingest_source import IngestSink, process_source_file
+from tracekite import engine_config
+from tracekite.services.scan import build_graph
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 

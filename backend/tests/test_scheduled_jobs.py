@@ -6,11 +6,11 @@ its trigger, because "billing calls refresh nightly" and "billing calls
 refresh on every request" are different findings wearing the same arrow.
 """
 
-from evigraph import engine_config
-from evigraph.db.memory_store import InMemoryLinkerStore, claims_from_scan
-from evigraph.parsers.cron_parser import parse_crontab
-from evigraph.services.linker.engine import link
-from evigraph.services.scan import scan
+from tracekite import engine_config
+from tracekite.db.memory_store import InMemoryLinkerStore, claims_from_scan
+from tracekite.parsers.cron_parser import parse_crontab
+from tracekite.services.linker.engine import link
+from tracekite.services.scan import scan
 
 NOW = "2026-01-01T00:00:00+00:00"
 

@@ -1,7 +1,7 @@
 # Hybrid Graph Workbench — review template
 
 This is the isolated design template that was approved before implementation.
-Reviewing it does not alter the running Evigraph application; its approved light,
+Reviewing it does not alter the running TraceKite application; its approved light,
 grouped direction was applied separately on 2026-08-30.
 
 ## Design sources

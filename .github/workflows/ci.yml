@@ -77,21 +77,21 @@ jobs:
     # The image now installs the same uv.lock the tests resolve, so this is no
     # longer covering a version gap — it covers the build. A COPY that misses a
     # directory, a stale lock, a rename that left an import behind: none of
-    # those fail a test run, and all of them fail `import evigraph.main` inside
+    # those fail a test run, and all of them fail `import tracekite.main` inside
     # the artifact that ships. Two green suites once said yes while the
     # container would not boot.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: build the deployment image
-        run: docker build -f backend/Dockerfile -t evigraph-backend:ci .
+        run: docker build -f backend/Dockerfile -t tracekite-backend:ci .
       - name: every module imports on the deploy runtime
         run: |
-          docker run --rm -i evigraph-backend:ci python - <<'PY'
+          docker run --rm -i tracekite-backend:ci python - <<'PY'
           import importlib, pathlib, sys
-          root = pathlib.Path("/app/evigraph")
+          root = pathlib.Path("/app/tracekite")
           mods = sorted(
-              "evigraph." + str(p.relative_to(root)).replace("/", ".")[:-3]
+              "tracekite." + str(p.relative_to(root)).replace("/", ".")[:-3]
               for p in root.rglob("*.py") if "__pycache__" not in str(p))
           mods = [m[:-9] if m.endswith(".__init__") else m for m in mods]
           failed = []
@@ -129,9 +129,9 @@ jobs:
           uv sync --frozen
           GRAPH_HMAC_KEY=ci-fixed-key .venv/bin/python - <<'PY'
           import sys; sys.path.insert(0, "backend")
-          from evigraph import engine_config
-          from evigraph.db.artifact import write_artifact
-          from evigraph.services.scan import scan
+          from tracekite import engine_config
+          from tracekite.db.artifact import write_artifact
+          from tracekite.services.scan import scan
           engine_config.configure(graph_hmac_key="ci-fixed-key")
           write_artifact(scan("backend/tests/fixtures/callgraph-sample",
                               "corpus"), "corpus", "/tmp/base")
@@ -143,9 +143,9 @@ jobs:
           uv sync --frozen
           GRAPH_HMAC_KEY=ci-fixed-key .venv/bin/python - <<'PY'
           import sys; sys.path.insert(0, "backend")
-          from evigraph import engine_config
-          from evigraph.db.artifact import write_artifact
-          from evigraph.services.scan import scan
+          from tracekite import engine_config
+          from tracekite.db.artifact import write_artifact
+          from tracekite.services.scan import scan
           engine_config.configure(graph_hmac_key="ci-fixed-key")
           write_artifact(scan("backend/tests/fixtures/callgraph-sample",
                               "corpus"), "corpus", "/tmp/head")
@@ -156,9 +156,9 @@ jobs:
       # What must not happen is a change nobody noticed.
       - name: what changed
         run: |
-          BASE=$(ls /tmp/base/*.evigraph | head -1)
-          HEAD=$(ls /tmp/head/*.evigraph | head -1)
-          .venv/bin/python -m evigraph.cli diff "$BASE" "$HEAD" \
+          BASE=$(ls /tmp/base/*.tracekite | head -1)
+          HEAD=$(ls /tmp/head/*.tracekite | head -1)
+          .venv/bin/python -m tracekite.cli diff "$BASE" "$HEAD" \
             > /tmp/graph-diff.json || true
           echo '### What this changed in the graph' >> $GITHUB_STEP_SUMMARY
           echo '```json' >> $GITHUB_STEP_SUMMARY
@@ -176,8 +176,8 @@ jobs:
       - name: who this breaks
         run: |
           echo '### Who this change breaks' >> $GITHUB_STEP_SUMMARY
-          .venv/bin/python -m evigraph.cli pr \
-            --base /tmp/base/*.evigraph --head /tmp/head/*.evigraph \
+          .venv/bin/python -m tracekite.cli pr \
+            --base /tmp/base/*.tracekite --head /tmp/head/*.tracekite \
             --changed-repo corpus --comment >> $GITHUB_STEP_SUMMARY || true
         working-directory: backend
 

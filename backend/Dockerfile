@@ -31,14 +31,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # resolved something newer than CI tested is the divergence this file
 # exists to close. `--no-install-project` because the source is COPYed
 # below rather than installed — the app runs from the tree, and the
-# library distribution is built separately from packaging/evigraph-core.
+# library distribution is built separately from packaging/tracekite-core.
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONPATH=/app
 
-COPY backend/evigraph ./evigraph
+COPY backend/tracekite ./tracekite
 COPY backend/tests ./tests
 # Operator control plane: confidence table, aliases, roster, promotions.
 COPY config ./config
@@ -52,4 +52,4 @@ USER kg
 
 EXPOSE 8000
 
-CMD ["uvicorn", "evigraph.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "tracekite.main:app", "--host", "0.0.0.0", "--port", "8000"]

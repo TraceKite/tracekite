@@ -14,9 +14,9 @@ import os
 
 import pytest
 
-from evigraph import engine_config
-from evigraph.services.ingest_source import IngestSink
-from evigraph.services.scan import scan
+from tracekite import engine_config
+from tracekite.services.ingest_source import IngestSink
+from tracekite.services.scan import scan
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 SAMPLE = os.path.join(FIXTURES, "callgraph-sample")

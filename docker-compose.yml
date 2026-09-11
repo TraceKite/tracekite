@@ -1,4 +1,4 @@
-name: evigraph
+name: tracekite
 
 # Required secrets have no defaults on purpose — compose fails fast rather than
 # booting with a known-default Neo4j password or an unauthenticated API.
@@ -7,7 +7,7 @@ name: evigraph
 services:
   neo4j:
     image: neo4j:5.26-community
-    container_name: evigraph-neo4j
+    container_name: tracekite-neo4j
     ports:
       - "${NEO4J_HTTP_PORT:-27474}:7474"
       - "${NEO4J_BOLT_PORT:-27687}:7687"
@@ -27,14 +27,14 @@ services:
       timeout: 10s
       retries: 12
       start_period: 30s
-    networks: [evigraph]
+    networks: [tracekite]
     restart: unless-stopped
 
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: evigraph-backend
+    container_name: tracekite-backend
     ports:
       # Loopback only: anonymous reads are enabled below, so the API must
       # not be reachable from the network. Override BIND_ADDR to change.
@@ -56,7 +56,7 @@ services:
       ALLOWED_GIT_HOSTS: "${ALLOWED_GIT_HOSTS:-github.com}"
       # Browser traffic is same-origin through the nginx proxy, so no origin
       # needs to be allowlisted unless the UI is served from elsewhere.
-      EVIGRAPH_CORS_ORIGINS: "${EVIGRAPH_CORS_ORIGINS:-}"
+      TRACEKITE_CORS_ORIGINS: "${TRACEKITE_CORS_ORIGINS:-}"
       INGEST_WORKERS: "${INGEST_WORKERS:-2}"
       MAX_SCOPE_REPOS: "${MAX_SCOPE_REPOS:-10}"
     volumes:
@@ -71,14 +71,14 @@ services:
       timeout: 10s
       retries: 12
       start_period: 20s
-    networks: [evigraph]
+    networks: [tracekite]
     restart: unless-stopped
 
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    container_name: evigraph-frontend
+    container_name: tracekite-frontend
     ports:
       # Loopback only: the UI proxies /api, so exposing it would expose
       # the API too.
@@ -86,7 +86,7 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    networks: [evigraph]
+    networks: [tracekite]
     restart: unless-stopped
 
 volumes:
@@ -96,5 +96,5 @@ volumes:
   backend_var:
 
 networks:
-  evigraph:
+  tracekite:
     driver: bridge

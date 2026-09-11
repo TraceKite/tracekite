@@ -7,18 +7,18 @@ turn `process.env.ORDERS_URL` into an edge.
 
 import pytest
 
-from evigraph.parsers.kubernetes_parser import parse_kubernetes_yaml
-from evigraph.services.ingest_claims import emit_k8s_claims, emit_source_claims
-from evigraph.services.ingest_source import IngestSink
-from evigraph.services.linker import (
+from tracekite.parsers.kubernetes_parser import parse_kubernetes_yaml
+from tracekite.services.ingest_claims import emit_k8s_claims, emit_source_claims
+from tracekite.services.ingest_source import IngestSink
+from tracekite.services.linker import (
     r0_alias, r1_compose, r2_k8s, r4_gateway, r7_http, r9_env,
     r9_env_index,
 )
-from evigraph.services.linker.normalize import normalize_http_calls
-from evigraph.services.linker.base import (
+from tracekite.services.linker.normalize import normalize_http_calls
+from tracekite.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, ResolverOutput, load_confidence,
 )
-from evigraph.services.linker.engine import materialize_pending
+from tracekite.services.linker.engine import materialize_pending
 from types import SimpleNamespace
 
 

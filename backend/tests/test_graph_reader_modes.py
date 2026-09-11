@@ -2,7 +2,7 @@
 
 import pytest
 
-from evigraph.services.graph_reader import VIEW_MODES
+from tracekite.services.graph_reader import VIEW_MODES
 
 
 BROAD_MODES = ("overview", "architecture", "code", "api", "dependencies")

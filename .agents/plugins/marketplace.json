@@ -1,14 +1,14 @@
 {
-  "name": "evigraph-labs",
+  "name": "tracekite",
   "interface": {
-    "displayName": "Evigraph Labs"
+    "displayName": "TraceKite"
   },
   "plugins": [
     {
-      "name": "evigraph",
+      "name": "tracekite",
       "source": {
         "source": "local",
-        "path": "./plugins/evigraph"
+        "path": "./plugins/tracekite"
       },
       "policy": {
         "installation": "AVAILABLE",

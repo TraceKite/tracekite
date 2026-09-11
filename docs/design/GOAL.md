@@ -1,13 +1,13 @@
 # Goal
 
-Evigraph establishes **what is connected across repositories, and how we know** —
+TraceKite establishes **what is connected across repositories, and how we know** —
 and nothing beyond that. Incident triage, chat, ranking and retrieval belong to
 whatever consumes it.
 
 Its edges are not present in any source file. A call site holds
 `f"{self._registry_url}/v1/callers"`; the route lives in another repo's Go
 handler; the host arrives from a compose env var. No AST reaches across that
-gap. So Evigraph emits **claims** from each artifact independently, then joins
+gap. So TraceKite emits **claims** from each artifact independently, then joins
 them on a shared rendezvous key — making the join evidence rather than
 inference, with a file and line cited on *both* sides of every edge.
 
@@ -25,10 +25,10 @@ It is currently an application: FastAPI + Neo4j + React on Docker Compose.
 Become an engine that a host embeds, governed by
 `docs/design/architecture.md`, which is normative.
 
-At the end Evigraph is **two surfaces over one engine**:
+At the end TraceKite is **two surfaces over one engine**:
 
 - `docker compose up` — the product, exactly as today
-- `pip install evigraph-core` — the same engine as a library: no server, no
+- `pip install tracekite-core` — the same engine as a library: no server, no
   database, host supplies storage or none
 
 …and it answers, on every pull request, **which consumers a change breaks**,
@@ -44,7 +44,7 @@ with a file and line for each, across an estate of a thousand repositories.
    *Exit: a synthetic 1,000-repo estate links within budget; one push re-links
    in seconds, not 81 minutes.*
 3. **Model** (10) — UI_CALLS, vendor catalog, SCIP import for symbol calls,
-   `evigraph explain`. *Exit: every edge explains its own derivation.*
+   `tracekite explain`. *Exit: every edge explains its own derivation.*
 4. **Change** (21) — temporal, PR mode, contract drift, calibrated confidence.
    *Exit: a PR comment names exactly who breaks.*
 5. **Breadth** (14) — protocol and IaC long tail, MCP surface, fixtures.

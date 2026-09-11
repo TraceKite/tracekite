@@ -7,9 +7,9 @@ A suggestion that changed the graph would be a guessed edge with a
 paper trail.
 """
 
-from evigraph.services.linker.alias_suggestions import suggest_aliases
-from evigraph.services.linker.base import ClaimRecord
-from evigraph.services.linker.engine import link
+from tracekite.services.linker.alias_suggestions import suggest_aliases
+from tracekite.services.linker.base import ClaimRecord
+from tracekite.services.linker.engine import link
 
 NOW = "2026-01-01T00:00:00+00:00"
 

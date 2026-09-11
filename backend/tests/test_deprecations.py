@@ -6,9 +6,9 @@ contract with nobody calling it must say so out loud rather than by
 omission.
 """
 
-from evigraph.models.graph_models import GraphEdge
-from evigraph.services.linker.deprecations import deprecation_report
-from evigraph.services.linker.values import RendezvousSpec
+from tracekite.models.graph_models import GraphEdge
+from tracekite.services.linker.deprecations import deprecation_report
+from tracekite.services.linker.values import RendezvousSpec
 
 
 def contract(node_id="global:Http:billing:GET:/v1/legacy/{}",
@@ -92,10 +92,10 @@ class TestEndToEnd:
     def test_a_deprecated_annotation_reaches_the_report(self, tmp_path):
         """Source annotation to report, through the real pipeline: a JVM
         handler marked @Deprecated, called from another repo."""
-        from evigraph import engine_config
-        from evigraph.db.memory_store import InMemoryLinkerStore
-        from evigraph.services.linker.engine import link
-        from evigraph.services.scan import scan
+        from tracekite import engine_config
+        from tracekite.db.memory_store import InMemoryLinkerStore
+        from tracekite.services.linker.engine import link
+        from tracekite.services.scan import scan
 
         provider = tmp_path / "billing-service"
         (provider / "src").mkdir(parents=True)
@@ -130,7 +130,7 @@ class TestEndToEnd:
                       run_id="linkrun_dep",
                       now="2026-01-01T00:00:00+00:00")
 
-        from evigraph.services.linker.deprecations import deprecation_report
+        from tracekite.services.linker.deprecations import deprecation_report
         report = deprecation_report(result.edges, result.rendezvous)
         assert len(report) == 1, [
             (s.node_id, s.props.get("deprecated"))

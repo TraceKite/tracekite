@@ -4,14 +4,14 @@ import json
 
 import pytest
 
-from evigraph import engine_config
-from evigraph.config import settings
-from evigraph.services import graph_factories as gf
-from evigraph.services.redaction import (
+from tracekite import engine_config
+from tracekite.config import settings
+from tracekite.services import graph_factories as gf
+from tracekite.services.redaction import (
     RedactionKeyMissing, is_secret_key, redact, shannon_entropy_bits,
 )
-from evigraph.utils import hashing
-from evigraph.utils.canonical import (
+from tracekite.utils import hashing
+from tracekite.utils.canonical import (
     build_purl, canonicalize_path_template, normalize_http_method,
 )
 
@@ -213,7 +213,7 @@ class TestReaderHelpers:
     def test_node_from_props_folds_temporal_values_json_safe(self):
         from neo4j.time import DateTime
 
-        from evigraph.services.graph_reader import _node_from_props
+        from tracekite.services.graph_reader import _node_from_props
 
         node = _node_from_props({
             "id": "x", "type": "Repo", "name": "r",

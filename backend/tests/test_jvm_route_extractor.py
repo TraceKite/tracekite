@@ -1,6 +1,6 @@
 """WebFlux functional + Ktor route extraction."""
 
-from evigraph.services.jvm_route_extractor import extract_jvm_routes
+from tracekite.services.jvm_route_extractor import extract_jvm_routes
 
 
 def _line(src: str, needle: str) -> int:

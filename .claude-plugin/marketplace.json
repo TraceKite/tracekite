@@ -1,13 +1,13 @@
 {
-  "name": "evigraph-labs",
-  "description": "Evidence-backed code intelligence from Evigraph Labs.",
+  "name": "tracekite",
+  "description": "Evidence-backed code intelligence from TraceKite.",
   "owner": {
-    "name": "Evigraph Labs"
+    "name": "TraceKite"
   },
   "plugins": [
     {
-      "name": "evigraph",
-      "source": "./plugins/evigraph",
+      "name": "tracekite",
+      "source": "./plugins/tracekite",
       "description": "Trace repository-backed dependencies with file and line evidence."
     }
   ]

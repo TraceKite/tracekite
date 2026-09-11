@@ -42,19 +42,19 @@ from tools.ctx_access import BACKEND, resolver_access        # noqa: E402
 # somebody made on purpose rather than a helper that appeared.
 DECLARED_CANONICALISERS = {
     # The canonicaliser: path templates, HTTP methods, package URLs.
-    "evigraph/utils/canonical.py",
+    "tracekite/utils/canonical.py",
     # `positional()` — narrower than the canonicaliser and idempotent on its
     # output, which `test_invariants.py` pins rather than assumes.
-    "evigraph/services/linker/base.py",
+    "tracekite/services/linker/base.py",
 }
 
 # The one module that may spell a rendezvous node id. Labelled estates state
 # expected ids as literals — those are assertions about output, not a second
 # implementation, so the calibration corpus is exempt.
 DECLARED_ID_BUILDERS = {
-    "evigraph/utils/rendezvous_ids.py",
-    "evigraph/services/calibration.py",
-    "evigraph/services/calibration_estates.py",
+    "tracekite/utils/rendezvous_ids.py",
+    "tracekite/services/calibration.py",
+    "tracekite/services/calibration_estates.py",
 }
 
 
@@ -93,12 +93,12 @@ def check_key_discipline() -> list[str]:
     it, so `startswith("pkg:")` is left alone.
     """
     violations = []
-    for path in sorted((BACKEND / "evigraph").rglob("*.py")):
+    for path in sorted((BACKEND / "tracekite").rglob("*.py")):
         rel = path.relative_to(BACKEND.parent).as_posix().replace(
             "backend/", "")
         if rel in DECLARED_CANONICALISERS:
             continue
-        if not rel.startswith("evigraph/services/linker/"):
+        if not rel.startswith("tracekite/services/linker/"):
             continue
         tree = ast.parse(path.read_text(), filename=str(path))
         for node in ast.walk(tree):
@@ -107,7 +107,7 @@ def check_key_discipline() -> list[str]:
                     f"I4: {rel}:{node.lineno} collapses a route parameter to "
                     f"'{{}}' — that is key canonicalisation, and a second "
                     f"implementation of it produces keys that never meet "
-                    f"their counterparts. Call evigraph.utils.canonical instead, "
+                    f"their counterparts. Call tracekite.utils.canonical instead, "
                     f"or add this file to DECLARED_CANONICALISERS on "
                     f"purpose.")
             if _builds_a_purl(node):
@@ -127,7 +127,7 @@ def check_id_discipline() -> list[str]:
     would miss.
     """
     violations = []
-    for path in sorted(BACKEND.rglob("evigraph/**/*.py")):
+    for path in sorted(BACKEND.rglob("tracekite/**/*.py")):
         rel = path.relative_to(BACKEND).as_posix()
         if rel in DECLARED_ID_BUILDERS:
             continue
@@ -144,7 +144,7 @@ def check_id_discipline() -> list[str]:
                 violations.append(
                     f"{rel}:{node.lineno} builds a rendezvous id "
                     f"({value[:40]!r}) — that format belongs to "
-                    f"evigraph/utils/rendezvous_ids.py; a second speller finds "
+                    f"tracekite/utils/rendezvous_ids.py; a second speller finds "
                     f"nothing and reports it as an empty answer")
     return violations
 

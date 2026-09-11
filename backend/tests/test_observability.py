@@ -12,17 +12,17 @@ import logging
 
 import pytest
 
-from evigraph.metrics_export import (
+from tracekite.metrics_export import (
     COUNTER_METRIC, TIMING_METRIC, LoggingSink, OpenTelemetrySink,
     export_run, open_telemetry_sink,
 )
-from evigraph.run_logging import (
+from tracekite.run_logging import (
     JsonFormatter, RunIdFilter, configure_logging, current_run_id,
     run_context,
 )
-from evigraph.services.linker.base import ClaimRecord
-from evigraph.services.linker.engine import RESOLVERS, link
-from evigraph.telemetry import RunTimings, timed
+from tracekite.services.linker.base import ClaimRecord
+from tracekite.services.linker.engine import RESOLVERS, link
+from tracekite.telemetry import RunTimings, timed
 
 
 def claim(cid, repo, key, hint):
@@ -176,7 +176,7 @@ class TestMetricsExport:
             assert isinstance(sink, OpenTelemetrySink)
 
     def test_logging_sink_reports_every_measurement(self, caplog):
-        with caplog.at_level(logging.INFO, logger="evigraph.metrics_export"):
+        with caplog.at_level(logging.INFO, logger="tracekite.metrics_export"):
             export_run(LoggingSink(), run_id="r1", counters={"a": 1})
         assert any(getattr(r, "key", "") == "a" for r in caplog.records)
 
@@ -218,8 +218,8 @@ class TestOpenTelemetrySink:
 
 
 def _service(on_run):
-    from evigraph.db.memory_store import InMemoryLinkerStore
-    from evigraph.services.linker.service import LinkerService
+    from tracekite.db.memory_store import InMemoryLinkerStore
+    from tracekite.services.linker.service import LinkerService
 
     store = InMemoryLinkerStore([])
     return LinkerService(store, on_run=on_run), store
@@ -309,7 +309,7 @@ class TestCorrelatedLogs:
         finally:
             root = logging.getLogger()
             for h in list(root.handlers):
-                if getattr(h, "_evigraph_configured", False):
+                if getattr(h, "_tracekite_configured", False):
                     root.removeHandler(h)
 
     def test_one_run_is_reconstructable_from_logs(self, caplog):
@@ -325,15 +325,15 @@ class TestCorrelatedLogs:
         with caplog.at_level(logging.INFO):
             with run_context("job_42"):
                 run()
-                logging.getLogger("evigraph.parsers.imaginary").info("read a file")
+                logging.getLogger("tracekite.parsers.imaginary").info("read a file")
 
         ambient = [r for r in caplog.records
-                   if r.name == "evigraph.parsers.imaginary"]
+                   if r.name == "tracekite.parsers.imaginary"]
         assert ambient
         assert all(r.link_run_id == "job_42" for r in ambient)
 
         linker = [r for r in caplog.records
-                  if r.name.startswith("evigraph.services.linker")]
+                  if r.name.startswith("tracekite.services.linker")]
         assert linker
         assert all(r.link_run_id == "linkrun_obs" for r in linker)
         assert sum("Linker r7_http" in r.getMessage() for r in linker) == 1

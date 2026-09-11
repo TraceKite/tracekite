@@ -12,10 +12,10 @@ import threading
 
 import pytest
 
-from evigraph.db.graph_store import Aggregate, Neighbourhood
-from evigraph.db.memory_store import InMemoryGraphStore
-from evigraph.db.sqlite_store import SQLiteGraphStore
-from evigraph.models.graph_models import GraphEdge, GraphNode
+from tracekite.db.graph_store import Aggregate, Neighbourhood
+from tracekite.db.memory_store import InMemoryGraphStore
+from tracekite.db.sqlite_store import SQLiteGraphStore
+from tracekite.models.graph_models import GraphEdge, GraphNode
 
 WRITERS = 8
 PER_WRITER = 25

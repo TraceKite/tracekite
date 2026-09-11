@@ -10,7 +10,7 @@ reader does not have; they were already pointing at finished work rather
 than at the reason the code is shaped the way it is. The ids are frozen
 below rather than read back, so this guard does not need them either.
 
-**No stale self-reference.** The package was renamed `app` -> `evigraph`. The
+**No stale self-reference.** The package was renamed `app` -> `tracekite`. The
 imports were all fixed, and `TestNoStaleSelfReference` pins them — but it
 parses the AST, so it sees only `import` statements. The rename left
 `python -m app.cli` in the CLI's own usage text, in the tree-sitter README's
@@ -52,7 +52,7 @@ ROADMAP_IDS = frozenset({
 # stale `app.` reference it would have caught was sitting in a document
 # instead: a migration guide whose examples all imported `app.db`, the
 # accuracy README, architecture.md twice.
-_SCAN_ROOTS = ("backend", "backend/evigraph", "backend/tools", "backend/tests",
+_SCAN_ROOTS = ("backend", "backend/tracekite", "backend/tools", "backend/tests",
                "frontend/src", "lib", "docs", "scripts", "config", "corpus",
                "packaging", "plugins", "schemas", ".github",
                ".agents/plugins", ".claude-plugin")
@@ -156,19 +156,19 @@ class TestNoStaleSelfReferenceInProse:
             text = path.read_text(encoding="utf-8", errors="replace")
             for match in _STALE_DOTTED.finditer(text):
                 head = match.group().split(".")[1]
-                if not (REPO / "backend" / "evigraph" / head).exists() and \
-                        not (REPO / "backend" / "evigraph" / f"{head}.py").exists():
+                if not (REPO / "backend" / "tracekite" / head).exists() and \
+                        not (REPO / "backend" / "tracekite" / f"{head}.py").exists():
                     continue                  # some other project's `app.x`
                 line = text.count("\n", 0, match.start()) + 1
                 offenders.append(f"{label(path)}:{line}: {match.group()}")
         assert not offenders, (
-            "the package is `evigraph`; these still say `app`:\n  "
+            "the package is `tracekite`; these still say `app`:\n  "
             + "\n  ".join(offenders))
 
     def test_no_file_names_a_path_that_is_really_this_package(self):
         """`app/routes/_index.tsx` is Remix and `app/models/o.rb` is Rails;
         `app/services/claims.py` is this package under its old name. The
-        difference is whether the file exists under `backend/evigraph/`."""
+        difference is whether the file exists under `backend/tracekite/`."""
         offenders = []
         for path in sources():
             if path.name in _QUOTES_THE_PATTERN:
@@ -176,12 +176,12 @@ class TestNoStaleSelfReferenceInProse:
             text = path.read_text(encoding="utf-8", errors="replace")
             for match in _STALE_PATH.finditer(text):
                 rest = match.group().split("/", 1)[1].rstrip(".,;:)— ")
-                if not (REPO / "backend" / "evigraph" / rest).exists():
+                if not (REPO / "backend" / "tracekite" / rest).exists():
                     continue                  # fixture data, not us
                 line = text.count("\n", 0, match.start()) + 1
                 offenders.append(f"{label(path)}:{line}: {match.group()}")
         assert not offenders, (
-            "the package directory is `backend/evigraph/`; these still say "
+            "the package directory is `backend/tracekite/`; these still say "
             "`app/`:\n  " + "\n  ".join(offenders))
 
 
@@ -192,7 +192,7 @@ class TestTheGuardsSeeSomething:
         paths = sources()
         assert len(paths) > 300, f"only {len(paths)} files scanned"
         names = {label(p) for p in paths}
-        assert "backend/evigraph/cli.py" in names               # production
+        assert "backend/tracekite/cli.py" in names               # production
         assert "backend/tests/test_source_hygiene.py" in names  # tests
         assert not any("components/ui/" in str(p) for p in paths)  # vendored
         assert not any("generated/" in str(p) for p in paths)

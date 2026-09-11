@@ -1,6 +1,6 @@
 # Agent and MCP integration
 
-Evigraph can scan source directories or load portable `.evigraph` artifacts, link
+TraceKite can scan source directories or load portable `.tracekite` artifacts, link
 their claims once at startup, and answer MCP requests over stdio. Client
 registration is explicit because each client owns a different configuration
 format.
@@ -11,33 +11,33 @@ From this checkout:
 
 ```bash
 uv tool install .
-evigraph install-skill
+tracekite install-skill
 ```
 
 `install-skill` supports `claude`, `codex`, `kimi`, and
 `antigravity`. Repeat `--client` to select more than one:
 
 ```bash
-evigraph install-skill --client codex --client kimi
+tracekite install-skill --client codex --client kimi
 ```
 
 The installer writes only published global skill locations:
 
 | Client | Skill path |
 |---|---|
-| Claude Code | `~/.claude/skills/evigraph/SKILL.md` |
-| Codex | `~/.agents/skills/evigraph/SKILL.md` |
-| Kimi | `~/.kimi/skills/evigraph/SKILL.md` |
-| Antigravity | `~/.gemini/config/skills/evigraph/SKILL.md` |
+| Claude Code | `~/.claude/skills/tracekite/SKILL.md` |
+| Codex | `~/.agents/skills/tracekite/SKILL.md` |
+| Kimi | `~/.kimi/skills/tracekite/SKILL.md` |
+| Antigravity | `~/.gemini/config/skills/tracekite/SKILL.md` |
 
 An existing, different file is never overwritten. MCP configuration is never
 changed by this command.
 
 ## Or install the agent plugin
 
-The repository's [`plugins/evigraph/`](../plugins/evigraph/) directory is one
+The repository's [`plugins/tracekite/`](../plugins/tracekite/) directory is one
 cross-client plugin source. It carries separate Claude Code, Codex, and Kimi
-manifests around the same skill. Its default MCP command is `evigraph mcp`, which
+manifests around the same skill. Its default MCP command is `tracekite mcp`, which
 scans the client's current repository on the first graph query.
 
 For multiple repositories, register a separate MCP server with every absolute
@@ -49,7 +49,7 @@ the current client-specific marketplace and registration commands.
 Pass each repository as its own source directory:
 
 ```bash
-evigraph mcp /absolute/path/orders /absolute/path/billing
+tracekite mcp /absolute/path/orders /absolute/path/billing
 ```
 
 Source directories are fully scanned when the server starts. A parent
@@ -59,10 +59,10 @@ For repeatable CI or faster startup, create one artifact per repository and
 pass the resulting filenames:
 
 ```bash
-evigraph artifact /absolute/path/orders --repo-id orders --out ./artifacts
-evigraph artifact /absolute/path/billing --repo-id billing --out ./artifacts
-evigraph mcp ./artifacts/orders-<digest>.evigraph \
-  ./artifacts/billing-<digest>.evigraph
+tracekite artifact /absolute/path/orders --repo-id orders --out ./artifacts
+tracekite artifact /absolute/path/billing --repo-id billing --out ./artifacts
+tracekite mcp ./artifacts/orders-<digest>.tracekite \
+  ./artifacts/billing-<digest>.tracekite
 ```
 
 Inputs with the same repository ID are rejected rather than merged
@@ -75,7 +75,7 @@ Use absolute repository or artifact paths in persistent client configuration.
 ### Codex
 
 ```bash
-codex mcp add evigraph -- evigraph mcp \
+codex mcp add tracekite -- tracekite mcp \
   /absolute/path/orders /absolute/path/billing
 ```
 
@@ -85,7 +85,7 @@ Codex stores user configuration in `~/.codex/config.toml`. See the
 ### Claude Code
 
 ```bash
-claude mcp add --scope user evigraph -- evigraph mcp \
+claude mcp add --scope user tracekite -- tracekite mcp \
   /absolute/path/orders /absolute/path/billing
 ```
 
@@ -95,7 +95,7 @@ See the
 ### Kimi CLI
 
 ```bash
-kimi mcp add --transport stdio evigraph -- evigraph mcp \
+kimi mcp add --transport stdio tracekite -- tracekite mcp \
   /absolute/path/orders /absolute/path/billing
 ```
 
@@ -109,8 +109,8 @@ Add the server to `~/.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "evigraph": {
-      "command": "evigraph",
+    "tracekite": {
+      "command": "tracekite",
       "args": [
         "mcp",
         "/absolute/path/orders",
@@ -125,7 +125,7 @@ See [Cursor's MCP documentation](https://docs.cursor.com/context/model-context-p
 
 ### Antigravity
 
-Add the same `mcpServers.evigraph` command and arguments to
+Add the same `mcpServers.tracekite` command and arguments to
 `~/.gemini/config/mcp_config.json`. Antigravity uses
 `~/.gemini/config/skills` for global skills.
 
@@ -144,8 +144,8 @@ with an exact ID.
 
 ## Troubleshooting
 
-- Run `evigraph --help` to verify the executable is on the client's PATH.
-- Run `evigraph mcp ...` in a terminal and send newline-delimited JSON-RPC only
+- Run `tracekite --help` to verify the executable is on the client's PATH.
+- Run `tracekite mcp ...` in a terminal and send newline-delimited JSON-RPC only
   when debugging the transport; normal clients manage stdio themselves.
 - If two inputs share a basename, create artifacts with distinct
   `--repo-id` values.

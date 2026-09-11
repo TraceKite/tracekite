@@ -10,13 +10,13 @@ import os
 
 import pytest
 
-from evigraph import engine_config
-from evigraph.db.artifact import (
+from tracekite import engine_config
+from tracekite.db.artifact import (
     ARTIFACT_SUFFIX, digest_of, is_unchanged, open_artifact, read_meta,
     write_artifact,
 )
-from evigraph.db.graph_store import Aggregate
-from evigraph.services.scan import scan
+from tracekite.db.graph_store import Aggregate
+from tracekite.services.scan import scan
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 SAMPLE = os.path.join(FIXTURES, "callgraph-sample")
@@ -111,7 +111,7 @@ class TestIncrementalReingest:
 
     def test_first_pass_scans_and_writes(self, tmp_path):
         engine_config.configure(graph_hmac_key="artifact-test-key")
-        from evigraph.services.reingest import scan_if_changed
+        from tracekite.services.reingest import scan_if_changed
 
         ref, reused = scan_if_changed(SAMPLE, "repo_a", str(tmp_path))
         assert reused is False
@@ -120,7 +120,7 @@ class TestIncrementalReingest:
     def test_second_pass_reuses_without_parsing(self, tmp_path):
         """The saving is the whole scan, not merely the write."""
         engine_config.configure(graph_hmac_key="artifact-test-key")
-        from evigraph.services.reingest import scan_if_changed
+        from tracekite.services.reingest import scan_if_changed
 
         first, _ = scan_if_changed(SAMPLE, "repo_a", str(tmp_path))
         second, reused = scan_if_changed(SAMPLE, "repo_a", str(tmp_path))
@@ -134,7 +134,7 @@ class TestIncrementalReingest:
         import shutil
 
         engine_config.configure(graph_hmac_key="artifact-test-key")
-        from evigraph.services.reingest import scan_if_changed
+        from tracekite.services.reingest import scan_if_changed
 
         work = tmp_path / "repo"
         shutil.copytree(SAMPLE, work)
@@ -152,7 +152,7 @@ class TestIncrementalReingest:
     def test_fingerprint_is_stable_and_content_sensitive(self, tmp_path):
         import shutil
 
-        from evigraph.services.reingest import source_fingerprint
+        from tracekite.services.reingest import source_fingerprint
 
         work = tmp_path / "repo"
         shutil.copytree(SAMPLE, work)
@@ -174,7 +174,7 @@ class TestCompaction:
                 for i in range(count)]
 
     def test_many_artifacts_become_one_index(self, tmp_path):
-        from evigraph.db.artifact import compact
+        from tracekite.db.artifact import compact
 
         paths = self._artifacts(tmp_path, 12)
         result = compact(paths, str(tmp_path / "index.db"))
@@ -183,7 +183,7 @@ class TestCompaction:
         assert result.nodes > 0 and result.edges > 0
 
     def test_the_index_is_queryable(self, tmp_path):
-        from evigraph.db.artifact import compact
+        from tracekite.db.artifact import compact
 
         paths = self._artifacts(tmp_path, 5)
         result = compact(paths, str(tmp_path / "index.db"))
@@ -194,7 +194,7 @@ class TestCompaction:
     def test_recompacting_supersedes_rather_than_duplicates(self, tmp_path):
         """An artifact merged twice must not double its rows — identity is
         the node id, not the number of times it arrived."""
-        from evigraph.db.artifact import compact
+        from tracekite.db.artifact import compact
 
         paths = self._artifacts(tmp_path, 3)
         once = compact(paths, str(tmp_path / "a.db"))
@@ -205,24 +205,24 @@ class TestCompaction:
     def test_an_unreadable_artifact_is_named_not_dropped(self, tmp_path):
         """A compaction that quietly omitted a repo would produce an index
         that looks complete and is missing an estate's worth of edges."""
-        from evigraph.db.artifact import compact
+        from tracekite.db.artifact import compact
 
         paths = self._artifacts(tmp_path, 2)
-        broken = tmp_path / "broken.evigraph"
+        broken = tmp_path / "broken.tracekite"
         broken.write_bytes(b"not a database at all")
         result = compact(paths + [str(broken)], str(tmp_path / "index.db"))
         assert result.artifacts == 2
-        assert "broken.evigraph" in result.skipped
+        assert "broken.tracekite" in result.skipped
 
     def test_a_wrong_wire_version_is_refused_and_reported(self, tmp_path):
         """Merging an artifact written against a different contract would
         silently mix two shapes."""
         import sqlite3 as sq
 
-        from evigraph.db.artifact import compact
+        from tracekite.db.artifact import compact
 
         paths = self._artifacts(tmp_path, 1)
-        stale = tmp_path / "arts" / "stale.evigraph"
+        stale = tmp_path / "arts" / "stale.tracekite"
         stale.write_bytes(open(paths[0], "rb").read())
         conn = sq.connect(str(stale))
         conn.execute("UPDATE artifact_meta SET value='0.0.1' "
@@ -232,10 +232,10 @@ class TestCompaction:
 
         result = compact(paths + [str(stale)], str(tmp_path / "index.db"))
         assert result.artifacts == 1
-        assert "wire" in result.skipped["stale.evigraph"]
+        assert "wire" in result.skipped["stale.tracekite"]
 
     def test_the_index_records_what_it_contains(self, tmp_path):
-        from evigraph.db.artifact import compact
+        from tracekite.db.artifact import compact
 
         paths = self._artifacts(tmp_path, 4)
         result = compact(paths, str(tmp_path / "index.db"))
@@ -267,7 +267,7 @@ class TestAbsenceIsRecorded:
         repository forever, and omitted kinds that are emitted, which could
         never be reported absent at all.
         """
-        from evigraph.services.claims import ACTIVE_KINDS
+        from tracekite.services.claims import ACTIVE_KINDS
 
         engine_config.configure(graph_hmac_key="artifact-test-key")
         a = scan(SAMPLE, "repo_a").absence
@@ -294,8 +294,8 @@ class TestAbsenceIsRecorded:
         """`data_dynamic_site` counts a site the extractor refused to name.
         Reading found kinds off the counter keys published that refusal as a
         finding, which is a decline inverted into a claim."""
-        from evigraph.services.absence import absence_report
-        from evigraph.services.ingest_source import IngestSink
+        from tracekite.services.absence import absence_report
+        from tracekite.services.ingest_source import IngestSink
 
         sink = IngestSink()
         sink.count_claim("data_dynamic_site")
@@ -308,7 +308,7 @@ class TestAbsenceIsRecorded:
         reached — that is the implied absence C5 removes."""
         import dataclasses
 
-        from evigraph import engine_config as ec
+        from tracekite import engine_config as ec
 
         original = ec._active
         try:
@@ -327,7 +327,7 @@ class TestAbsenceIsRecorded:
         different follow-ups."""
         import dataclasses
 
-        from evigraph import engine_config as ec
+        from tracekite import engine_config as ec
 
         original = ec._active
         try:
@@ -346,7 +346,7 @@ class TestAbsenceIsRecorded:
     def test_a_v1_0_artifact_migrates_to_an_honest_unknown(self):
         """Not to an empty report — that would claim the scan was complete
         and found nothing, which is the implied absence C5 removes."""
-        from evigraph.db.artifact_migrations import migrate
+        from tracekite.db.artifact_migrations import migrate
 
         out = migrate({"wire_version": "1.0.0", "repo_id": "old"})
         assert out["absence"]["absence_is_evidence"] is False

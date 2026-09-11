@@ -1,4 +1,4 @@
-"""`evigraph-core` declares what it actually needs, and nothing heavy.
+"""`tracekite-core` declares what it actually needs, and nothing heavy.
 
 The distribution's dependency list is not hand-maintained: it is the measured
 import closure of the core and parsers layers. This fails when the two drift,
@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 import check_layers  # noqa: E402
 
 PYPROJECT = (Path(__file__).resolve().parent.parent.parent
-             / "packaging" / "evigraph-core" / "pyproject.toml")
+             / "packaging" / "tracekite-core" / "pyproject.toml")
 CLI_PYPROJECT = Path(__file__).resolve().parent.parent.parent / "pyproject.toml"
 
 # Never in the core distribution. A host already running a graph database must
@@ -86,7 +86,7 @@ def _imported() -> set[str]:
                     found.add(node.module.split(".")[0])
     stdlib = set(sys.stdlib_module_names)
     return {DISTRIBUTION_OF.get(m, m).replace("_", "-").lower()
-            for m in found if m not in stdlib and m != "evigraph"}
+            for m in found if m not in stdlib and m != "tracekite"}
 
 
 class TestCoreDistribution:
@@ -125,7 +125,7 @@ class TestCoreDistribution:
         hook = (PYPROJECT.parent / "hatch_build.py").read_text()
 
         assert 'path = "hatch_build.py"' in text
-        assert 'package = "evigraph"' in text
+        assert 'package = "tracekite"' in text
         assert '_control_plane' in hook
 
     def test_distribution_carries_the_repository_license_verbatim(self):
@@ -139,6 +139,6 @@ class TestCliDistribution:
     def test_cli_wheel_ships_code_and_control_plane(self):
         text = CLI_PYPROJECT.read_text()
 
-        assert 'evigraph = "evigraph.cli:main"' in text
-        assert 'packages = ["backend/evigraph"]' in text
-        assert '"config" = "evigraph/_control_plane"' in text
+        assert 'tracekite = "tracekite.cli:main"' in text
+        assert 'packages = ["backend/tracekite"]' in text
+        assert '"config" = "tracekite/_control_plane"' in text

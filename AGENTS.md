@@ -42,9 +42,9 @@ session if it has been edited since.
 
 ### Deterministic Codebase Indexing & Subagent Control
 
-- **Evigraph is the primary deterministic source-code evidence indexer** for cross-repository architecture, caller resolution, API endpoints, and refactoring impact.
-- **For any dependency, caller, or impact question:** Query Evigraph MCP tools (`consumers_of`, `trace`, `services`) directly inline in the primary thread. **DO NOT spawn background subagents** (`Explore`, `general-purpose`) for queries that Evigraph's pre-indexed graph answers.
-- **Use Evigraph's returned file:line evidence citations** to locate and open the exact target source files directly when deep method implementation inspection is needed.
+- **TraceKite is the primary deterministic source-code evidence indexer** for cross-repository architecture, caller resolution, API endpoints, and refactoring impact.
+- **For any dependency, caller, or impact question:** Query TraceKite MCP tools (`consumers_of`, `trace`, `services`) directly inline in the primary thread. **DO NOT spawn background subagents** (`Explore`, `general-purpose`) for queries that TraceKite's pre-indexed graph answers.
+- **Use TraceKite's returned file:line evidence citations** to locate and open the exact target source files directly when deep method implementation inspection is needed.
 
 Name the source of truth for the question actually being asked, because they
 differ and they outrank each other:
@@ -55,7 +55,7 @@ differ and they outrank each other:
 | what the system actually does today | the code, and a test that runs |
 | what a value is | `config/*.yml`, not a remembered number |
 | why something is the way it is | git history, and `docs/design/architecture.md` §10 (decision record) |
-| what an endpoint returns | the route in `backend/evigraph/routes/`, or call it. `lib/api-spec/openapi.yaml` is now generated from the app and CI fails when it is stale, so it is answerable too — but the route is still the source |
+| what an endpoint returns | the route in `backend/tracekite/routes/`, or call it. `lib/api-spec/openapi.yaml` is now generated from the app and CI fails when it is stale, so it is answerable too — but the route is still the source |
 
 **When the code and a document disagree, say so.** That divergence is a finding
 in its own right and usually the most useful thing in the reply. Silently
@@ -90,11 +90,11 @@ are not verification; they are declines wearing the costume of an answer.
 ## 2. Where code goes
 
 ```
-backend/evigraph/parsers/     bytes + path → structured data.  Pure. No I/O, no DB.
-backend/evigraph/services/    extraction, claims, ingestion orchestration
-backend/evigraph/services/linker/   rN_*.py resolvers: claims → edges
-backend/evigraph/routes/      HTTP surface only — thin, no business logic
-backend/evigraph/db/          the only place that talks to Neo4j
+backend/tracekite/parsers/     bytes + path → structured data.  Pure. No I/O, no DB.
+backend/tracekite/services/    extraction, claims, ingestion orchestration
+backend/tracekite/services/linker/   rN_*.py resolvers: claims → edges
+backend/tracekite/routes/      HTTP surface only — thin, no business logic
+backend/tracekite/db/          the only place that talks to Neo4j
 config/*.yml             operator-tunable knobs (confidence, aliases, limits)
 frontend/src/components/ views and widgets
 frontend/src/components/ui/    vendored shadcn — do not hand-edit, regenerate
@@ -125,7 +125,7 @@ test coverage; large files produce coverage theatre.
 
 Scope of the rule:
 
-- **Applies to** everything under `backend/evigraph/`, `backend/tools/`,
+- **Applies to** everything under `backend/tracekite/`, `backend/tools/`,
   `frontend/src/` (excluding `components/ui/`), `lib/`, `artifacts/*/src/`,
   and `scripts/src/`.
 - **Exempt:** vendored code (`frontend/src/components/ui/`), generated clients
@@ -295,7 +295,7 @@ there so a new emitter cannot forget it.
 ```
 
 ```bash
-pnpm --filter @evigraph/web run typecheck
+pnpm --filter @tracekite/web run typecheck
 ```
 
 If you touched extraction or linking, re-ingest a repo and run the accuracy

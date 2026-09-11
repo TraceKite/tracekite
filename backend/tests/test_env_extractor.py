@@ -2,7 +2,7 @@
 
 import pytest
 
-from evigraph.services.env_extractor import (
+from tracekite.services.env_extractor import (
     extract_env_reads, extract_shell_interpolations, is_generic_env,
     looks_like_endpoint_var,
 )

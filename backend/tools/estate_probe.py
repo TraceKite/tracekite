@@ -32,9 +32,9 @@ from tools.scale_probe import _skew  # noqa: E402
 
 def measure_scan(repos: list[tuple[str, str]], workers: int,
                  hmac_key: str) -> tuple[float, list[str]]:
-    from evigraph.services.parallel_map import scan_many
+    from tracekite.services.parallel_map import scan_many
 
-    out_dir = tempfile.mkdtemp(prefix=f"evigraph-probe-w{workers}-")
+    out_dir = tempfile.mkdtemp(prefix=f"tracekite-probe-w{workers}-")
     started = time.perf_counter()
     result = scan_many(repos, out_dir, workers=workers, hmac_key=hmac_key)
     elapsed = time.perf_counter() - started
@@ -46,8 +46,8 @@ def measure_scan(repos: list[tuple[str, str]], workers: int,
 
 
 def link_artifacts(paths: list[str]) -> tuple[float, float, object, list]:
-    from evigraph.db.artifact_reader import read_claims
-    from evigraph.services.linker.engine import link
+    from tracekite.db.artifact_reader import read_claims
+    from tracekite.services.linker.engine import link
 
     started = time.perf_counter()
     # Claims only: the artifacts hold the whole graph, but the link
@@ -88,7 +88,7 @@ def main() -> int:
     repos = [(repo, os.path.join(args.estate, repo))
              for repo in sorted(manifest["repos"])]
 
-    from evigraph import engine_config
+    from tracekite import engine_config
     engine_config.configure(graph_hmac_key=args.hmac_key)
 
     print(f"{len(repos)} repos, {manifest['files']} files, "
@@ -112,7 +112,7 @@ def main() -> int:
 
     # The skew guard's answer: what REDUCE's worst worker would carry
     # with the hot keys split, against the naive floor without.
-    from evigraph.services.linker.partitions import plan
+    from tracekite.services.linker.partitions import plan
     guarded = plan(claims, workers=8)
     naive_floor = (skew["largest_key_claims"]
                    / max(1, guarded.total_claims / 8))
@@ -147,7 +147,7 @@ def measure_repush(repos, artifacts: list[str], hmac_key: str) -> None:
     file gets a comment appended, which changes the fingerprint without
     changing any claim.
     """
-    from evigraph.services.parallel_map import scan_many
+    from tracekite.services.parallel_map import scan_many
 
     _repo_id, repo_path = repos[0]
     # Walked, not assumed: a monorepo nests its padding under services/<svc>,

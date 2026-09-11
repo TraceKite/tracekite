@@ -1,13 +1,13 @@
 import pytest
 from unittest.mock import patch
 
-from evigraph.services.linker.normalize import normalize_http_calls
-from evigraph.services.linker import r0_alias, r4_gateway, r7_http
-from evigraph.services.linker.base import (
+from tracekite.services.linker.normalize import normalize_http_calls
+from tracekite.services.linker import r0_alias, r4_gateway, r7_http
+from tracekite.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, fuse_edges, linker_edge,
     load_aliases, load_confidence, positional,
 )
-from evigraph.services.linker.rollups import build_rollups
+from tracekite.services.linker.rollups import build_rollups
 
 
 def claim(kind, direction, key, repo="repo_a", hint=None, hint_source="none",
@@ -309,13 +309,13 @@ class TestConfidenceControlPlane:
         assert c.conf("r7", "hint_exact") == pytest.approx(0.95)
 
     def test_missing_table_fails_closed(self, tmp_path):
-        from evigraph.services.linker.base import ConfidenceTableMissing
-        with patch("evigraph.services.linker.base.config_dir",
+        from tracekite.services.linker.base import ConfidenceTableMissing
+        with patch("tracekite.services.linker.base.config_dir",
                    return_value=str(tmp_path)):
             with pytest.raises(ConfidenceTableMissing):
                 load_confidence()
 
     def test_kg_config_dir_env_alias_is_wired(self, monkeypatch, tmp_path):
-        from evigraph.config import Settings
+        from tracekite.config import Settings
         monkeypatch.setenv("KG_CONFIG_DIR", str(tmp_path))
         assert Settings().config_dir == str(tmp_path)

@@ -13,8 +13,8 @@ import pytest
 
 from tests.conftest import neo4j_available
 
-from evigraph.db.graph_store import Aggregate, BoundedPath, Neighbourhood
-from evigraph.db.neo4j_graph_store import Neo4jGraphStore
+from tracekite.db.graph_store import Aggregate, BoundedPath, Neighbourhood
+from tracekite.db.neo4j_graph_store import Neo4jGraphStore
 
 pytestmark = pytest.mark.skipif(not neo4j_available(),
                                 reason="needs a running Neo4j")
@@ -29,7 +29,7 @@ def store():
 def a_service_edge():
     """A real Service→Service edge, or skip: asserting against an empty graph
     would pass while proving nothing."""
-    from evigraph.db.neo4j_client import get_session
+    from tracekite.db.neo4j_client import get_session
 
     with get_session() as session:
         row = session.run(
@@ -89,10 +89,10 @@ class TestMigration:
         """Row counts are not the test — the answer is. If the service
         connections differ, something was lost, and copying rather than
         re-deriving exists precisely so they do not."""
-        from evigraph.db.graph_store import Aggregate
-        from evigraph.db.migrate import migrate_to_sqlite
-        from evigraph.db.neo4j_client import get_session
-        from evigraph.db.sqlite_store import SQLiteGraphStore
+        from tracekite.db.graph_store import Aggregate
+        from tracekite.db.migrate import migrate_to_sqlite
+        from tracekite.db.neo4j_client import get_session
+        from tracekite.db.sqlite_store import SQLiteGraphStore
 
         out = str(tmp_path / "estate.db")
         result = migrate_to_sqlite(out)
@@ -114,8 +114,8 @@ class TestMigration:
         the migration time onto every row and destroying determinism."""
         import json
 
-        from evigraph.db.migrate import migrate_to_sqlite
-        from evigraph.db.sqlite_store import SQLiteGraphStore
+        from tracekite.db.migrate import migrate_to_sqlite
+        from tracekite.db.sqlite_store import SQLiteGraphStore
 
         out = str(tmp_path / "estate.db")
         migrate_to_sqlite(out)

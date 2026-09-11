@@ -7,9 +7,9 @@ declines everything that would require actually RENDERING a template,
 because a hand-rendered value is an invented one.
 """
 
-from evigraph.parsers.kubernetes_parser import parse_k8s_file
-from evigraph.services.ingest_claims import emit_k8s_claims, emit_source_claims
-from evigraph.services.ingest_source import IngestSink
+from tracekite.parsers.kubernetes_parser import parse_k8s_file
+from tracekite.services.ingest_claims import emit_k8s_claims, emit_source_claims
+from tracekite.services.ingest_source import IngestSink
 from tests.test_m2_k8s_env import (
     _claims_from_sink, _file, ingest_k8s, run_linker,
 )

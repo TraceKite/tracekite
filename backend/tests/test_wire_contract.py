@@ -1,6 +1,6 @@
 """The wire contract is published and frozen.
 
-`schemas/evigraph-wire-<version>.json` is what a non-Python host validates
+`schemas/tracekite-wire-<version>.json` is what a non-Python host validates
 against. These tests are the enforcement half: the published file and the code
 cannot drift, and the version cannot change without the filename changing with
 it.
@@ -15,26 +15,26 @@ The policy, stated once and enforced here:
   than no dependency at all.
 
 If a test here fails, the contract changed. Decide the bump deliberately, then
-regenerate: `python -m evigraph.cli schema > schemas/evigraph-wire-<version>.json`.
+regenerate: `python -m tracekite.cli schema > schemas/tracekite-wire-<version>.json`.
 """
 
 import json
 import os
 import re
 
-from evigraph.wire import PUBLISHED, WIRE_VERSION, json_schemas
+from tracekite.wire import PUBLISHED, WIRE_VERSION, json_schemas
 
 SCHEMA_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "schemas")
-PUBLISHED_PATH = os.path.join(SCHEMA_DIR, f"evigraph-wire-{WIRE_VERSION}.json")
+PUBLISHED_PATH = os.path.join(SCHEMA_DIR, f"tracekite-wire-{WIRE_VERSION}.json")
 
 
 class TestPublished:
     def test_schema_file_exists_for_this_version(self):
         assert os.path.exists(PUBLISHED_PATH), (
             f"no published schema for {WIRE_VERSION}. Regenerate:\n"
-            f"  python -m evigraph.cli schema > {PUBLISHED_PATH}")
+            f"  python -m tracekite.cli schema > {PUBLISHED_PATH}")
 
     def test_published_file_matches_the_code(self):
         """The freeze. A model changed without republishing means a host
@@ -49,7 +49,7 @@ class TestPublished:
         """A schema whose version is only inside it cannot be fetched by
         version, and two versions cannot coexist on disk."""
         name = os.path.basename(PUBLISHED_PATH)
-        match = re.fullmatch(r"evigraph-wire-(\d+\.\d+\.\d+)\.json", name)
+        match = re.fullmatch(r"tracekite-wire-(\d+\.\d+\.\d+)\.json", name)
         assert match and match.group(1) == WIRE_VERSION, name
 
     def test_version_is_semver(self):

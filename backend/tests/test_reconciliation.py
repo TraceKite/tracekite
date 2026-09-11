@@ -6,11 +6,11 @@ endpoint nobody documents (observed-not-declared — undocumented coupling).
 The precision pin matters most: a spec must never MINT a contract.
 """
 
-from evigraph import engine_config
-from evigraph.db.memory_store import InMemoryLinkerStore, claims_from_scan
-from evigraph.services.linker.engine import link
-from evigraph.services.linker.reconciliation import reconcile
-from evigraph.services.scan import scan
+from tracekite import engine_config
+from tracekite.db.memory_store import InMemoryLinkerStore, claims_from_scan
+from tracekite.services.linker.engine import link
+from tracekite.services.linker.reconciliation import reconcile
+from tracekite.services.scan import scan
 
 SPEC = """openapi: 3.0.0
 info: {title: Billing API}

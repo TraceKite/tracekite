@@ -81,13 +81,13 @@ def _skew(claims) -> dict:
 
 
 def probe(count: int) -> dict:
-    from evigraph import engine_config
-    from evigraph.db.memory_store import InMemoryLinkerStore
-    from evigraph.services.linker.engine import link
-    from evigraph.services.scan import scan
+    from tracekite import engine_config
+    from tracekite.db.memory_store import InMemoryLinkerStore
+    from tracekite.services.linker.engine import link
+    from tracekite.services.scan import scan
 
     engine_config.configure(graph_hmac_key="scale-probe-key")
-    workdir = tempfile.mkdtemp(prefix="evigraph-scale-")
+    workdir = tempfile.mkdtemp(prefix="tracekite-scale-")
     try:
         repos = _replicate(count, workdir)
 

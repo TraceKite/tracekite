@@ -1,31 +1,31 @@
 :root {
-  --evigraph-graphite: #20241f;
-  --evigraph-graphite-raised: #3c4038;
-  --evigraph-mineral: #f4f1e9;
-  --evigraph-bone: #efebe1;
-  --evigraph-paper: #fbf9f3;
-  --evigraph-border: #c9c3b7;
-  --evigraph-border-soft: #d6d0c3;
-  --evigraph-smoke: #6b6f65;
-  --evigraph-smoke-muted: #8a8e84;
-  --evigraph-forest: #315b47;
-  --evigraph-rust: #a45138;
-  --evigraph-ochre: #9b7a31;
+  --tracekite-graphite: #20241f;
+  --tracekite-graphite-raised: #3c4038;
+  --tracekite-mineral: #f4f1e9;
+  --tracekite-bone: #efebe1;
+  --tracekite-paper: #fbf9f3;
+  --tracekite-border: #c9c3b7;
+  --tracekite-border-soft: #d6d0c3;
+  --tracekite-smoke: #6b6f65;
+  --tracekite-smoke-muted: #8a8e84;
+  --tracekite-forest: #315b47;
+  --tracekite-rust: #a45138;
+  --tracekite-ochre: #9b7a31;
 
-  --evigraph-font-sans: "IBM Plex Sans", "Helvetica Neue", Helvetica, sans-serif;
-  --evigraph-font-mono: "IBM Plex Mono", monospace;
+  --tracekite-font-sans: "IBM Plex Sans", "Helvetica Neue", Helvetica, sans-serif;
+  --tracekite-font-mono: "IBM Plex Mono", monospace;
 
-  --evigraph-space-1: 4px;
-  --evigraph-space-2: 8px;
-  --evigraph-space-3: 12px;
-  --evigraph-space-4: 16px;
-  --evigraph-space-5: 24px;
-  --evigraph-space-6: 32px;
+  --tracekite-space-1: 4px;
+  --tracekite-space-2: 8px;
+  --tracekite-space-3: 12px;
+  --tracekite-space-4: 16px;
+  --tracekite-space-5: 24px;
+  --tracekite-space-6: 32px;
 
-  --evigraph-radius-control: 4px;
-  --evigraph-radius-panel: 6px;
-  --evigraph-border-width: 1px;
-  --evigraph-header-height: 52px;
-  --evigraph-sidebar-width: 248px;
-  --evigraph-inspector-width: 320px;
+  --tracekite-radius-control: 4px;
+  --tracekite-radius-panel: 6px;
+  --tracekite-border-width: 1px;
+  --tracekite-header-height: 52px;
+  --tracekite-sidebar-width: 248px;
+  --tracekite-inspector-width: 320px;
 }

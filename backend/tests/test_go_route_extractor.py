@@ -4,7 +4,7 @@ net/http (incl. Go 1.22 method patterns), echo, chi, fiber, gorilla/mux, gin.
 Precision-first: dynamic paths decline instead of guessing.
 """
 
-from evigraph.services.go_route_extractor import extract_go_routes
+from tracekite.services.go_route_extractor import extract_go_routes
 
 
 def _line(src: str, needle: str) -> int:

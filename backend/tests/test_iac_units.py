@@ -6,12 +6,12 @@ the real scan — and each format's decline, because the formats' file
 shapes collide with ordinary configuration everywhere.
 """
 
-from evigraph import engine_config
-from evigraph.db.memory_store import claims_from_scan
-from evigraph.parsers.iac_units import (
+from tracekite import engine_config
+from tracekite.db.memory_store import claims_from_scan
+from tracekite.parsers.iac_units import (
     extract_iac_services, parse_ansible, parse_nomad, parse_systemd,
 )
-from evigraph.services.scan import scan
+from tracekite.services.scan import scan
 
 
 def scanned_claims(tmp_path, relpath, content):

@@ -1,6 +1,6 @@
 """Confidence-calibration CLI.
 
-Runs the labeled-estate harness in evigraph/services/calibration.py, prints the
+Runs the labeled-estate harness in tracekite/services/calibration.py, prints the
 per-tier P/R table plus the unmeasured-tier gap list, and (unless --dry-run)
 writes the `measured:` block into confidence.yml.
 
@@ -31,7 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--config-dir", default=None,
         help="Control-plane directory holding confidence.yml (default: the "
-             "repo's config/, resolved via evigraph.services.linker.base."
+             "repo's config/, resolved via tracekite.services.linker.base."
              "config_dir()).")
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -61,17 +61,17 @@ def main(argv: list[str] | None = None) -> int:
     # objects. Core does not read the environment itself (architecture §2),
     # so an entry point that skips this hashes config values under an empty
     # HMAC key instead of the deployment's. Must follow the setdefault above.
-    import evigraph.config  # noqa: F401
+    import tracekite.config  # noqa: F401
 
-    from evigraph.services.calibration import run_calibration
-    from evigraph.services.calibration_io import (
+    from tracekite.services.calibration import run_calibration
+    from tracekite.services.calibration_io import (
         DEFAULT_CORPUS, coverage_gaps, write_measured,
     )
-    from evigraph.services.linker.base import config_dir, load_confidence
-    from evigraph.services.linker.reliability import (
+    from tracekite.services.linker.base import config_dir, load_confidence
+    from tracekite.services.linker.reliability import (
         derive_constants, derived_block_lines,
     )
-    from evigraph.services.linker.review_labels import review_labels
+    from tracekite.services.linker.review_labels import review_labels
 
     config_path = os.path.join(config_dir(), "confidence.yml")
     served_table = load_confidence()

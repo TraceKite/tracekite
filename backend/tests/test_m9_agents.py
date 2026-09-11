@@ -8,14 +8,14 @@ claiming one server name is a declined coin flip.
 
 from types import SimpleNamespace
 
-from evigraph.parsers.parser_registry import parse_file
-from evigraph.services.agents_extractor import parse_agent_card, parse_mcp_config
-from evigraph.services.ingest_claims import (
+from tracekite.parsers.parser_registry import parse_file
+from tracekite.services.agents_extractor import parse_agent_card, parse_mcp_config
+from tracekite.services.ingest_claims import (
     emit_agent_card_claims, emit_agent_claims, emit_mcp_config_claims,
 )
-from evigraph.services.ingest_source import IngestSink
-from evigraph.services.linker import r11_agent
-from evigraph.services.linker.base import (
+from tracekite.services.ingest_source import IngestSink
+from tracekite.services.linker import r11_agent
+from tracekite.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, ResolverOutput, load_confidence,
 )
 

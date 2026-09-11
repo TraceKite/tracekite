@@ -23,7 +23,7 @@ import ast
 import pathlib
 import sys
 
-APP = pathlib.Path(__file__).resolve().parent.parent / "evigraph"
+APP = pathlib.Path(__file__).resolve().parent.parent / "tracekite"
 # Bottom-up. Equal rank means sibling: siblings may not import each other.
 RANK = {"core": 0, "parsers": 1, "store": 1, "server": 2}
 # First match wins, so longer prefixes are listed before the packages that
@@ -196,7 +196,7 @@ def imports_of(path: pathlib.Path) -> set[str]:
             found.add(node.module)
             # `from app.x import y` may name a module rather than a symbol.
             found.update(f"{node.module}.{a.name}" for a in node.names)
-    return {m[len("evigraph."):] for m in found if m.startswith("evigraph.")}
+    return {m[len("tracekite."):] for m in found if m.startswith("tracekite.")}
 
 
 def resolve(target: str) -> str | None:

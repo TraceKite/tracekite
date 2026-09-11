@@ -2,7 +2,7 @@
 
 The wheel used to install a top-level package called `app`. `app` is the
 conventional package name for FastAPI, Flask and Django projects — which
-is exactly the audience `pip install evigraph-core` exists for — so an
+is exactly the audience `pip install tracekite-core` exists for — so an
 integrating host's own `app/` shadowed the library entirely: cwd precedes
 site-packages, and `from app.services...` raised ModuleNotFoundError. Two
 installed distributions both owning `app/` merged silently in
@@ -20,7 +20,7 @@ import tomllib
 
 BACKEND = pathlib.Path(__file__).resolve().parent.parent
 REPO = BACKEND.parent
-PYPROJECT = REPO / "packaging" / "evigraph-core" / "pyproject.toml"
+PYPROJECT = REPO / "packaging" / "tracekite-core" / "pyproject.toml"
 
 # Names a host is likely to own. `app` is the one that actually bit.
 SQUATTED = {"app", "src", "lib", "core", "server", "api", "main", "config",
@@ -46,7 +46,7 @@ def _shipped_packages() -> set[str]:
 
 class TestNamespace:
     def test_the_source_package_is_named_for_the_project(self):
-        assert (BACKEND / "evigraph" / "__init__.py").exists()
+        assert (BACKEND / "tracekite" / "__init__.py").exists()
         assert not (BACKEND / "app").exists(), (
             "backend/app is back; the wheel would claim the `app` namespace "
             "and shadow every host that has its own")
@@ -58,11 +58,11 @@ class TestNamespace:
             f"with the host application it is meant to be embedded in")
 
     def test_the_wheel_ships_exactly_one_top_level_package(self):
-        assert _shipped_packages() == {"evigraph"}, _shipped_packages()
+        assert _shipped_packages() == {"tracekite"}, _shipped_packages()
 
     def test_the_console_script_points_into_that_package(self):
         scripts = _spec()["project"].get("scripts") or {}
-        assert scripts.get("evigraph", "").startswith("evigraph."), scripts
+        assert scripts.get("tracekite", "").startswith("tracekite."), scripts
 
 
 class TestNoStaleSelfReference:
@@ -90,8 +90,8 @@ class TestNoStaleSelfReference:
 
     def test_the_container_entrypoint_targets_the_renamed_package(self):
         dockerfile = (BACKEND / "Dockerfile").read_text()
-        assert "evigraph.main:app" in dockerfile
-        assert "backend/evigraph" in dockerfile
+        assert "tracekite.main:app" in dockerfile
+        assert "backend/tracekite" in dockerfile
         assert "COPY backend/app " not in dockerfile
 
 
@@ -107,11 +107,11 @@ class TestDocumentedImportsResolve:
         modules = set()
         for line in readme.splitlines():
             line = line.strip()
-            if line.startswith("from evigraph") and " import " in line:
+            if line.startswith("from tracekite") and " import " in line:
                 modules.add(line.split()[1])
-            elif line.startswith("import evigraph"):
+            elif line.startswith("import tracekite"):
                 modules.add(line.split()[1])
-        assert modules, "no evigraph imports found in the README at all"
+        assert modules, "no tracekite imports found in the README at all"
         for name in sorted(modules):
             importlib.import_module(name)      # raises if the path moved
 
@@ -166,7 +166,7 @@ class TestReadmeDocumentsTheCli:
 
     def _subcommands(self) -> set[str]:
         import argparse
-        from evigraph.cli import build_parser
+        from tracekite.cli import build_parser
         for action in build_parser()._actions:
             if isinstance(action, argparse._SubParsersAction):
                 return set(action.choices)
@@ -175,7 +175,7 @@ class TestReadmeDocumentsTheCli:
     def test_every_subcommand_appears_in_the_readme(self):
         readme = (REPO / "README.md").read_text(encoding="utf-8")
         missing = sorted(c for c in self._subcommands()
-                         if f"evigraph {c}" not in readme)
+                         if f"tracekite {c}" not in readme)
         assert not missing, (
             f"undocumented subcommand(s): {missing} — add them to the CLI "
             f"section of the README")
@@ -183,6 +183,6 @@ class TestReadmeDocumentsTheCli:
     def test_the_readme_documents_no_command_that_does_not_exist(self):
         import re
         readme = (REPO / "README.md").read_text(encoding="utf-8")
-        claimed = set(re.findall(r"`evigraph ([a-z][a-z-]+)", readme))
+        claimed = set(re.findall(r"`tracekite ([a-z][a-z-]+)", readme))
         unknown = sorted(claimed - self._subcommands())
         assert not unknown, f"README documents non-existent command(s): {unknown}"

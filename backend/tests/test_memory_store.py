@@ -9,10 +9,10 @@ import os
 
 import pytest
 
-from evigraph.db.graph_store import Aggregate, BoundedPath, Neighbourhood
-from evigraph.db.memory_store import InMemoryGraphStore, InMemoryLinkerStore
-from evigraph.db.sqlite_store import SQLiteGraphStore
-from evigraph.models.graph_models import GraphEdge, GraphNode
+from tracekite.db.graph_store import Aggregate, BoundedPath, Neighbourhood
+from tracekite.db.memory_store import InMemoryGraphStore, InMemoryLinkerStore
+from tracekite.db.sqlite_store import SQLiteGraphStore
+from tracekite.models.graph_models import GraphEdge, GraphNode
 
 
 def node(nid, ntype="File", repo="r1"):
@@ -34,26 +34,26 @@ def edge(src, dst, etype="CALLS_SERVICE", repo="r1"):
 def _scratch_neo4j():
     """A disposable Neo4j, never the deployment's own.
 
-    `EVIGRAPH_SCRATCH_NEO4J_URI` must point at a throwaway instance: this
+    `TRACEKITE_SCRATCH_NEO4J_URI` must point at a throwaway instance: this
     fixture writes and deletes nodes, and running it against a real estate
     would leave `CALLS_SERVICE` edges behind — the exact relationship the
     accuracy harness counts.
 
-        docker run --rm -d --name evigraph-scratch-neo4j -p 27699:7687 \
+        docker run --rm -d --name tracekite-scratch-neo4j -p 27699:7687 \
           -e NEO4J_AUTH=neo4j/scratchpassword123 neo4j:5.26-community
-        export EVIGRAPH_SCRATCH_NEO4J_URI=bolt://localhost:27699
-        export EVIGRAPH_SCRATCH_NEO4J_PASSWORD=scratchpassword123
+        export TRACEKITE_SCRATCH_NEO4J_URI=bolt://localhost:27699
+        export TRACEKITE_SCRATCH_NEO4J_PASSWORD=scratchpassword123
     """
-    uri = os.environ.get("EVIGRAPH_SCRATCH_NEO4J_URI")
+    uri = os.environ.get("TRACEKITE_SCRATCH_NEO4J_URI")
     if not uri:
         pytest.skip("no scratch Neo4j; see _scratch_neo4j for how to start one")
 
-    from evigraph.db import neo4j_client, store_config
-    from evigraph.db.neo4j_graph_store import Neo4jGraphStore
+    from tracekite.db import neo4j_client, store_config
+    from tracekite.db.neo4j_graph_store import Neo4jGraphStore
 
     store_config.configure(
         neo4j_uri=uri, neo4j_user="neo4j",
-        neo4j_password=os.environ.get("EVIGRAPH_SCRATCH_NEO4J_PASSWORD", ""))
+        neo4j_password=os.environ.get("TRACEKITE_SCRATCH_NEO4J_PASSWORD", ""))
     neo4j_client._driver = None          # rebind to the scratch instance
     with neo4j_client.get_session() as session:
         session.run("MATCH (n) DETACH DELETE n").consume()
@@ -255,7 +255,7 @@ class TestDeterministicArtifact:
         excluded from the content and kept as metadata."""
         import json
 
-        from evigraph.db.sqlite_store import _VOLATILE
+        from tracekite.db.sqlite_store import _VOLATILE
 
         store = SQLiteGraphStore(":memory:")
         store.upsert_edges([edge("a", "b")])

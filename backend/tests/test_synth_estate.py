@@ -16,10 +16,10 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
 
-from evigraph import engine_config  # noqa: E402
-from evigraph.db.memory_store import InMemoryLinkerStore  # noqa: E402
-from evigraph.services.linker.engine import link  # noqa: E402
-from evigraph.services.scan import scan  # noqa: E402
+from tracekite import engine_config  # noqa: E402
+from tracekite.db.memory_store import InMemoryLinkerStore  # noqa: E402
+from tracekite.services.linker.engine import link  # noqa: E402
+from tracekite.services.scan import scan  # noqa: E402
 from tools.synth_estate import generate  # noqa: E402
 
 
