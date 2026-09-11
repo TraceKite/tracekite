@@ -9,15 +9,15 @@ checks a date twice.
 
 import os
 
-from adduce import engine_config
-from adduce.db.artifact import write_artifact
-from adduce.db.artifact_reader import read_artifact
-from adduce.db.memory_store import InMemoryLinkerStore
-from adduce.models.graph_models import GraphEdge
-from adduce.services.linker.history import (
+from evigraph import engine_config
+from evigraph.db.artifact import write_artifact
+from evigraph.db.artifact_reader import read_artifact
+from evigraph.db.memory_store import InMemoryLinkerStore
+from evigraph.models.graph_models import GraphEdge
+from evigraph.services.linker.history import (
     changed_between, consumers_over_time, edge_history, edge_key,
 )
-from adduce.services.scan import scan
+from evigraph.services.scan import scan
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 SAMPLE = os.path.join(FIXTURES, "callgraph-sample")

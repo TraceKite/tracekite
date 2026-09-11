@@ -5,7 +5,7 @@ app CONSUMES and `subscribe` means it PRODUCES. Get that backwards and every
 declared topic edge in the graph points the wrong way.
 """
 
-from adduce.parsers.asyncapi_parser import (
+from evigraph.parsers.asyncapi_parser import (
     is_asyncapi_file, is_avro_schema_file, parse_asyncapi, parse_avro_schema,
 )
 

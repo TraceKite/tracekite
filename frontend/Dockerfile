@@ -20,7 +20,7 @@ COPY lib/api-zod/package.json ./lib/api-zod/
 COPY lib/db/package.json ./lib/db/
 COPY scripts/package.json ./scripts/
 
-RUN pnpm install --frozen-lockfile --filter '@adduce/web...'
+RUN pnpm install --frozen-lockfile --filter '@evigraph/web...'
 
 COPY tsconfig.base.json ./
 COPY lib ./lib
@@ -28,7 +28,7 @@ COPY frontend ./frontend
 
 # Same-origin API: nginx proxies /api, so no base URL is baked into the bundle.
 ENV NODE_ENV=production
-RUN pnpm --filter '@adduce/web' build
+RUN pnpm --filter '@evigraph/web' build
 
 
 FROM nginx:1.27-alpine AS runtime

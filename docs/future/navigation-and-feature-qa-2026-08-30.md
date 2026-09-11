@@ -1,4 +1,4 @@
-# Adduce interaction contract and feature QA
+# Evigraph interaction contract and feature QA
 
 Date: 2026-08-30
 Runtime reviewed: `http://127.0.0.1:28080/`

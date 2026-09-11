@@ -11,17 +11,17 @@ from types import SimpleNamespace
 
 import pytest
 
-from adduce.parsers.asyncapi_parser import parse_asyncapi
-from adduce.parsers.iac_parser import parse_terraform
-from adduce.parsers.kubernetes_parser import parse_kubernetes_yaml
-from adduce.services.claims import CONSUMES, PROVIDES, ContractClaim, topic_key
-from adduce.services.ingest_claims import (
+from evigraph.parsers.asyncapi_parser import parse_asyncapi
+from evigraph.parsers.iac_parser import parse_terraform
+from evigraph.parsers.kubernetes_parser import parse_kubernetes_yaml
+from evigraph.services.claims import CONSUMES, PROVIDES, ContractClaim, topic_key
+from evigraph.services.ingest_claims import (
     add_claim, emit_asyncapi_claims, emit_avro_claims, emit_iac_claims,
     emit_k8s_claims, emit_messaging_claims,
 )
-from adduce.services.ingest_source import IngestSink
-from adduce.services.linker import r0_alias, r6_topic, r9_env, r9_env_index
-from adduce.services.linker.base import (
+from evigraph.services.ingest_source import IngestSink
+from evigraph.services.linker import r0_alias, r6_topic, r9_env, r9_env_index
+from evigraph.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, ResolverOutput, load_confidence,
 )
 

@@ -1,5 +1,5 @@
 import pytest
-from adduce.utils.hashing import (
+from evigraph.utils.hashing import (
     generate_repo_id, generate_node_id, normalize_github_url, sanitize_path,
 )
 
@@ -24,16 +24,16 @@ class TestNormalizeGithubUrl:
         assert repo == "linux"
 
     def test_scp_ssh_url(self):
-        url, owner, repo = normalize_github_url("git@github.com:adduce-labs/adduce")
-        assert url == "https://github.com/adduce-labs/adduce"
-        assert owner == "adduce-labs"
-        assert repo == "adduce"
+        url, owner, repo = normalize_github_url("git@github.com:evigraph-labs/evigraph")
+        assert url == "https://github.com/evigraph-labs/evigraph"
+        assert owner == "evigraph-labs"
+        assert repo == "evigraph"
 
     def test_scp_ssh_url_with_git_suffix(self):
-        url, owner, repo = normalize_github_url("git@github.com:adduce-labs/adduce.git")
-        assert url == "https://github.com/adduce-labs/adduce"
-        assert owner == "adduce-labs"
-        assert repo == "adduce"
+        url, owner, repo = normalize_github_url("git@github.com:evigraph-labs/evigraph.git")
+        assert url == "https://github.com/evigraph-labs/evigraph"
+        assert owner == "evigraph-labs"
+        assert repo == "evigraph"
     
     def test_invalid_url(self):
         with pytest.raises(ValueError):

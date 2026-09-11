@@ -147,7 +147,7 @@ export default function AppHeader() {
           <Box className="w-4 h-4 text-[#f4f1e9]" />
         </div>
         <div className="flex flex-col">
-          <span className="text-xs font-bold tracking-tight text-slate-900 leading-none">ADDUCE</span>
+          <span className="text-xs font-bold tracking-tight text-slate-900 leading-none">EVIGRAPH</span>
           <span className="text-[9.5px] font-medium text-slate-400 leading-none mt-0.5">Code Intelligence</span>
         </div>
       </div>

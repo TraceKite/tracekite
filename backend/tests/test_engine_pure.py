@@ -36,14 +36,14 @@ PROGRAM = textwrap.dedent(
     sys.path.insert(0, %r)
 
     # A library host configures the engine directly. It cannot import
-    # adduce.config — that needs pydantic-settings, which is banned here — and
+    # evigraph.config — that needs pydantic-settings, which is banned here — and
     # that is the point: core takes its values from a caller, not an
     # environment it had to be running inside a server to read.
-    from adduce import engine_config
+    from evigraph import engine_config
     engine_config.configure(graph_hmac_key="engine-purity-test-key")
 
-    from adduce.services.linker.base import ClaimRecord
-    from adduce.services.linker.engine import link
+    from evigraph.services.linker.base import ClaimRecord
+    from evigraph.services.linker.engine import link
 
     def claim(cid, repo, kind, direction, key, **kw):
         return ClaimRecord(
@@ -72,9 +72,9 @@ PROGRAM = textwrap.dedent(
     assert result.rendezvous, "no rendezvous minted"
 
     # --- the other half: scan() reads real repositories off disk ----------
-    from adduce.db.memory_store import InMemoryLinkerStore
-    from adduce.services.linker.service import LinkerService
-    from adduce.services.scan import scan
+    from evigraph.db.memory_store import InMemoryLinkerStore
+    from evigraph.services.linker.service import LinkerService
+    from evigraph.services.scan import scan
 
     first = scan(%r, "fixrepo", owner="fix", repo_name="callgraph-sample")
     second = scan(%r, "secrepo", owner="sec", repo_name="planted-secret")

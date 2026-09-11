@@ -1,5 +1,5 @@
 {
-  "name": "@adduce/web",
+  "name": "@evigraph/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",

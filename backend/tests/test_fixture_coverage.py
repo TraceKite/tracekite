@@ -8,8 +8,8 @@ roster maps to at least one labelled estate whose expectations exercise
 its section, with the exemptions stated rather than implied.
 """
 
-from adduce.services.calibration import build_estates
-from adduce.services.linker.engine import resolver_order
+from evigraph.services.calibration import build_estates
+from evigraph.services.linker.engine import resolver_order
 
 # Roster name -> confidence section its tiers live under.
 _SECTION_OF = {

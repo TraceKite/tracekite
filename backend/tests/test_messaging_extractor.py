@@ -1,6 +1,6 @@
 """Messaging producer/consumer sites."""
 
-from adduce.services.messaging_extractor import (
+from evigraph.services.messaging_extractor import (
     MessagingSite, extract_messaging_sites, extract_stream_bindings,
 )
 

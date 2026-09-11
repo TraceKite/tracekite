@@ -1,6 +1,6 @@
 # Agent and MCP integration
 
-Adduce can scan source directories or load portable `.adduce` artifacts, link
+Evigraph can scan source directories or load portable `.evigraph` artifacts, link
 their claims once at startup, and answer MCP requests over stdio. Client
 registration is explicit because each client owns a different configuration
 format.
@@ -11,33 +11,33 @@ From this checkout:
 
 ```bash
 uv tool install .
-adduce install-skill
+evigraph install-skill
 ```
 
 `install-skill` supports `claude`, `codex`, `kimi`, and
 `antigravity`. Repeat `--client` to select more than one:
 
 ```bash
-adduce install-skill --client codex --client kimi
+evigraph install-skill --client codex --client kimi
 ```
 
 The installer writes only published global skill locations:
 
 | Client | Skill path |
 |---|---|
-| Claude Code | `~/.claude/skills/adduce/SKILL.md` |
-| Codex | `~/.agents/skills/adduce/SKILL.md` |
-| Kimi | `~/.kimi/skills/adduce/SKILL.md` |
-| Antigravity | `~/.gemini/config/skills/adduce/SKILL.md` |
+| Claude Code | `~/.claude/skills/evigraph/SKILL.md` |
+| Codex | `~/.agents/skills/evigraph/SKILL.md` |
+| Kimi | `~/.kimi/skills/evigraph/SKILL.md` |
+| Antigravity | `~/.gemini/config/skills/evigraph/SKILL.md` |
 
 An existing, different file is never overwritten. MCP configuration is never
 changed by this command.
 
 ## Or install the agent plugin
 
-The repository's [`plugins/adduce/`](../plugins/adduce/) directory is one
+The repository's [`plugins/evigraph/`](../plugins/evigraph/) directory is one
 cross-client plugin source. It carries separate Claude Code, Codex, and Kimi
-manifests around the same skill. Its default MCP command is `adduce mcp`, which
+manifests around the same skill. Its default MCP command is `evigraph mcp`, which
 scans the client's current repository on the first graph query.
 
 For multiple repositories, register a separate MCP server with every absolute
@@ -49,7 +49,7 @@ the current client-specific marketplace and registration commands.
 Pass each repository as its own source directory:
 
 ```bash
-adduce mcp /absolute/path/orders /absolute/path/billing
+evigraph mcp /absolute/path/orders /absolute/path/billing
 ```
 
 Source directories are fully scanned when the server starts. A parent
@@ -59,10 +59,10 @@ For repeatable CI or faster startup, create one artifact per repository and
 pass the resulting filenames:
 
 ```bash
-adduce artifact /absolute/path/orders --repo-id orders --out ./artifacts
-adduce artifact /absolute/path/billing --repo-id billing --out ./artifacts
-adduce mcp ./artifacts/orders-<digest>.adduce \
-  ./artifacts/billing-<digest>.adduce
+evigraph artifact /absolute/path/orders --repo-id orders --out ./artifacts
+evigraph artifact /absolute/path/billing --repo-id billing --out ./artifacts
+evigraph mcp ./artifacts/orders-<digest>.evigraph \
+  ./artifacts/billing-<digest>.evigraph
 ```
 
 Inputs with the same repository ID are rejected rather than merged
@@ -75,7 +75,7 @@ Use absolute repository or artifact paths in persistent client configuration.
 ### Codex
 
 ```bash
-codex mcp add adduce -- adduce mcp \
+codex mcp add evigraph -- evigraph mcp \
   /absolute/path/orders /absolute/path/billing
 ```
 
@@ -85,7 +85,7 @@ Codex stores user configuration in `~/.codex/config.toml`. See the
 ### Claude Code
 
 ```bash
-claude mcp add --scope user adduce -- adduce mcp \
+claude mcp add --scope user evigraph -- evigraph mcp \
   /absolute/path/orders /absolute/path/billing
 ```
 
@@ -95,7 +95,7 @@ See the
 ### Kimi CLI
 
 ```bash
-kimi mcp add --transport stdio adduce -- adduce mcp \
+kimi mcp add --transport stdio evigraph -- evigraph mcp \
   /absolute/path/orders /absolute/path/billing
 ```
 
@@ -109,8 +109,8 @@ Add the server to `~/.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "adduce": {
-      "command": "adduce",
+    "evigraph": {
+      "command": "evigraph",
       "args": [
         "mcp",
         "/absolute/path/orders",
@@ -125,7 +125,7 @@ See [Cursor's MCP documentation](https://docs.cursor.com/context/model-context-p
 
 ### Antigravity
 
-Add the same `mcpServers.adduce` command and arguments to
+Add the same `mcpServers.evigraph` command and arguments to
 `~/.gemini/config/mcp_config.json`. Antigravity uses
 `~/.gemini/config/skills` for global skills.
 
@@ -144,8 +144,8 @@ with an exact ID.
 
 ## Troubleshooting
 
-- Run `adduce --help` to verify the executable is on the client's PATH.
-- Run `adduce mcp ...` in a terminal and send newline-delimited JSON-RPC only
+- Run `evigraph --help` to verify the executable is on the client's PATH.
+- Run `evigraph mcp ...` in a terminal and send newline-delimited JSON-RPC only
   when debugging the transport; normal clients manage stdio themselves.
 - If two inputs share a basename, create artifacts with distinct
   `--repo-id` values.

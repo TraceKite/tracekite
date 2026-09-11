@@ -8,7 +8,7 @@ strongest link's confidence.
 
 import pytest
 
-from adduce.services.linker.confidence_math import (
+from evigraph.services.linker.confidence_math import (
     path_confidence, wilson_interval,
 )
 

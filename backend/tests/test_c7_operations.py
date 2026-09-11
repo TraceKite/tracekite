@@ -7,9 +7,9 @@ SAME_OPERATION edges to the HttpContract and the Topic — gRPC, HTTP and
 Kafka, one operation. Everything less than authored declares nothing.
 """
 
-from adduce.parsers.proto_parser import parse_proto
-from adduce.services.calibration_estates import operation_estate
-from adduce.services.linker.engine import link
+from evigraph.parsers.proto_parser import parse_proto
+from evigraph.services.calibration_estates import operation_estate
+from evigraph.services.linker.engine import link
 
 PROTO = """
 syntax = "proto3";

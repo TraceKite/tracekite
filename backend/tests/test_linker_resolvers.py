@@ -1,8 +1,8 @@
 import pytest
 
-from adduce.services.linker import r0_alias, r1_compose, r4_gateway
-from adduce.services.linker.normalize import normalize_http_calls
-from adduce.services.linker.base import ClaimIndex, ClaimRecord, LinkContext, load_confidence
+from evigraph.services.linker import r0_alias, r1_compose, r4_gateway
+from evigraph.services.linker.normalize import normalize_http_calls
+from evigraph.services.linker.base import ClaimIndex, ClaimRecord, LinkContext, load_confidence
 
 
 def claim(kind, direction, key, repo="repo_a", hint=None, hint_source="none",
@@ -204,8 +204,8 @@ class TestNonSpringProviderScope:
 
     @staticmethod
     def _run(claims):
-        from adduce.services.linker import r7_http
-        from adduce.services.linker.base import ResolverOutput
+        from evigraph.services.linker import r7_http
+        from evigraph.services.linker.base import ResolverOutput
         c = ctx()
         index = ClaimIndex(claims)
         out = ResolverOutput()
@@ -381,7 +381,7 @@ class TestR7QualifyFromConfig:
                       etype="ApiEndpoint")]
 
     def _run(self, claims):
-        from adduce.services.linker import r0_alias, r7_http
+        from evigraph.services.linker import r0_alias, r7_http
         c = ctx()
         index = ClaimIndex(claims)
         r0_alias.resolve(index, c)
@@ -518,7 +518,7 @@ class TestR7QualifyByVarOnly:
         ]
 
     def _run(self, claims):
-        from adduce.services.linker import r0_alias, r7_http
+        from evigraph.services.linker import r0_alias, r7_http
         c = ctx()
         index = ClaimIndex(claims)
         r0_alias.resolve(index, c)
@@ -573,21 +573,21 @@ class TestI9KeyFinality:
     """
 
     def test_joining_without_normalize_raises_rather_than_emitting_nothing(self):
-        from adduce.services.linker import r7_http
+        from evigraph.services.linker import r7_http
         c = ctx()
         index = ClaimIndex([])
         with pytest.raises(RuntimeError, match="NORMALIZE has not run"):
             r7_http.resolve(index, c)
 
     def test_run_resolvers_freezes_keys_before_the_join(self):
-        from adduce.services.linker.engine import run_resolvers
+        from evigraph.services.linker.engine import run_resolvers
         c = ctx()
         run_resolvers(ClaimIndex([]), c)
         # Populated, not merely absent-and-tolerated.
         assert c.normalized_calls == {}
 
     def test_broadcast_runs_before_join(self):
-        from adduce.services.linker.engine import (
+        from evigraph.services.linker.engine import (
             BROADCAST_RESOLVERS, JOIN_RESOLVERS, RESOLVERS,
         )
         names = [n for n, _ in RESOLVERS]

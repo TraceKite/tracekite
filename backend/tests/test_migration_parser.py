@@ -1,6 +1,6 @@
 """Migration parsing and shared SQL table extraction."""
 
-from adduce.parsers.migration_parser import (
+from evigraph.parsers.migration_parser import (
     MigrationInfo, is_migration_file, parse_migration, parse_sql_tables,
 )
 

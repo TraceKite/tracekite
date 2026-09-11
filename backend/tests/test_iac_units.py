@@ -6,12 +6,12 @@ the real scan — and each format's decline, because the formats' file
 shapes collide with ordinary configuration everywhere.
 """
 
-from adduce import engine_config
-from adduce.db.memory_store import claims_from_scan
-from adduce.parsers.iac_units import (
+from evigraph import engine_config
+from evigraph.db.memory_store import claims_from_scan
+from evigraph.parsers.iac_units import (
     extract_iac_services, parse_ansible, parse_nomad, parse_systemd,
 )
-from adduce.services.scan import scan
+from evigraph.services.scan import scan
 
 
 def scanned_claims(tmp_path, relpath, content):

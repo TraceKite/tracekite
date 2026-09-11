@@ -2,7 +2,7 @@
 
 `config_dir()` reads engine_config, never the environment — core may not
 read the environment (architecture §2). The server gets its binding from
-importing `adduce.config`; the CLI has no such import, so `main()` must do
+importing `evigraph.config`; the CLI has no such import, so `main()` must do
 it. Without that, `config_dir()` falls back to walking four directories
 up from `base.py`, which happens to land on `config/` in a source
 checkout and overshoots to `/config` in the container, where the code is
@@ -19,8 +19,8 @@ import json
 
 import pytest
 
-from adduce import engine_config
-from adduce.cli import main
+from evigraph import engine_config
+from evigraph.cli import main
 
 
 @pytest.fixture(autouse=True)
@@ -55,7 +55,7 @@ class TestConfigDirBinding:
         control plane in a directory the base.py walk could never reach, and
         a command that must load confidence still works."""
         import shutil
-        from adduce.services.linker.base import config_dir
+        from evigraph.services.linker.base import config_dir
 
         control = tmp_path / "elsewhere"
         shutil.copytree(config_dir(), control)

@@ -10,12 +10,12 @@ else uses, and the memory could quietly stay proportional to the graph.
 import os
 import tracemalloc
 
-from adduce import engine_config
-from adduce.db.artifact import write_artifact
-from adduce.db.artifact_reader import read_artifact, read_claims
-from adduce.db.memory_store import claims_from_scan
-from adduce.services.linker.engine import link
-from adduce.services.scan import scan
+from evigraph import engine_config
+from evigraph.db.artifact import write_artifact
+from evigraph.db.artifact_reader import read_artifact, read_claims
+from evigraph.db.memory_store import claims_from_scan
+from evigraph.services.linker.engine import link
+from evigraph.services.scan import scan
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 SAMPLE = os.path.join(FIXTURES, "callgraph-sample")
@@ -50,7 +50,7 @@ class TestEquivalence:
             return link(claims, run_id="linkrun_stream",
                         now="2026-01-01T00:00:00+00:00")
 
-        from adduce.db.memory_store import InMemoryLinkerStore
+        from evigraph.db.memory_store import InMemoryLinkerStore
         full = run(InMemoryLinkerStore([read_artifact(path)]).load_claims())
         streamed = run(read_claims(path))
 

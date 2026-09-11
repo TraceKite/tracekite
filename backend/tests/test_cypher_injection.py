@@ -17,7 +17,7 @@ is worse than none.
 
 import pytest
 
-from adduce.db.neo4j_graph_store import _rel_pattern
+from evigraph.db.neo4j_graph_store import _rel_pattern
 
 
 class TestRealTypesPass:

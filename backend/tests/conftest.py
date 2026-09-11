@@ -7,7 +7,7 @@ os.environ.setdefault("API_TOKEN", "test-api-token")
 
 import pytest  # noqa: E402
 
-from adduce.config import settings  # noqa: E402
+from evigraph.config import settings  # noqa: E402
 
 settings.graph_hmac_key = settings.graph_hmac_key or "test-hmac-key-not-a-secret"
 settings.api_token = settings.api_token or "test-api-token"
@@ -24,7 +24,7 @@ def neo4j_available() -> bool:
     failure instead of 13 quiet skips.
     """
     try:
-        from adduce.db.neo4j_client import check_neo4j_health
+        from evigraph.db.neo4j_client import check_neo4j_health
         ok = bool(settings.neo4j_password) and check_neo4j_health()
     except Exception:
         ok = False

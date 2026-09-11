@@ -1,7 +1,7 @@
 """The CLI is the library surface with a face on it.
 
 Run as a subprocess, because the contract being tested is the process one:
-JSON on stdout and nothing else, so `adduce link ... | jq` works.
+JSON on stdout and nothing else, so `evigraph link ... | jq` works.
 """
 
 import json
@@ -9,7 +9,7 @@ import os
 import subprocess
 import sys
 
-from adduce.cli import build_parser
+from evigraph.cli import build_parser
 
 BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIXTURES = os.path.join(BACKEND, "tests", "fixtures")
@@ -20,7 +20,7 @@ FIXED_NOW = "2026-01-01T00:00:00+00:00"
 
 def run(*args):
     proc = subprocess.run(
-        [sys.executable, "-m", "adduce.cli", *args],
+        [sys.executable, "-m", "evigraph.cli", *args],
         cwd=BACKEND, capture_output=True, text=True, timeout=300)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     return proc
@@ -112,7 +112,7 @@ class TestPublishedContract:
         assert "counters" in schemas["LinkReport"]["required"]
 
     def test_link_output_validates_against_the_published_model(self):
-        from adduce.wire import LinkReport
+        from evigraph.wire import LinkReport
 
         payload = json.loads(
             run("link", SAMPLE, PLANTED, "--now", FIXED_NOW).stdout)
@@ -121,7 +121,7 @@ class TestPublishedContract:
         assert all(e.evidence for e in report.edges)
 
     def test_scan_output_validates_against_the_published_model(self):
-        from adduce.wire import ScanReport
+        from evigraph.wire import ScanReport
 
         assert ScanReport(**json.loads(run("scan", SAMPLE).stdout))
 
@@ -143,11 +143,11 @@ class TestFullDerivation:
     """
 
     def _edges(self):
-        from adduce.cli_explain import _derivation
-        from adduce import engine_config
-        from adduce.db.memory_store import InMemoryLinkerStore
-        from adduce.services.linker.engine import link
-        from adduce.services.scan import scan
+        from evigraph.cli_explain import _derivation
+        from evigraph import engine_config
+        from evigraph.db.memory_store import InMemoryLinkerStore
+        from evigraph.services.linker.engine import link
+        from evigraph.services.scan import scan
 
         engine_config.configure(graph_hmac_key="e7-test-key")
         store = InMemoryLinkerStore([scan(SAMPLE, "a"), scan(PLANTED, "b")])
@@ -206,10 +206,10 @@ class TestMeasuredInExplain:
     """F1: the interval is served next to every priced confidence."""
 
     def _edges(self):
-        from adduce import engine_config
-        from adduce.db.memory_store import InMemoryLinkerStore
-        from adduce.services.linker.engine import link
-        from adduce.services.scan import scan
+        from evigraph import engine_config
+        from evigraph.db.memory_store import InMemoryLinkerStore
+        from evigraph.services.linker.engine import link
+        from evigraph.services.scan import scan
 
         engine_config.configure(graph_hmac_key="explain-measured-test")
         sinks = [scan(os.path.join(CORPUS, "orders-service"), "orders-service"),
@@ -220,7 +220,7 @@ class TestMeasuredInExplain:
                     now="2026-01-01T00:00:00+00:00").edges
 
     def test_a_priced_edge_carries_its_interval(self):
-        from adduce.cli_explain import _measured_row
+        from evigraph.cli_explain import _measured_row
 
         invokes = [e for e in self._edges() if e.type == "INVOKES"]
         assert invokes
@@ -233,7 +233,7 @@ class TestMeasuredInExplain:
             "a wide bound, not a bare 1.000")
 
     def test_an_unpriced_edge_says_why_not_nothing(self):
-        from adduce.cli_explain import _measured_row
+        from evigraph.cli_explain import _measured_row
 
         rollups = [e for e in self._edges()
                    if e.detected_by.startswith("rollup.")]

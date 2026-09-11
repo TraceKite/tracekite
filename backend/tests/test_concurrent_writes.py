@@ -12,10 +12,10 @@ import threading
 
 import pytest
 
-from adduce.db.graph_store import Aggregate, Neighbourhood
-from adduce.db.memory_store import InMemoryGraphStore
-from adduce.db.sqlite_store import SQLiteGraphStore
-from adduce.models.graph_models import GraphEdge, GraphNode
+from evigraph.db.graph_store import Aggregate, Neighbourhood
+from evigraph.db.memory_store import InMemoryGraphStore
+from evigraph.db.sqlite_store import SQLiteGraphStore
+from evigraph.models.graph_models import GraphEdge, GraphNode
 
 WRITERS = 8
 PER_WRITER = 25

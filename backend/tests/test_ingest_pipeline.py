@@ -5,15 +5,15 @@ import json
 import os
 from types import SimpleNamespace
 
-from adduce.config import settings
-from adduce.parsers.base import ParsedApiEndpoint, ParsedEntity, ParseResult
-from adduce.parsers.config_parser import ConfigEntry, ConfigParseResult
-from adduce.parsers.dependency_parser import DependencyInfo
-from adduce.services.file_scanner import scan_repository
-from adduce.services.ingest_artifacts import process_config, process_dependencies
-from adduce.services.ingest_source import IngestSink, process_source_file
-from adduce import engine_config
-from adduce.services.scan import build_graph
+from evigraph.config import settings
+from evigraph.parsers.base import ParsedApiEndpoint, ParsedEntity, ParseResult
+from evigraph.parsers.config_parser import ConfigEntry, ConfigParseResult
+from evigraph.parsers.dependency_parser import DependencyInfo
+from evigraph.services.file_scanner import scan_repository
+from evigraph.services.ingest_artifacts import process_config, process_dependencies
+from evigraph.services.ingest_source import IngestSink, process_source_file
+from evigraph import engine_config
+from evigraph.services.scan import build_graph
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 

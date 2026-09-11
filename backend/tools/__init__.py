@@ -1,1 +1,1 @@
-"""Operator tools for the Adduce backend (run from backend/)."""
+"""Operator tools for the Evigraph backend (run from backend/)."""

@@ -4,7 +4,7 @@
 # measured row. `measured: null` marks provisional values awaiting the
 # microSecEnD + adversarial-fixture calibration run (M2).
 #
-# This is the single copy. Loaded by adduce/services/linker/base.py:load_confidence();
+# This is the single copy. Loaded by evigraph/services/linker/base.py:load_confidence();
 # override the directory with KG_CONFIG_DIR.
 version: 1
 floor: 0.6

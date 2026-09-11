@@ -11,9 +11,9 @@ resolver at all.
 
 import pytest
 
-from adduce.services.linker.base import ClaimIndex, ClaimRecord, LinkContext
-from adduce.services.linker.engine import run_resolvers
-from adduce.services.linker.vendors import (
+from evigraph.services.linker.base import ClaimIndex, ClaimRecord, LinkContext
+from evigraph.services.linker.engine import run_resolvers
+from evigraph.services.linker.vendors import (
     Vendor, classify, load_vendors, looks_external,
 )
 

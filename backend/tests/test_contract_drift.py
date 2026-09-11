@@ -6,10 +6,10 @@ endpoint), and a removed operation with no remaining caller is a
 completed migration, not drift.
 """
 
-from adduce import engine_config
-from adduce.db.memory_store import claims_from_scan
-from adduce.services.linker.contract_drift import contract_drift
-from adduce.services.scan import scan
+from evigraph import engine_config
+from evigraph.db.memory_store import claims_from_scan
+from evigraph.services.linker.contract_drift import contract_drift
+from evigraph.services.scan import scan
 
 PROVIDER_V1 = ('package internal\nimport "net/http"\n'
                'func R(m *http.ServeMux) {\n'

@@ -8,7 +8,7 @@ look-alike APIs (Twilio ``messages.create``, langchain ``Tool``) must yield
 nothing, and config ``env``/``headers`` blocks must never reach ``attrs``.
 """
 
-from adduce.services.agents_extractor import (
+from evigraph.services.agents_extractor import (
     AgentCard,
     LlmCallSite,
     McpToolSite,

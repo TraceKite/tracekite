@@ -1,7 +1,7 @@
 """Tests for dependency file parsers."""
 
 import pytest
-from adduce.parsers.dependency_parser import (
+from evigraph.parsers.dependency_parser import (
     DependencyInfo, PublishIdentity,
     parse_package_json, parse_requirements_txt, parse_pom_xml,
     parse_build_gradle, parse_dependency_file, parse_publish_identity,

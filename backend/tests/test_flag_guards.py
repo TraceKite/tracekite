@@ -6,9 +6,9 @@ stay unmarked.
 
 from types import SimpleNamespace
 
-from adduce.services.flag_guards import annotate_flag_guards, guarded_ranges
-from adduce.services.ingest_claims import emit_source_claims
-from adduce.services.ingest_source import IngestSink
+from evigraph.services.flag_guards import annotate_flag_guards, guarded_ranges
+from evigraph.services.ingest_claims import emit_source_claims
+from evigraph.services.ingest_source import IngestSink
 
 PY_GUARDED = '''import requests
 
@@ -92,7 +92,7 @@ class TestClaimsCarryTheFlag:
 class TestEdgeCarriesCondition:
     def test_condition_rides_the_edge(self):
         from tests.test_alias_suggestions import calls_service_edges, claim
-        from adduce.services.linker.engine import link
+        from evigraph.services.linker.engine import link
 
         estate = [
             claim("svcname", "provides", "proj:web", repo="repo_web",

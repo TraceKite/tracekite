@@ -8,8 +8,8 @@ independent copies drift — so the unterminated-block reading is asserted
 here rather than left to whichever caller happens to depend on it.
 """
 
-from adduce.parsers.brace_blocks import balanced_block
-from adduce.parsers.yaml_shapes import as_list, as_str
+from evigraph.parsers.brace_blocks import balanced_block
+from evigraph.parsers.yaml_shapes import as_list, as_str
 
 
 class TestBalancedBlock:

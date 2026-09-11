@@ -12,8 +12,8 @@ import shutil
 
 import pytest
 
-from adduce import engine_config
-from adduce.services.parallel_map import scan_many
+from evigraph import engine_config
+from evigraph.services.parallel_map import scan_many
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 SAMPLE = os.path.join(FIXTURES, "callgraph-sample")

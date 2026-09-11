@@ -17,8 +17,8 @@ import os
 
 import pytest
 
-from adduce.services import repo_service
-from adduce.services.repo_service import CloneError, clone_repository
+from evigraph.services import repo_service
+from evigraph.services.repo_service import CloneError, clone_repository
 
 
 @pytest.fixture

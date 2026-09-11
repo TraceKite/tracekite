@@ -6,7 +6,7 @@ or a hash access as a route mints phantom endpoints across every Ruby repo
 in an estate.
 """
 
-from adduce.services.rb_route_extractor import extract_rb_routes
+from evigraph.services.rb_route_extractor import extract_rb_routes
 
 ROUTES_RB = "config/routes.rb"
 
@@ -99,8 +99,8 @@ class TestEndToEnd:
         """The whole point: a Ruby provider must be joinable. Through the
         real scan, a Rails route becomes an ApiEndpoint a consumer's claim
         can meet."""
-        from adduce import engine_config
-        from adduce.services.scan import scan
+        from evigraph import engine_config
+        from evigraph.services.scan import scan
 
         engine_config.configure(graph_hmac_key="rb-route-test")
         (tmp_path / "config").mkdir()

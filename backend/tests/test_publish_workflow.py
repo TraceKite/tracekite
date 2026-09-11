@@ -46,7 +46,7 @@ class TestWorkflowShape:
 
     def test_the_scan_step_feeds_the_upload(self):
         [job] = _workflow()["jobs"].values()
-        run_steps = [s for s in job["steps"] if "adduce.cli artifact" in
+        run_steps = [s for s in job["steps"] if "evigraph.cli artifact" in
                      str(s.get("run", ""))]
         assert run_steps, "no step invokes the artifact command"
         assert "--head-sha \"$GITHUB_SHA\"" in run_steps[0]["run"], (
@@ -66,7 +66,7 @@ class TestTheCommandItInvokes:
 
         def run():
             return subprocess.run(
-                [sys.executable, "-m", "adduce.cli", "artifact", corpus,
+                [sys.executable, "-m", "evigraph.cli", "artifact", corpus,
                  "--out", str(tmp_path), "--repo-id", "orders",
                  "--head-sha", "abc123"],
                 cwd=BACKEND, capture_output=True, text=True, timeout=300)
@@ -90,10 +90,10 @@ class TestPyPIWorkflow:
         commands = "\n".join(str(step.get("run", "")) for step in steps)
 
         assert "GITHUB_REF_NAME" in commands
-        assert "uv build --project packaging/adduce-core" in commands
+        assert "uv build --project packaging/evigraph-core" in commands
         assert "twine check dist/*" in commands
-        assert ".test-env/bin/adduce link" in commands
-        assert '".test-env/bin/adduce", "mcp"' in commands
+        assert ".test-env/bin/evigraph link" in commands
+        assert '".test-env/bin/evigraph", "mcp"' in commands
 
     def test_oidc_permission_is_scoped_to_the_protected_publish_job(self):
         doc = _pypi_workflow()
@@ -103,11 +103,11 @@ class TestPyPIWorkflow:
         assert "permissions" not in doc["jobs"]["build"]
         assert publish["permissions"] == {"id-token": "write"}
         assert publish["environment"] == {
-            "name": "pypi", "url": "https://pypi.org/p/adduce-core"}
+            "name": "pypi", "url": "https://pypi.org/p/evigraph-core"}
 
 
 def test_container_import_gate_attaches_the_python_script_to_stdin():
     steps = _ci_workflow()["jobs"]["container"]["steps"]
     commands = "\n".join(str(step.get("run", "")) for step in steps)
 
-    assert "docker run --rm -i adduce-backend:ci python -" in commands
+    assert "docker run --rm -i evigraph-backend:ci python -" in commands

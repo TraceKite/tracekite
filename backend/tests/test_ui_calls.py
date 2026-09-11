@@ -8,9 +8,9 @@ else — a plain fetch() in ordinary .ts is a Node service's call shape too,
 and typing it by folklore would be a guessed edge.
 """
 
-from adduce.services.http_call_extractor import extract_http_calls
-from adduce.services.linker.base import ClaimIndex, ClaimRecord, LinkContext
-from adduce.services.linker.engine import link
+from evigraph.services.http_call_extractor import extract_http_calls
+from evigraph.services.linker.base import ClaimIndex, ClaimRecord, LinkContext
+from evigraph.services.linker.engine import link
 
 
 def claim(cid, repo, kind, direction, key, *, hint=None, src="none",
@@ -97,7 +97,7 @@ class TestEdgeType:
         assert calls, [e.type for e in result.edges]
 
     def test_a_ui_consumer_still_blocks_a_deprecation(self):
-        from adduce.services.linker.deprecations import deprecation_report
+        from evigraph.services.linker.deprecations import deprecation_report
 
         result = self._run({"ui": True})
         for spec in result.rendezvous:
@@ -112,9 +112,9 @@ class TestEndToEnd:
         """The exit criterion, through the real pipeline: a .tsx component
         fetches, the provider registers the route, the edge is UI_CALLS
         with file:line on both sides."""
-        from adduce import engine_config
-        from adduce.db.memory_store import InMemoryLinkerStore
-        from adduce.services.scan import scan
+        from evigraph import engine_config
+        from evigraph.db.memory_store import InMemoryLinkerStore
+        from evigraph.services.scan import scan
 
         engine_config.configure(graph_hmac_key="ui-calls-test")
         web = tmp_path / "web"

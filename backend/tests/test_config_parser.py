@@ -1,11 +1,11 @@
 import pytest
-from adduce.parsers.config_parser import (
+from evigraph.parsers.config_parser import (
     parse_properties_file,
     parse_yaml_file,
     parse_env_file,
     parse_config_file,
 )
-from adduce.parsers.parser_registry import is_config_file
+from evigraph.parsers.parser_registry import is_config_file
 
 
 class TestPropertiesParser:

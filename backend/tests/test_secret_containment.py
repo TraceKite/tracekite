@@ -16,10 +16,10 @@ import json
 import logging
 import os
 
-from adduce import engine_config
-from adduce.db.memory_store import InMemoryLinkerStore
-from adduce.services.linker.service import LinkerService
-from adduce.services.scan import scan
+from evigraph import engine_config
+from evigraph.db.memory_store import InMemoryLinkerStore
+from evigraph.services.linker.service import LinkerService
+from evigraph.services.scan import scan
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 PLANTED = os.path.join(FIXTURES, "planted-secret")

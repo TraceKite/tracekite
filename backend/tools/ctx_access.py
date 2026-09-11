@@ -11,7 +11,7 @@ import ast
 import pathlib
 
 BACKEND = pathlib.Path(__file__).resolve().parent.parent
-LINKER = BACKEND / "adduce" / "services" / "linker"
+LINKER = BACKEND / "evigraph" / "services" / "linker"
 
 # Reading one entry is shard-local: the partition that owns the key owns the
 # entry. Reading the whole table is not — it asks for entries other shards
@@ -159,7 +159,7 @@ def resolver_access() -> tuple[dict, dict]:
     attribute to the AST but is behaviour, not a table, and listing it as one
     would bury the four names that matter under a dozen that never can.
     """
-    from adduce.services.linker.engine import BROADCAST_RESOLVERS, JOIN_RESOLVERS
+    from evigraph.services.linker.engine import BROADCAST_RESOLVERS, JOIN_RESOLVERS
 
     writes_by_method = method_writes()
     not_a_table = set(writes_by_method) | _properties()

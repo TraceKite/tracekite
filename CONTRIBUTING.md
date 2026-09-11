@@ -27,7 +27,7 @@ See the compatibility note at the end of this file.
 Frontend typecheck:
 
 ```bash
-pnpm --filter @adduce/web run typecheck
+pnpm --filter @evigraph/web run typecheck
 ```
 
 ## The one rule that matters
@@ -50,7 +50,7 @@ Concretely, that means:
 
 ## Adding a parser
 
-1. Write it in `backend/adduce/parsers/`. It takes a path and content, and returns
+1. Write it in `backend/evigraph/parsers/`. It takes a path and content, and returns
    structured data or `None` — never raises for a file it doesn't recognise.
 2. **Detect by shape, not by filename.** One estate's `capability-manifest.json`
    is another's `server.json`. Sniff the content for the structure that makes
@@ -62,7 +62,7 @@ Concretely, that means:
 
 ## Adding a resolver
 
-Resolvers live in `backend/adduce/services/linker/` as `rN_name.py` and expose
+Resolvers live in `backend/evigraph/services/linker/` as `rN_name.py` and expose
 `resolve(index, ctx) -> ResolverOutput`. A resolver joins a `consumes` claim to
 a `provides` claim on a shared key and emits an edge with a confidence drawn
 from `config/confidence.yml` via `ctx.conf("rN", tier)` — never a hardcoded
@@ -90,7 +90,7 @@ files. Do them together:
 | the kinds it reads | `services/linker/incremental.py` → `RESOLVER_KINDS` | incremental relink silently skips your resolver |
 
 `config/confidence.yml` is the single copy and ships inside the wheel as
-`adduce/_control_plane/`; `KG_CONFIG_DIR` overrides its location.
+`evigraph/_control_plane/`; `KG_CONFIG_DIR` overrides its location.
 
 ## The API surface, briefly
 

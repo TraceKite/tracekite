@@ -13,11 +13,11 @@ import sys
 import pytest
 import yaml
 
-from adduce.services.calibration import build_estates, run_calibration
-from adduce.services.calibration_io import (
+from evigraph.services.calibration import build_estates, run_calibration
+from evigraph.services.calibration_io import (
     MEASURED_MARKER, coverage_gaps, write_measured,
 )
-from adduce.services.linker.base import config_dir
+from evigraph.services.linker.base import config_dir
 
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(config_dir(), "confidence.yml")

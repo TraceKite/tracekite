@@ -24,9 +24,9 @@ import pathlib
 
 import pytest
 
-from adduce.services.claims import ACTIVE_KINDS, RESERVED_KINDS
+from evigraph.services.claims import ACTIVE_KINDS, RESERVED_KINDS
 
-_SERVICES = pathlib.Path(__file__).resolve().parents[1] / "adduce" / "services"
+_SERVICES = pathlib.Path(__file__).resolve().parents[1] / "evigraph" / "services"
 
 # `calibration.py` also builds ContractClaims, and is excluded on purpose: it
 # manufactures labelled estates to measure resolvers. Counting it would let a

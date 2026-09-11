@@ -18,7 +18,7 @@ import re
 
 from fastapi.routing import APIRoute
 
-from adduce.routes import graph, health, impact, jobs, links, repos, rollup, trace
+from evigraph.routes import graph, health, impact, jobs, links, repos, rollup, trace
 
 # The same routers main.py includes — the published surface.
 ROUTERS = (health.router, repos.router, jobs.router, graph.router,

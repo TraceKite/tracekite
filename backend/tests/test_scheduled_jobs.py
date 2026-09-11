@@ -6,11 +6,11 @@ its trigger, because "billing calls refresh nightly" and "billing calls
 refresh on every request" are different findings wearing the same arrow.
 """
 
-from adduce import engine_config
-from adduce.db.memory_store import InMemoryLinkerStore, claims_from_scan
-from adduce.parsers.cron_parser import parse_crontab
-from adduce.services.linker.engine import link
-from adduce.services.scan import scan
+from evigraph import engine_config
+from evigraph.db.memory_store import InMemoryLinkerStore, claims_from_scan
+from evigraph.parsers.cron_parser import parse_crontab
+from evigraph.services.linker.engine import link
+from evigraph.services.scan import scan
 
 NOW = "2026-01-01T00:00:00+00:00"
 

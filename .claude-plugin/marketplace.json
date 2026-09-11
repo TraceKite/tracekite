@@ -1,13 +1,13 @@
 {
-  "name": "adduce-labs",
-  "description": "Evidence-backed code intelligence from Adduce Labs.",
+  "name": "evigraph-labs",
+  "description": "Evidence-backed code intelligence from Evigraph Labs.",
   "owner": {
-    "name": "Adduce Labs"
+    "name": "Evigraph Labs"
   },
   "plugins": [
     {
-      "name": "adduce",
-      "source": "./plugins/adduce",
+      "name": "evigraph",
+      "source": "./plugins/evigraph",
       "description": "Trace repository-backed dependencies with file and line evidence."
     }
   ]

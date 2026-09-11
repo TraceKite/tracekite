@@ -8,13 +8,13 @@ Unity Catalog three-part names) join freely.
 
 from types import SimpleNamespace
 
-from adduce.parsers.pipeline_parser import parse_databricks_notebook, parse_dbt_model
-from adduce.services.ingest_claims import (
+from evigraph.parsers.pipeline_parser import parse_databricks_notebook, parse_dbt_model
+from evigraph.services.ingest_claims import (
     emit_data_site_claims, emit_migration_claims, emit_pipeline_claims,
 )
-from adduce.services.ingest_source import IngestSink
-from adduce.services.linker import r0_alias, r6_topic, r10_dataset
-from adduce.services.linker.base import (
+from evigraph.services.ingest_source import IngestSink
+from evigraph.services.linker import r0_alias, r6_topic, r10_dataset
+from evigraph.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, ResolverOutput, load_confidence,
 )
 

@@ -6,9 +6,9 @@ anything unverifiable is counted and left alone — wrongly aging a good
 edge is the same sin as inventing one.
 """
 
-from adduce.models.graph_models import GraphEdge
-from adduce.services.claims import ContractClaim
-from adduce.services.evidence_reverify import (
+from evigraph.models.graph_models import GraphEdge
+from evigraph.services.claims import ContractClaim
+from evigraph.services.evidence_reverify import (
     claim_token, downgrade_stale, reverify,
 )
 

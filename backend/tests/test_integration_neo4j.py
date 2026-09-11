@@ -6,13 +6,13 @@ lite-tier defaults applied on read, repo-scoped clears, job persistence.
 
 import pytest
 
-from adduce.db.constraints import clear_repo_graph, create_constraints
-from adduce.db.neo4j_client import get_session
-from adduce.services import graph_factories as gf
-from adduce.services import graph_writer
-from adduce.services.graph_reader import get_graph, get_node_details, get_repo
-from adduce.services.graph_writer import WriteReconciliationError
-from adduce.services.redaction import redact
+from evigraph.db.constraints import clear_repo_graph, create_constraints
+from evigraph.db.neo4j_client import get_session
+from evigraph.services import graph_factories as gf
+from evigraph.services import graph_writer
+from evigraph.services.graph_reader import get_graph, get_node_details, get_repo
+from evigraph.services.graph_writer import WriteReconciliationError
+from evigraph.services.redaction import redact
 from tests.conftest import neo4j_available
 
 pytestmark = pytest.mark.skipif(not neo4j_available(),
@@ -31,8 +31,8 @@ def _build_repo_a():
     file_b = gf.create_file_node(REPO_A, "src/b.py", "b.py", "Python", 100, False)
     nodes += [folder, file_a, file_b]
 
-    from adduce.models.graph_models import GraphNode
-    from adduce.utils.hashing import build_symbol_uid, generate_node_id, symbol_extra
+    from evigraph.models.graph_models import GraphNode
+    from evigraph.utils.hashing import build_symbol_uid, generate_node_id, symbol_extra
     caller = GraphNode(
         id=generate_node_id(REPO_A, "Function", "src/a.py", "caller",
                             extra=symbol_extra("caller", 0, 0)),

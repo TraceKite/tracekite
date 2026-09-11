@@ -12,15 +12,15 @@ from unittest.mock import patch
 
 import pytest
 
-from adduce.models.graph_models import GraphEdge
-from adduce.services.linker import normalize
-from adduce.services.linker.normalize import normalize_http_calls
-from adduce.services.linker import r0_alias, r1_compose, r4_gateway, r7_http
-from adduce.services.linker.base import (
+from evigraph.models.graph_models import GraphEdge
+from evigraph.services.linker import normalize
+from evigraph.services.linker.normalize import normalize_http_calls
+from evigraph.services.linker import r0_alias, r1_compose, r4_gateway, r7_http
+from evigraph.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, ResolverOutput, RendezvousSpec,
     ServiceSpec, fuse_edges, linker_edge, load_aliases, load_confidence,
 )
-from adduce.services.linker.rollups import build_rollups
+from evigraph.services.linker.rollups import build_rollups
 
 
 def claim(kind, direction, key, repo="repo_a", hint=None, hint_source="none",
@@ -134,7 +134,7 @@ class TestBase:
 
     def test_load_aliases_missing_file(self):
         # base.py:228-229 -- missing service_aliases.yml returns {}.
-        with patch("adduce.services.linker.base.os.path.exists",
+        with patch("evigraph.services.linker.base.os.path.exists",
                    return_value=False):
             assert load_aliases() == {}
 
@@ -151,7 +151,7 @@ class TestBase:
             "    aliases: [pay-svc, payment]\n"
             "  empty-svc:\n",
             encoding="utf-8")
-        with patch("adduce.services.linker.base.config_dir", return_value=str(tmp_path)):
+        with patch("evigraph.services.linker.base.config_dir", return_value=str(tmp_path)):
             aliases = load_aliases()
         assert aliases == {"payments": ["pay-svc", "payment"],
                            "empty-svc": []}
@@ -662,8 +662,8 @@ class TestR7:
     def test_rewrite_no_matching_prefix(self):
         # path_algebra.resolve_chain -- rewrite rules exist for the hint but
         # none of their prefixes match the template -> zero hops, unchanged.
-        from adduce.services.linker.base import RouteRule
-        from adduce.services.linker.path_algebra import resolve_chain
+        from evigraph.services.linker.base import RouteRule
+        from evigraph.services.linker.path_algebra import resolve_chain
 
         c = ctx()
         c.rewrite_routes["api-gateway"] = [
@@ -737,7 +737,7 @@ class TestRollups:
         # rollups.py:31-33 -- contract id with fewer than 5 colon-parts.
         c = ctx()
         assert r0_alias  # sanity import
-        from adduce.services.linker import rollups as R
+        from evigraph.services.linker import rollups as R
         assert R._contract_service(c, "global:Http:only") is None
 
     def test_calls_unmapped_when_contract_unmapped(self):

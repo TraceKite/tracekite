@@ -4,18 +4,18 @@ from types import SimpleNamespace
 
 import pytest
 
-from adduce.services.claims import (
+from evigraph.services.claims import (
     ContractClaim, GENERIC_NAME_DENYLIST, http_consumes_key, http_provides_key,
     is_generic_name, route_key, svcname_key, claim_to_node,
 )
-from adduce.parsers.config_parser import parse_config_file
-from adduce.parsers.docker_parser import parse_docker_file
-from adduce.services.http_call_extractor import extract_feign_clients, extract_http_calls
-from adduce.services.ingest_claims import (
+from evigraph.parsers.config_parser import parse_config_file
+from evigraph.parsers.docker_parser import parse_docker_file
+from evigraph.services.http_call_extractor import extract_feign_clients, extract_http_calls
+from evigraph.services.ingest_claims import (
     emit_compose_claims, emit_config_claims, emit_source_claims,
 )
-from adduce.services.ingest_source import IngestSink
-from adduce.services.redaction import redact
+from evigraph.services.ingest_source import IngestSink
+from evigraph.services.redaction import redact
 
 
 def _file(path, language="java"):
@@ -297,7 +297,7 @@ class TestSourceParserFallback:
     lands in the graph as a bare File node."""
 
     def test_typescript_component_is_recovered(self):
-        from adduce.parsers.parser_registry import parse_source
+        from evigraph.parsers.parser_registry import parse_source
         src = (
             "import '@/styles/globals.css';\n"
             "export const metadata = { title: 'x' };\n"
@@ -310,13 +310,13 @@ class TestSourceParserFallback:
         assert "RootLayout" in [e.name for e in result.entities]
 
     def test_python_is_untouched_by_the_fallback(self):
-        from adduce.parsers.parser_registry import parse_source
+        from evigraph.parsers.parser_registry import parse_source
         src = "class Settings:\n    def load(self):\n        return 1\n"
         result = parse_source("svc/config.py", src)
         assert [e.name for e in result.entities][:1] == ["Settings"]
 
     def test_genuinely_empty_file_stays_empty(self):
-        from adduce.parsers.parser_registry import parse_source
+        from evigraph.parsers.parser_registry import parse_source
         result = parse_source("apps/web/next-env.d.ts", "/// <reference types='next' />\n")
         assert result is not None
         assert result.entities == []
@@ -327,7 +327,7 @@ class TestUnrenderedTemplateNames:
     These reached the live graph as real Service nodes on the map."""
 
     def test_helm_expressions_rejected(self):
-        from adduce.services.claims import is_unrendered_template
+        from evigraph.services.claims import is_unrendered_template
         for value in ("{{ .values.otel.servicename | quote }}",
                       "{{.Values.name}}",
                       "${SERVICE_NAME}",
@@ -338,7 +338,7 @@ class TestUnrenderedTemplateNames:
             assert is_unrendered_template(value), value
 
     def test_real_names_kept(self):
-        from adduce.services.claims import is_unrendered_template
+        from evigraph.services.claims import is_unrendered_template
         for value in ("capability-registry", "foyer", "iasuap/web",
                       "campaign-service-mcp", "platform-db-migrate",
                       "api_gateway", "svc.prod.internal", ""):
@@ -350,7 +350,7 @@ class TestComposeFileRecognition:
     them, taking a whole observability stack out of one estate's graph."""
 
     def test_overlay_names_recognised(self):
-        from adduce.parsers.parser_registry import is_docker_file
+        from evigraph.parsers.parser_registry import is_docker_file
         for name in ("docker-compose.yml", "docker-compose.yaml",
                      "compose.yml", "compose.yaml",
                      "docker-compose.observability.yml",
@@ -360,12 +360,12 @@ class TestComposeFileRecognition:
             assert is_docker_file(name), name
 
     def test_dockerfile_still_recognised(self):
-        from adduce.parsers.parser_registry import is_docker_file
+        from evigraph.parsers.parser_registry import is_docker_file
         assert is_docker_file("Dockerfile")
         assert is_docker_file("svc/api.dockerfile")
 
     def test_unrelated_yaml_not_treated_as_compose(self):
-        from adduce.parsers.parser_registry import is_docker_file
+        from evigraph.parsers.parser_registry import is_docker_file
         for name in ("values.yaml", "deployment.yaml", "prometheus.yml",
                      "decompose.yaml", "compose-notes.md"):
             assert not is_docker_file(name), name
@@ -373,7 +373,7 @@ class TestComposeFileRecognition:
     def test_overlay_compose_is_actually_parsed_not_just_routed(self):
         # The registry once routed overlay names in and the parser then
         # dropped them, so routing alone proves nothing.
-        from adduce.parsers.docker_parser import parse_docker_file
+        from evigraph.parsers.docker_parser import parse_docker_file
         compose = (
             "services:\n"
             "  otel-collector:\n"
@@ -416,7 +416,7 @@ class TestMcpManifestParser:
 
     def _parse(self, doc):
         import json
-        from adduce.parsers.mcp_manifest_parser import parse_mcp_manifest
+        from evigraph.parsers.mcp_manifest_parser import parse_mcp_manifest
         return parse_mcp_manifest("capability-manifest.json", json.dumps(doc))
 
     def test_tools_and_server_extracted(self):
@@ -437,7 +437,7 @@ class TestMcpManifestParser:
         assert by_name["get_campaign_performance"].entity_kind == "campaign"
 
     def test_recognised_by_filename(self):
-        from adduce.parsers.mcp_manifest_parser import is_mcp_manifest
+        from evigraph.parsers.mcp_manifest_parser import is_mcp_manifest
         assert is_mcp_manifest("servers/x/capability-manifest.json")
         assert not is_mcp_manifest("servers/x/package.json")
         assert not is_mcp_manifest("manifests/schema.json")
@@ -449,7 +449,7 @@ class TestMcpManifestParser:
         useless in every other repository.
         """
         import json
-        from adduce.parsers.mcp_manifest_parser import is_mcp_manifest
+        from evigraph.parsers.mcp_manifest_parser import is_mcp_manifest
         manifest = json.dumps({
             "name": "billing-mcp",
             "tools": [{"name": "create_invoice"}, {"name": "void_invoice"}],
@@ -461,7 +461,7 @@ class TestMcpManifestParser:
     def test_shape_sniff_rejects_lookalikes(self):
         """`tools` is a common key; it alone must not be enough."""
         import json
-        from adduce.parsers.mcp_manifest_parser import is_mcp_manifest
+        from evigraph.parsers.mcp_manifest_parser import is_mcp_manifest
         # A package.json listing tool NAMES as bare strings, not declarations.
         assert not is_mcp_manifest(
             "cfg.json", json.dumps({"name": "pkg", "tools": ["eslint", "prettier"]}))
@@ -476,7 +476,7 @@ class TestMcpManifestParser:
         assert not is_mcp_manifest("huge.json", " " * (256 * 1024 + 1))
 
     def test_non_manifest_json_declined(self):
-        from adduce.parsers.mcp_manifest_parser import parse_mcp_manifest
+        from evigraph.parsers.mcp_manifest_parser import parse_mcp_manifest
         assert self._parse({"name": "x"}) is None                 # no tools
         assert self._parse({"tools": []}) is None                 # no name
         assert self._parse({"$schema": "...", "type": "object"}) is None
@@ -498,7 +498,7 @@ class TestPythonEndpointPrecision:
     361 contracts like `GET /caller_id` on the demo corpus."""
 
     def _paths(self, src: str):
-        from adduce.parsers.parser_registry import parse_source
+        from evigraph.parsers.parser_registry import parse_source
         result = parse_source("svc.py", src)
         return [(e.method, e.path) for e in (result.api_endpoints or [])]
 
@@ -537,13 +537,13 @@ class TestModuleBoundary:
     """
 
     def test_monorepo_module_is_the_dir_under_the_container(self):
-        from adduce.services.linker.modules import module_of
+        from evigraph.services.linker.modules import module_of
         assert module_of("projects/foyer/plugins/x.py") == "projects/foyer"
         assert module_of("services/billing/src/a.go") == "services/billing"
         assert module_of("apps/web/pages/index.tsx") == "apps/web"
 
     def test_single_service_repo_module_is_the_root_dir(self):
-        from adduce.services.linker.modules import module_of
+        from evigraph.services.linker.modules import module_of
         assert module_of("spring-petclinic-api-gateway/src/main/A.java") == \
             "spring-petclinic-api-gateway"
 
@@ -555,7 +555,7 @@ class TestModuleBoundary:
         code ownership and is not one. Declining is the same rule as
         declining an edge — and it stays counted as `r0.module_unknown`.
         """
-        from adduce.services.linker.modules import module_of
+        from evigraph.services.linker.modules import module_of
         for path in ("deploy/prod/orders.yaml", "k8s/base/svc.yaml",
                      "docker/orders/Dockerfile", "charts/orders/values.yaml",
                      # `chart` singular is the one the first list missed, on
@@ -568,12 +568,12 @@ class TestModuleBoundary:
     def test_a_real_module_is_still_named(self):
         # The exclusion must not swallow a module that merely deploys itself:
         # the first segment is what decides, not the presence of the word.
-        from adduce.services.linker.modules import module_of
+        from evigraph.services.linker.modules import module_of
         assert module_of("orders-service/deploy/prod.yaml") == "orders-service"
         assert module_of("projects/deployer/src/a.py") == "projects/deployer"
 
     def test_degenerate_paths_do_not_raise(self):
-        from adduce.services.linker.modules import module_of
+        from evigraph.services.linker.modules import module_of
         assert module_of("") == ""
         assert module_of(None) == ""
         # A bare container directory names no module on its own.
@@ -583,10 +583,10 @@ class TestModuleBoundary:
         assert module_of("projects") == ""
 
     def test_two_files_in_one_module_are_not_a_crossing(self):
-        from adduce.services.linker.modules import module_of
+        from evigraph.services.linker.modules import module_of
         assert module_of("projects/foyer/a.py") == module_of("projects/foyer/b/c.py")
 
     def test_two_projects_in_one_repo_are_a_crossing(self):
-        from adduce.services.linker.modules import module_of
+        from evigraph.services.linker.modules import module_of
         assert module_of("projects/foyer/a.py") != \
             module_of("projects/capability-registry/b.go")

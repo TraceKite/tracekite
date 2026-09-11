@@ -1,14 +1,14 @@
 {
-  "name": "adduce-labs",
+  "name": "evigraph-labs",
   "interface": {
-    "displayName": "Adduce Labs"
+    "displayName": "Evigraph Labs"
   },
   "plugins": [
     {
-      "name": "adduce",
+      "name": "evigraph",
       "source": {
         "source": "local",
-        "path": "./plugins/adduce"
+        "path": "./plugins/evigraph"
       },
       "policy": {
         "installation": "AVAILABLE",

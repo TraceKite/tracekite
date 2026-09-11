@@ -5,12 +5,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from adduce.models.graph_models import GraphEdge
-from adduce.services import graph_writer, link_writer
-from adduce.services.linker import engine as linker_engine
-from adduce.services.linker import service as linker_service
-from adduce.services.linker.base import RendezvousSpec, ServiceSpec
-from adduce.services.linker_store import Neo4jLinkerStore
+from evigraph.models.graph_models import GraphEdge
+from evigraph.services import graph_writer, link_writer
+from evigraph.services.linker import engine as linker_engine
+from evigraph.services.linker import service as linker_service
+from evigraph.services.linker.base import RendezvousSpec, ServiceSpec
+from evigraph.services.linker_store import Neo4jLinkerStore
 
 
 # --------------------------------------------------------------------------- #
@@ -68,7 +68,7 @@ class TestWriteRendezvousNodes:
             FakeResult(single_value={"c": 1}),
             FakeResult(single_value={"c": 1}),
         ])
-        with patch("adduce.services.link_writer.get_session", return_value=_ctx(session)):
+        with patch("evigraph.services.link_writer.get_session", return_value=_ctx(session)):
             total = link_writer.write_rendezvous_nodes(specs)
         assert total == 2
         assert len(session.calls) == 2
@@ -88,7 +88,7 @@ class TestWriteServiceNodes:
         specs = [ServiceSpec("global:Service:a", "a", is_gateway=False,
                              repo_ids=["r1"])]
         session = FakeSession([FakeResult(single_value={"c": 1})])
-        with patch("adduce.services.link_writer.get_session", return_value=_ctx(session)):
+        with patch("evigraph.services.link_writer.get_session", return_value=_ctx(session)):
             total = link_writer.write_service_nodes(specs)
         assert total == 1
         assert len(session.calls) == 1
@@ -101,7 +101,7 @@ class TestWriteServiceNodes:
         specs = [ServiceSpec("global:Service:gw", "gw", is_gateway=True,
                              repo_ids=["r1"])]
         session = FakeSession([FakeResult(single_value={"c": 1})])
-        with patch("adduce.services.link_writer.get_session", return_value=_ctx(session)):
+        with patch("evigraph.services.link_writer.get_session", return_value=_ctx(session)):
             total = link_writer.write_service_nodes(specs)
         assert total == 1
         assert len(session.calls) == 2
@@ -113,7 +113,7 @@ class TestWriteServiceNodes:
 class TestLinkRunLedger:
     def test_create_link_run(self):
         session = FakeSession()
-        with patch("adduce.services.link_writer.get_session", return_value=_ctx(session)):
+        with patch("evigraph.services.link_writer.get_session", return_value=_ctx(session)):
             link_writer.create_link_run("run1", "full")
         query, params = session.calls[0]
         assert "MERGE (l:LinkRun {id: $id})" in query
@@ -122,7 +122,7 @@ class TestLinkRunLedger:
 
     def test_finish_link_run_with_error(self):
         session = FakeSession()
-        with patch("adduce.services.link_writer.get_session", return_value=_ctx(session)):
+        with patch("evigraph.services.link_writer.get_session", return_value=_ctx(session)):
             link_writer.finish_link_run("run1", "failed", {"a": 1}, error="boom")
         query, params = session.calls[0]
         assert "SET l.status = $status" in query
@@ -132,7 +132,7 @@ class TestLinkRunLedger:
 
     def test_finish_link_run_default_error(self):
         session = FakeSession()
-        with patch("adduce.services.link_writer.get_session", return_value=_ctx(session)):
+        with patch("evigraph.services.link_writer.get_session", return_value=_ctx(session)):
             link_writer.finish_link_run("run1", "done", {"x": 2})
         _, params = session.calls[0]
         assert params["status"] == "done"
@@ -146,7 +146,7 @@ class TestLinkRunLedger:
             {"props": {"id": "r3", "counters": "not-json"}},
         ]
         session = FakeSession([FakeResult(records=records)])
-        with patch("adduce.services.link_writer.get_session", return_value=_ctx(session)):
+        with patch("evigraph.services.link_writer.get_session", return_value=_ctx(session)):
             runs = link_writer.list_link_runs(limit=5)
         assert runs[0]["counters"] == {"edges": 3}
         assert runs[1]["counters"] == {}
@@ -156,7 +156,7 @@ class TestLinkRunLedger:
 
     def test_list_link_runs_empty(self):
         session = FakeSession([FakeResult(records=[])])
-        with patch("adduce.services.link_writer.get_session", return_value=_ctx(session)):
+        with patch("evigraph.services.link_writer.get_session", return_value=_ctx(session)):
             runs = link_writer.list_link_runs()
         assert runs == []
 
@@ -166,7 +166,7 @@ class TestDeleteStaleLinkerEdges:
         consume = MagicMock()
         consume.counters.relationships_deleted = 4
         session = FakeSession([FakeResult(consume_obj=consume)])
-        with patch("adduce.services.link_writer.get_session", return_value=_ctx(session)):
+        with patch("evigraph.services.link_writer.get_session", return_value=_ctx(session)):
             deleted = link_writer.delete_stale_linker_edges("run1")
         assert deleted == 4
         query, params = session.calls[0]
@@ -177,7 +177,7 @@ class TestDeleteStaleLinkerEdges:
         consume = MagicMock()
         consume.counters.relationships_deleted = 0
         session = FakeSession([FakeResult(consume_obj=consume)])
-        with patch("adduce.services.link_writer.get_session", return_value=_ctx(session)):
+        with patch("evigraph.services.link_writer.get_session", return_value=_ctx(session)):
             deleted = link_writer.delete_stale_linker_edges("run1")
         assert deleted == 0
 
@@ -185,13 +185,13 @@ class TestDeleteStaleLinkerEdges:
 class TestStampReposLinked:
     def test_empty_repo_ids_returns_early(self):
         session = FakeSession()
-        with patch("adduce.services.link_writer.get_session", return_value=_ctx(session)):
+        with patch("evigraph.services.link_writer.get_session", return_value=_ctx(session)):
             link_writer.stamp_repos_linked([], "run1")
         assert session.calls == []
 
     def test_stamps_repos(self):
         session = FakeSession()
-        with patch("adduce.services.link_writer.get_session", return_value=_ctx(session)):
+        with patch("evigraph.services.link_writer.get_session", return_value=_ctx(session)):
             link_writer.stamp_repos_linked(["r1", "r2"], "run1")
         query, params = session.calls[0]
         assert "SET r.linked_at = $now" in query
@@ -214,7 +214,7 @@ class TestLoadClaims:
              "enode": None, "etype": None},
         ]
         session = FakeSession([FakeResult(records=records)])
-        with patch("adduce.services.linker_store.get_session",
+        with patch("evigraph.services.linker_store.get_session",
                    return_value=_ctx(session)):
             claims = Neo4jLinkerStore().load_claims()
         assert len(claims) == 2
@@ -229,7 +229,7 @@ class TestLoadClaims:
         evidence nodes are incomplete, so edges built off them look resolved
         and are silently wrong."""
         session = FakeSession([FakeResult(records=[])])
-        with patch("adduce.services.linker_store.get_session",
+        with patch("evigraph.services.linker_store.get_session",
                    return_value=_ctx(session)):
             Neo4jLinkerStore().load_claims()
         _query, params = session.calls[0]
@@ -306,14 +306,14 @@ class TestLinkerServiceLinkFull:
         """Only the config loaders remain patched — they read YAML off disk,
         which is not storage the linker's port covers."""
         return (
-            patch("adduce.services.linker.engine.load_confidence",
+            patch("evigraph.services.linker.engine.load_confidence",
                   return_value={}),
-            patch("adduce.services.linker.engine.load_aliases", return_value={}),
-            patch("adduce.services.linker.engine.build_rollups", return_value=[]),
+            patch("evigraph.services.linker.engine.load_aliases", return_value={}),
+            patch("evigraph.services.linker.engine.build_rollups", return_value=[]),
         )
 
     def test_link_full_success(self):
-        from adduce.services.linker.base import ClaimRecord
+        from evigraph.services.linker.base import ClaimRecord
         claim = ClaimRecord(
             id="c1", repo_id="r1", kind="svcname", direction="provides",
             key="k", service_hint=None, hint_source="none", matchable=True,
@@ -406,7 +406,7 @@ class TestDedupe:
 
 class TestJobHandlers:
     def test_register_all(self):
-        from adduce.services import job_handlers
+        from evigraph.services import job_handlers
         queue = MagicMock()
         job_handlers.register_all(queue)
         registered = {c.args[0] for c in queue.register_handler.call_args_list}
@@ -414,13 +414,13 @@ class TestJobHandlers:
                               "link_delta"}
 
     def test_handle_ingest(self):
-        from adduce.services import job_handlers
-        from adduce.services.job_queue import Job
+        from evigraph.services import job_handlers
+        from evigraph.services.job_queue import Job
         job = Job(id="j1", type="ingest", repo_id="r1",
                   payload={"github_url": "https://github.com/foo/bar",
                            "branch": "main", "github_token": "t", "refresh": False})
-        with patch("adduce.services.job_handlers.run_ingestion") as run, \
-                patch("adduce.services.job_handlers._enqueue_relink") as relink:
+        with patch("evigraph.services.job_handlers.run_ingestion") as run, \
+                patch("evigraph.services.job_handlers._enqueue_relink") as relink:
             job_handlers._handle_ingest(job)
         run.assert_called_once()
         assert run.call_args[0][0] == "j1"
@@ -430,93 +430,93 @@ class TestJobHandlers:
         relink.assert_called_once()
 
     def test_handle_refresh(self):
-        from adduce.services import job_handlers
-        from adduce.services.job_queue import Job
+        from evigraph.services import job_handlers
+        from evigraph.services.job_queue import Job
         job = Job(id="j2", type="refresh", repo_id="r1",
                   payload={"github_url": "https://github.com/foo/bar"})
-        with patch("adduce.services.job_handlers.run_ingestion") as run, \
-                patch("adduce.services.job_handlers._enqueue_relink") as relink:
+        with patch("evigraph.services.job_handlers.run_ingestion") as run, \
+                patch("evigraph.services.job_handlers._enqueue_relink") as relink:
             job_handlers._handle_refresh(job)
         assert run.call_args[1]["refresh"] is True
         relink.assert_called_once()
 
     def test_failed_ingest_does_not_relink(self):
-        from adduce.services import job_handlers
-        from adduce.services.job_queue import Job
+        from evigraph.services import job_handlers
+        from evigraph.services.job_queue import Job
         job = Job(id="j3", type="ingest", repo_id="r1",
                   payload={"github_url": "https://github.com/foo/bar"})
-        with patch("adduce.services.job_handlers.run_ingestion",
+        with patch("evigraph.services.job_handlers.run_ingestion",
                    side_effect=RuntimeError("clone failed")), \
-                patch("adduce.services.job_handlers._enqueue_relink") as relink:
+                patch("evigraph.services.job_handlers._enqueue_relink") as relink:
             with pytest.raises(RuntimeError):
                 job_handlers._handle_ingest(job)
         relink.assert_not_called()
 
     def test_repo_delete_relinks_when_claims_existed(self):
-        from adduce.services import job_handlers
-        from adduce.services.job_queue import Job
+        from evigraph.services import job_handlers
+        from evigraph.services.job_queue import Job
         job = Job(id="j4", type="repo_delete", repo_id="r1")
-        with patch("adduce.services.job_handlers.create_or_update_job"), \
-                patch("adduce.services.job_handlers.get_repo_claim_keys",
+        with patch("evigraph.services.job_handlers.create_or_update_job"), \
+                patch("evigraph.services.job_handlers.get_repo_claim_keys",
                       return_value=["svcname:discovery:orders"]), \
-                patch("adduce.services.job_handlers.clear_repo_graph",
+                patch("evigraph.services.job_handlers.clear_repo_graph",
                       return_value={"nodes_deleted": 5}), \
-                patch("adduce.services.job_handlers.delete_repository"), \
-                patch("adduce.services.job_handlers._enqueue_relink") as relink:
+                patch("evigraph.services.job_handlers.delete_repository"), \
+                patch("evigraph.services.job_handlers._enqueue_relink") as relink:
             job_handlers._handle_repo_delete(job)
         # Service-to-Service rollups outlive the deleted repo's nodes.
         relink.assert_called_once()
 
     def test_handle_link_full(self):
-        from adduce.services import job_handlers
-        from adduce.services.job_queue import Job
+        from evigraph.services import job_handlers
+        from evigraph.services.job_queue import Job
         job = Job(id="j3", type="link_full", repo_id="r1", payload={})
         fake_service = MagicMock()
         fake_service.return_value.link_full.return_value = {"edges_written": 7}
-        with patch("adduce.services.linker.LinkerService", fake_service), \
-             patch("adduce.services.job_handlers.create_or_update_job") as cj:
+        with patch("evigraph.services.linker.LinkerService", fake_service), \
+             patch("evigraph.services.job_handlers.create_or_update_job") as cj:
             job_handlers._handle_link_full(job)
         assert cj.call_args_list[0].args[2] == "running"
         assert cj.call_args_list[-1].args[2] == "completed"
         assert "7 edges" in cj.call_args_list[-1].args[4]
 
     def test_handle_link_full_exception_propagates(self):
-        from adduce.services import job_handlers
-        from adduce.services.job_queue import Job
+        from evigraph.services import job_handlers
+        from evigraph.services.job_queue import Job
         job = Job(id="j3", type="link_full", repo_id="r1", payload={})
         fake_service = MagicMock()
         fake_service.return_value.link_full.side_effect = RuntimeError("boom")
-        with patch("adduce.services.linker.LinkerService", fake_service), \
-             patch("adduce.services.job_handlers.create_or_update_job"):
+        with patch("evigraph.services.linker.LinkerService", fake_service), \
+             patch("evigraph.services.job_handlers.create_or_update_job"):
             with pytest.raises(RuntimeError, match="boom"):
                 job_handlers._handle_link_full(job)
 
     def test_handle_repo_delete(self):
-        from adduce.services import job_handlers
-        from adduce.services.job_queue import Job
+        from evigraph.services import job_handlers
+        from evigraph.services.job_queue import Job
         job = Job(id="j4", type="repo_delete", repo_id="r1", payload={})
-        with patch("adduce.services.job_handlers.get_repo_claim_keys",
+        with patch("evigraph.services.job_handlers.get_repo_claim_keys",
                    return_value=["k1", "k2"]), \
-             patch("adduce.services.job_handlers.clear_repo_graph",
+             patch("evigraph.services.job_handlers.clear_repo_graph",
                    return_value={"nodes_deleted": 5}), \
-             patch("adduce.services.job_handlers.delete_repository") as delete, \
-             patch("adduce.services.job_handlers._enqueue_relink"), \
-             patch("adduce.services.job_handlers.create_or_update_job") as cj:
+             patch("evigraph.services.job_handlers.delete_repository") as delete, \
+             patch("evigraph.services.job_handlers._enqueue_relink"), \
+             patch("evigraph.services.job_handlers.create_or_update_job") as cj:
             job_handlers._handle_repo_delete(job)
         delete.assert_called_once_with("r1")
         assert cj.call_args_list[-1].args[2] == "completed"
         assert "5 nodes" in cj.call_args_list[-1].args[4]
 
     def test_handle_repo_delete_no_claim_keys(self):
-        from adduce.services import job_handlers
-        from adduce.services.job_queue import Job
+        from evigraph.services import job_handlers
+        from evigraph.services.job_queue import Job
         job = Job(id="j5", type="repo_delete", repo_id="r1", payload={})
-        with patch("adduce.services.job_handlers.get_repo_claim_keys",
+        with patch("evigraph.services.job_handlers.get_repo_claim_keys",
                    return_value=[]), \
-             patch("adduce.services.job_handlers.clear_repo_graph",
+             patch("evigraph.services.job_handlers.clear_repo_graph",
                    return_value={"nodes_deleted": 0}), \
-             patch("adduce.services.job_handlers.delete_repository"), \
-             patch("adduce.services.job_handlers.create_or_update_job"):
+             patch("evigraph.services.job_handlers.delete_repository"), \
+             patch("evigraph.services.job_handlers.create_or_update_job"):
             job_handlers._handle_repo_delete(job)
 
 
@@ -526,21 +526,21 @@ class TestJobHandlers:
 
 class TestJobQueue:
     def test_register_handler_rejects_unknown(self):
-        from adduce.services.job_queue import JobQueue
+        from evigraph.services.job_queue import JobQueue
         q = JobQueue()
         with pytest.raises(ValueError, match="Unknown job type"):
             q.register_handler("bogus", lambda job: None)
 
     def test_submit_rejects_unknown(self):
-        from adduce.services.job_queue import JobQueue
+        from evigraph.services.job_queue import JobQueue
         q = JobQueue()
         with pytest.raises(ValueError, match="Unknown job type"):
             q.submit("bogus", "r1")
 
     def test_submit_and_dedupe(self):
-        from adduce.services.job_queue import JobQueue
+        from evigraph.services.job_queue import JobQueue
         q = JobQueue()
-        with patch("adduce.services.job_queue.create_or_update_job") as cj:
+        with patch("evigraph.services.job_queue.create_or_update_job") as cj:
             first = q.submit("ingest", "r1", job_id="fixed")
             second = q.submit("ingest", "r1")
         assert first == "fixed"
@@ -550,29 +550,29 @@ class TestJobQueue:
         assert q._ingest_q.qsize() == 1
 
     def test_submit_linker_lane(self):
-        from adduce.services.job_queue import JobQueue
+        from evigraph.services.job_queue import JobQueue
         q = JobQueue()
-        with patch("adduce.services.job_queue.create_or_update_job"):
+        with patch("evigraph.services.job_queue.create_or_update_job"):
             q.submit("link_full", "r1", payload={"x": 1})
         assert q._linker_q.qsize() == 1
         assert q._ingest_q.qsize() == 0
 
     def test_repo_lock_reuses_lock(self):
-        from adduce.services.job_queue import JobQueue
+        from evigraph.services.job_queue import JobQueue
         q = JobQueue()
         lock1 = q.repo_lock("r1")
         lock2 = q.repo_lock("r1")
         assert lock1 is lock2
 
     def test_worker_executes_handler(self):
-        from adduce.services.job_queue import JobQueue
+        from evigraph.services.job_queue import JobQueue
         q = JobQueue(ingest_workers=1)
         done = threading.Event()
 
         def handler(job):
             done.set()
 
-        with patch("adduce.services.job_queue.create_or_update_job"):
+        with patch("evigraph.services.job_queue.create_or_update_job"):
             q.register_handler("ingest", handler)
             q.start()
             # idempotent second start
@@ -587,7 +587,7 @@ class TestJobQueue:
             assert not t.is_alive()
 
     def test_worker_no_handler_marks_failed(self):
-        from adduce.services.job_queue import JobQueue, Job
+        from evigraph.services.job_queue import JobQueue, Job
         q = JobQueue()
         failed = threading.Event()
 
@@ -595,7 +595,7 @@ class TestJobQueue:
             if status == "failed":
                 failed.set()
 
-        with patch("adduce.services.job_queue.create_or_update_job",
+        with patch("evigraph.services.job_queue.create_or_update_job",
                    side_effect=fake_create):
             # put a job whose type has no registered handler
             q._linker_q.put(Job(id="j", type="link_full", repo_id="r1"))
@@ -608,7 +608,7 @@ class TestJobQueue:
         assert not t.is_alive()
 
     def test_worker_handler_exception_marks_failed(self):
-        from adduce.services.job_queue import JobQueue
+        from evigraph.services.job_queue import JobQueue
         q = JobQueue(ingest_workers=1)
         failed = threading.Event()
 
@@ -619,7 +619,7 @@ class TestJobQueue:
         def boom(job):
             raise RuntimeError("crash")
 
-        with patch("adduce.services.job_queue.create_or_update_job",
+        with patch("evigraph.services.job_queue.create_or_update_job",
                    side_effect=fake_create):
             q.register_handler("ingest", boom)
             q.start()
@@ -630,16 +630,16 @@ class TestJobQueue:
             t.join(timeout=2.0)
 
     def test_reap_stale_jobs(self):
-        from adduce.services import job_queue
+        from evigraph.services import job_queue
         session = FakeSession([FakeResult(single_value={"c": 3})])
-        with patch("adduce.db.neo4j_client.get_session", return_value=_ctx(session)):
+        with patch("evigraph.db.neo4j_client.get_session", return_value=_ctx(session)):
             count = job_queue.reap_stale_jobs()
         assert count == 3
 
     def test_reap_stale_jobs_zero(self):
-        from adduce.services import job_queue
+        from evigraph.services import job_queue
         session = FakeSession([FakeResult(single_value={"c": 0})])
-        with patch("adduce.db.neo4j_client.get_session", return_value=_ctx(session)):
+        with patch("evigraph.db.neo4j_client.get_session", return_value=_ctx(session)):
             count = job_queue.reap_stale_jobs()
         assert count == 0
 
@@ -675,7 +675,7 @@ class TestWriteLinkerEdges:
             FakeResult(single_value={"c": 2}),
             FakeResult(single_value={"c": 1}),
         ])
-        with patch("adduce.services.graph_writer.get_session",
+        with patch("evigraph.services.graph_writer.get_session",
                    return_value=_ctx(session)):
             written = graph_writer.write_linker_edges(edges)
         assert written == {"BUILT_FROM": 2, "EXPOSES": 1}
@@ -704,9 +704,9 @@ class TestWriteLinkerEdges:
     def test_reconciliation_mismatch_raises(self):
         edges = [_linker_edge(), _linker_edge(source="s2", target="t2")]
         session = FakeSession([FakeResult(single_value={"c": 1})])
-        with patch("adduce.services.graph_writer.get_session",
+        with patch("evigraph.services.graph_writer.get_session",
                    return_value=_ctx(session)), \
-             patch("adduce.services.graph_writer._diagnose_missing",
+             patch("evigraph.services.graph_writer._diagnose_missing",
                    return_value=["s1->t1"]):
             with pytest.raises(graph_writer.WriteReconciliationError):
                 graph_writer.write_linker_edges(edges)
@@ -723,11 +723,11 @@ class TestPartialFailureReporting:
     """
 
     def _run(self, store):
-        conf = patch("adduce.services.linker.engine.load_confidence",
+        conf = patch("evigraph.services.linker.engine.load_confidence",
                      return_value={})
-        aliases = patch("adduce.services.linker.engine.load_aliases",
+        aliases = patch("evigraph.services.linker.engine.load_aliases",
                         return_value={})
-        rollups = patch("adduce.services.linker.engine.build_rollups",
+        rollups = patch("evigraph.services.linker.engine.build_rollups",
                         return_value=[])
         with conf, aliases, rollups:
             return linker_service.LinkerService(store).link_full()

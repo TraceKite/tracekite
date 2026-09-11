@@ -18,23 +18,23 @@ import ast
 import dataclasses
 import pathlib
 
-from adduce.db.memory_store import claim_record
-from adduce.services.linker.base import ClaimRecord
+from evigraph.db.memory_store import claim_record
+from evigraph.services.linker.base import ClaimRecord
 
 BACKEND = pathlib.Path(__file__).resolve().parent.parent
 
 # `claim_record` is the mapping; the labelled-estate builders construct
 # ClaimRecords as test INPUT, which is authoring data, not reading it.
 DECLARED_BUILDERS = {
-    "adduce/db/memory_store.py",
-    "adduce/services/calibration.py",
-    "adduce/services/calibration_estates.py",
+    "evigraph/db/memory_store.py",
+    "evigraph/services/calibration.py",
+    "evigraph/services/calibration_estates.py",
 }
 
 
 def _mapped_fields() -> set[str]:
     """Field names `claim_record` actually assigns, read from its source."""
-    source = (BACKEND / "adduce/db/memory_store.py").read_text()
+    source = (BACKEND / "evigraph/db/memory_store.py").read_text()
     tree = ast.parse(source)
     func = next(n for n in tree.body
                 if isinstance(n, ast.FunctionDef) and n.name == "claim_record")
@@ -72,7 +72,7 @@ class TestMappingIsComplete:
 class TestNoReaderBuildsItsOwn:
     def test_readers_route_through_the_shared_mapping(self):
         offenders = []
-        for path in sorted(BACKEND.glob("adduce/**/*.py")):
+        for path in sorted(BACKEND.glob("evigraph/**/*.py")):
             rel = path.relative_to(BACKEND).as_posix()
             if rel in DECLARED_BUILDERS:
                 continue

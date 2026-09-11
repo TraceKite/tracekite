@@ -7,8 +7,8 @@ every (provider, consumer) pair of a split key must still meet in exactly
 one sub-shard, which is what the coverage tests pin.
 """
 
-from adduce.services.linker.base import ClaimRecord
-from adduce.services.linker.partitions import (
+from evigraph.services.linker.base import ClaimRecord
+from evigraph.services.linker.partitions import (
     REPLICATION_CAP, Plan, hot_key_sizes, plan,
 )
 
@@ -46,7 +46,7 @@ class TestDetection:
     def test_every_link_run_reports_skew(self):
         """Detection is live in the engine, not only in tools: a production
         estate must be able to say its own shard-limiting key exists."""
-        from adduce.services.linker.engine import link
+        from evigraph.services.linker.engine import link
 
         result = link(hot_estate(consumers=40, cold_keys=2),
                       run_id="linkrun_skew", confidence={}, aliases={},

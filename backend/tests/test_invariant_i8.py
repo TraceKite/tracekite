@@ -14,8 +14,8 @@ grows with the second number and not the first has broken the invariant.
 
 import pytest
 
-from adduce.services.linker.base import ClaimIndex, ClaimRecord, LinkContext
-from adduce.services.linker.engine import run_resolvers
+from evigraph.services.linker.base import ClaimIndex, ClaimRecord, LinkContext
+from evigraph.services.linker.engine import run_resolvers
 
 # Queues, not side tables: drained into edges within the run rather than
 # broadcast to workers, so claim-proportional is correct for them.

@@ -9,15 +9,15 @@ from types import SimpleNamespace
 
 import pytest
 
-from adduce.parsers.graphql_parser import (
+from evigraph.parsers.graphql_parser import (
     extract_gql_tags, parse_graphql_operations, parse_graphql_schema,
 )
-from adduce.services.ingest_claims import (
+from evigraph.services.ingest_claims import (
     emit_graphql_claims, emit_graphql_client_claims,
 )
-from adduce.services.ingest_source import IngestSink
-from adduce.services.linker import r0_alias, r8_graphql
-from adduce.services.linker.base import (
+from evigraph.services.ingest_source import IngestSink
+from evigraph.services.linker import r0_alias, r8_graphql
+from evigraph.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, ResolverOutput, load_confidence,
 )
 

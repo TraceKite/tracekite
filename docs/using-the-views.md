@@ -1,7 +1,7 @@
 # Using the views
 
 Reference for the three views and the controls they share. The
-[README](../README.md) covers what Adduce is and how to run it; this is what
+[README](../README.md) covers what Evigraph is and how to run it; this is what
 to do once it is running.
 
 ## Three views, three questions

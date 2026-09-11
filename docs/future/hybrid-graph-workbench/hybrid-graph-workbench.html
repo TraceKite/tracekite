@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Adduce Hybrid Graph Workbench</title>
+  <title>Evigraph Hybrid Graph Workbench</title>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -163,7 +163,7 @@
     <header class="hybrid-header">
       <div class="hybrid-brand">
         <div class="hybrid-mark">A</div>
-        <div><strong>ADDUCE</strong><small>Code Intelligence</small></div>
+        <div><strong>EVIGRAPH</strong><small>Code Intelligence</small></div>
       </div>
       <nav class="hybrid-nav" aria-label="Primary">
         <button class="is-active">Repo</button><button>Service Map</button><button>Trace</button>
@@ -220,7 +220,7 @@
           <span class="hybrid-chip">labels: groups + selected</span>
           <span class="hybrid-chip hybrid-zero">0 verified cross-repo code bridges</span>
         </div>
-        <svg id="hybrid-graph" class="hybrid-graph" viewBox="0 0 1060 720" role="img" aria-label="Hybrid Adduce graph design"></svg>
+        <svg id="hybrid-graph" class="hybrid-graph" viewBox="0 0 1060 720" role="img" aria-label="Hybrid Evigraph graph design"></svg>
         <div class="hybrid-canvas-tools" aria-label="Graph state">
           <button id="hybrid-overview" class="is-active" aria-pressed="true">Overview</button>
           <button id="hybrid-focus" aria-pressed="false">Focus App.tsx</button>
@@ -258,12 +258,12 @@
         { id:'la-backend', label:'lanovyx / backend', count:175, repo:'lanovyx', x:315, y:265, color:'#a45138' },
         { id:'la-frontend', label:'lanovyx / frontend', count:65, repo:'lanovyx', x:250, y:455, color:'#315b47' },
         { id:'la-mcp', label:'lanovyx / mcp', count:17, repo:'lanovyx', x:450, y:475, color:'#9b7a31' },
-        { id:'ad-backend', label:'adduce / backend', count:175, repo:'adduce', x:760, y:255, color:'#a45138' },
-        { id:'ad-frontend', label:'adduce / frontend', count:65, repo:'adduce', x:820, y:455, color:'#315b47' },
-        { id:'ad-lib', label:'adduce / lib', count:13, repo:'adduce', x:660, y:485, color:'#9b7a31' },
-        { id:'ad-artifacts', label:'adduce / artifacts', count:8, repo:'adduce', x:900, y:320, color:'#7f8379' },
+        { id:'ad-backend', label:'evigraph / backend', count:175, repo:'evigraph', x:760, y:255, color:'#a45138' },
+        { id:'ad-frontend', label:'evigraph / frontend', count:65, repo:'evigraph', x:820, y:455, color:'#315b47' },
+        { id:'ad-lib', label:'evigraph / lib', count:13, repo:'evigraph', x:660, y:485, color:'#9b7a31' },
+        { id:'ad-artifacts', label:'evigraph / artifacts', count:8, repo:'evigraph', x:900, y:320, color:'#7f8379' },
         { id:'la-docs', label:'lanovyx / docs', count:9, repo:'lanovyx', x:135, y:340, color:'#7f8379' },
-        { id:'ad-corpus', label:'adduce / corpus', count:13, repo:'adduce', x:590, y:330, color:'#7f8379' }
+        { id:'ad-corpus', label:'evigraph / corpus', count:13, repo:'evigraph', x:590, y:330, color:'#7f8379' }
       ];
       const localEdges = [
         ['la-backend','la-frontend'], ['la-backend','la-mcp'], ['la-frontend','la-docs'],
@@ -326,7 +326,7 @@
       }
       function drawOverview2d() {
         drawHull(300,355,235,245,'#315b47','sfbayman/lanovyx · 4 groups shown');
-        drawHull(755,355,245,245,'#a45138','adduce-labs/adduce · 5 groups shown');
+        drawHull(755,355,245,245,'#a45138','evigraph-labs/evigraph · 5 groups shown');
         localEdges.forEach(([a,b]) => {
           const source = groups.find(group => group.id === a);
           const target = groups.find(group => group.id === b);
@@ -337,7 +337,7 @@
       function drawFocus2d() {
         svg.appendChild(el('text', { x:42, y:120, fill:'#6e7168', 'font-size':12 }, 'faint repository context'));
         drawHull(285,390,190,205,'#315b47','sfbayman/lanovyx');
-        drawHull(770,390,190,205,'#a45138','adduce-labs/adduce');
+        drawHull(770,390,190,205,'#a45138','evigraph-labs/evigraph');
         focusEdges.forEach(([a,b]) => {
           const source = focusNodes[a], target = focusNodes[b];
           svg.appendChild(el('line', { x1:source.x, y1:source.y, x2:target.x, y2:target.y, stroke:a===5?'#9b7a31':'#a45138', 'stroke-width':2.2, 'marker-end':'url(#arrow)' }));
@@ -395,7 +395,7 @@
             <div class="hybrid-breakdown">
               <p class="hybrid-kicker">Scope breakdown</p>
               <div class="hybrid-breakdown-row"><div><strong>sfbayman/lanovyx</strong><span>4 groups</span></div><div class="hybrid-meter"><i style="width:58%;background:var(--forest)"></i></div></div>
-              <div class="hybrid-breakdown-row"><div><strong>adduce-labs/adduce</strong><span>5 groups</span></div><div class="hybrid-meter"><i style="width:66%;background:var(--rust)"></i></div></div>
+              <div class="hybrid-breakdown-row"><div><strong>evigraph-labs/evigraph</strong><span>5 groups</span></div><div class="hybrid-meter"><i style="width:66%;background:var(--rust)"></i></div></div>
             </div>`;
         } else {
           inspector.innerHTML = `

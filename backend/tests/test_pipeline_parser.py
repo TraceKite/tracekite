@@ -1,6 +1,6 @@
 """Data & ML pipeline parsing."""
 
-from adduce.parsers.pipeline_parser import (
+from evigraph.parsers.pipeline_parser import (
     extract_spark_datasets, is_pipeline_file, parse_airflow_dag,
     parse_databricks_bundle, parse_databricks_notebook, parse_dbt_model,
     parse_dbt_project, parse_dbt_sources,

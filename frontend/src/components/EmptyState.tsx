@@ -20,7 +20,7 @@ export default function EmptyState() {
         </div>
 
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-[#1a1d23]">Adduce</h2>
+          <h2 className="text-2xl font-bold text-[#1a1d23]">Evigraph</h2>
           <p className="text-sm max-w-md mx-auto leading-relaxed" style={{ color: "#8b929e" }}>
             Trace which service calls which — across repository boundaries, through
             gateways, with a file and line behind every edge.

@@ -12,9 +12,9 @@ import dataclasses
 
 import pytest
 
-from adduce.services.calibration import build_estates
-from adduce.services.linker.engine import link
-from adduce.services.linker.incremental import changed_kinds, relink
+from evigraph.services.calibration import build_estates
+from evigraph.services.linker.engine import link
+from evigraph.services.linker.incremental import changed_kinds, relink
 
 NOW = "2026-01-01T00:00:00+00:00"
 
@@ -129,10 +129,10 @@ class TestOnlyTouchedPartitionsReResolve:
     def test_a_registered_host_resolver_forces_full(self):
         """A host resolver's input kinds are unknown here; keeping anything
         would guess at what it reads. Guessing wrong keeps a stale edge."""
-        from adduce.services.linker.engine import (
+        from evigraph.services.linker.engine import (
             clear_registered_resolvers, register_resolver,
         )
-        from adduce.services.linker.values import ResolverOutput
+        from evigraph.services.linker.values import ResolverOutput
 
         class Hosted:
             def resolve(self, index, ctx):

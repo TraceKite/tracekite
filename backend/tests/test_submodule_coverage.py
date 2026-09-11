@@ -7,7 +7,7 @@ missing is exactly the shared library most likely to be called from other
 repositories — the edges this tool exists to find.
 """
 
-from adduce.services.scan import scan, unfetched_submodules
+from evigraph.services.scan import scan, unfetched_submodules
 
 
 def _gitmodules(root, *entries):

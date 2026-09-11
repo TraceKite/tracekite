@@ -14,7 +14,7 @@ above the only reader who would act on it.
 import json
 from unittest.mock import MagicMock, patch
 
-from adduce.services.ingestion_service import _stamp_coverage
+from evigraph.services.ingestion_service import _stamp_coverage
 
 
 def stamp(coverage, claims=None):
@@ -23,7 +23,7 @@ def stamp(coverage, claims=None):
     ctx = MagicMock()
     ctx.__enter__ = MagicMock(return_value=session)
     ctx.__exit__ = MagicMock(return_value=False)
-    with patch("adduce.services.ingestion_service.get_session", return_value=ctx):
+    with patch("evigraph.services.ingestion_service.get_session", return_value=ctx):
         _stamp_coverage("r1", coverage, claims)
     return json.loads(session.run.call_args.kwargs["totals"])
 

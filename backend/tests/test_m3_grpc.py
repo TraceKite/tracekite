@@ -9,17 +9,17 @@ from types import SimpleNamespace
 
 import pytest
 
-from adduce.parsers.proto_parser import parse_buf, parse_proto, parse_thrift
-from adduce.services.grpc_extractor import extract_grpc_sites, strip_generated_suffix
-from adduce.services.ingest_claims import (
+from evigraph.parsers.proto_parser import parse_buf, parse_proto, parse_thrift
+from evigraph.services.grpc_extractor import extract_grpc_sites, strip_generated_suffix
+from evigraph.services.ingest_claims import (
     emit_grpc_site_claims, emit_proto_claims, emit_buf_claims,
 )
-from adduce.services.ingest_source import IngestSink
-from adduce.services.linker import r0_alias, r2_k8s, r5_grpc
-from adduce.services.linker.base import (
+from evigraph.services.ingest_source import IngestSink
+from evigraph.services.linker import r0_alias, r2_k8s, r5_grpc
+from evigraph.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, ResolverOutput, load_confidence,
 )
-from adduce.services.linker.engine import materialize_pending
+from evigraph.services.linker.engine import materialize_pending
 
 PROTO = """
 syntax = "proto3";

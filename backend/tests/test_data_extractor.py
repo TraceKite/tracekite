@@ -1,6 +1,6 @@
 """Data-layer site extraction."""
 
-from adduce.services.data_extractor import DataSite, extract_data_sites
+from evigraph.services.data_extractor import DataSite, extract_data_sites
 
 ES_PY = """\
 import os

@@ -7,8 +7,8 @@ receiver matches neither, because a guessed direction is worse than a
 missing edge.
 """
 
-from adduce.services.http_call_extractor import extract_http_calls
-from adduce.services.php_route_extractor import extract_php_routes
+from evigraph.services.http_call_extractor import extract_http_calls
+from evigraph.services.php_route_extractor import extract_php_routes
 
 
 def routes(content, path="routes/api.php"):
@@ -76,8 +76,8 @@ class TestSymfony:
 
 class TestEndToEnd:
     def test_a_scanned_laravel_repo_produces_the_contract_side(self, tmp_path):
-        from adduce import engine_config
-        from adduce.services.scan import scan
+        from evigraph import engine_config
+        from evigraph.services.scan import scan
 
         engine_config.configure(graph_hmac_key="php-route-test")
         (tmp_path / "routes").mkdir()

@@ -7,11 +7,11 @@ nothing about who is depended on — so what these tests pin is that the
 CHANNEL survives the trip: extractor to claim to contract to edge.
 """
 
-from adduce import engine_config
-from adduce.db.memory_store import InMemoryLinkerStore
-from adduce.services.http_call_extractor import extract_http_calls
-from adduce.services.linker.engine import link
-from adduce.services.scan import scan
+from evigraph import engine_config
+from evigraph.db.memory_store import InMemoryLinkerStore
+from evigraph.services.http_call_extractor import extract_http_calls
+from evigraph.services.linker.engine import link
+from evigraph.services.scan import scan
 
 NOW = "2026-01-01T00:00:00+00:00"
 

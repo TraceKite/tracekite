@@ -8,8 +8,8 @@ outside Docker) so that the suite can still be run for non-parser tests.
 from pathlib import Path
 import pytest
 
-from adduce.parsers.parser_registry import parse_file
-from adduce.parsers.tree_sitter.core.parser import TREE_SITTER_AVAILABLE
+from evigraph.parsers.parser_registry import parse_file
+from evigraph.parsers.tree_sitter.core.parser import TREE_SITTER_AVAILABLE
 
 FIXTURES = Path(__file__).parent / "fixtures" / "callgraph-sample"
 

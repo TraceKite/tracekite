@@ -14,9 +14,9 @@ import os
 
 import pytest
 
-from adduce import engine_config
-from adduce.services.ingest_source import IngestSink
-from adduce.services.scan import scan
+from evigraph import engine_config
+from evigraph.services.ingest_source import IngestSink
+from evigraph.services.scan import scan
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 SAMPLE = os.path.join(FIXTURES, "callgraph-sample")

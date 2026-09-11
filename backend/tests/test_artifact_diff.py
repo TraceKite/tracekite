@@ -11,10 +11,10 @@ import shutil
 
 import pytest
 
-from adduce import engine_config
-from adduce.db.artifact import write_artifact
-from adduce.db.artifact_diff import diff_artifacts
-from adduce.services.scan import scan
+from evigraph import engine_config
+from evigraph.db.artifact import write_artifact
+from evigraph.db.artifact_diff import diff_artifacts
+from evigraph.services.scan import scan
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 SAMPLE = os.path.join(FIXTURES, "callgraph-sample")

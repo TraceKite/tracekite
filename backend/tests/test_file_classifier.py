@@ -2,8 +2,8 @@
 
 import pytest
 
-from adduce.services.claims import ContractClaim
-from adduce.services.file_classifier import classify, has_generated_header
+from evigraph.services.claims import ContractClaim
+from evigraph.services.file_classifier import classify, has_generated_header
 
 
 class TestTest:
@@ -97,8 +97,8 @@ class TestClaimGating:
 class TestProvenanceStamping:
     def test_stamped_from_evidence_path_automatically(self):
         from types import SimpleNamespace
-        from adduce.services.ingest_claims import emit_source_claims
-        from adduce.services.ingest_source import IngestSink
+        from evigraph.services.ingest_claims import emit_source_claims
+        from evigraph.services.ingest_source import IngestSink
 
         sink = IngestSink()
         emit_source_claims(
@@ -112,8 +112,8 @@ class TestProvenanceStamping:
 
     def test_production_file_has_empty_provenance(self):
         from types import SimpleNamespace
-        from adduce.services.ingest_claims import emit_source_claims
-        from adduce.services.ingest_source import IngestSink
+        from evigraph.services.ingest_claims import emit_source_claims
+        from evigraph.services.ingest_source import IngestSink
 
         sink = IngestSink()
         emit_source_claims(

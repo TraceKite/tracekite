@@ -9,18 +9,18 @@ from types import SimpleNamespace
 
 import pytest
 
-import adduce.services.ingest_deps as ingest_deps
-from adduce.parsers.dependency_parser import DependencyInfo
-from adduce.services.claims import is_internal_lib, lib_key
-from adduce.services.ingest_deps import (
+import evigraph.services.ingest_deps as ingest_deps
+from evigraph.parsers.dependency_parser import DependencyInfo
+from evigraph.services.claims import is_internal_lib, lib_key
+from evigraph.services.ingest_deps import (
     emit_dependency_claims, emit_publish_claims,
 )
-from adduce.services.ingest_source import IngestSink
-from adduce.services.linker import r3_library
-from adduce.services.linker.base import (
+from evigraph.services.ingest_source import IngestSink
+from evigraph.services.linker import r3_library
+from evigraph.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, ResolverOutput, load_confidence,
 )
-from adduce.utils.hashing import generate_repo_id
+from evigraph.utils.hashing import generate_repo_id
 
 INTERNAL = {"maven": {"namespaces": ["org.acme"]},
             "npm": {"scopes": ["@acme"]},

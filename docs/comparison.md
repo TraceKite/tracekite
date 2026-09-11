@@ -1,7 +1,7 @@
-# Adduce compared, including where it loses
+# Evigraph compared, including where it loses
 
 A project that only names its wins is easy to dismiss. This page states what
-Adduce answers that other tools cannot, and — with the same specificity — what
+Evigraph answers that other tools cannot, and — with the same specificity — what
 they answer that it cannot.
 
 Every number here is measured on the corpus in this repository: six real
@@ -12,7 +12,7 @@ positives and 0 false positives across seven strata.
 
 ## The distinction that matters
 
-Adduce's edges are **not lexically present in any source file**. Here is a real
+Evigraph's edges are **not lexically present in any source file**. Here is a real
 call and the endpoint that serves it:
 
 ```python
@@ -42,7 +42,7 @@ binding. That is not a tuning difference; it is a different kind of graph.
 dependency-cruiser, madge, jdeps, pydeps, code2flow, SCIP/LSIF indexes,
 AST-to-Neo4j importers.
 
-| | They graph | Adduce graphs |
+| | They graph | Evigraph graphs |
 |---|---|---|
 | Edge exists because | one symbol names another | two artifacts agree on a rendezvous key |
 | Crosses a process boundary | no | yes, that is the point |
@@ -50,7 +50,7 @@ AST-to-Neo4j importers.
 | Evidence | the reference itself | `file:line` on **both** sides |
 
 **Where they win:** "who calls this function" is their question and they answer
-it better. Adduce works at contract altitude — service, endpoint, topic, table
+it better. Evigraph works at contract altitude — service, endpoint, topic, table
 — and deliberately does not index symbols. If you want to rename a method
 safely, use Sourcegraph.
 
@@ -62,12 +62,12 @@ Backstage, Cortex, OpsLevel.
 
 **Where they win, and it is not close:** ownership, lifecycle, on-call
 rotation, tiering, documentation links. None of that is in the code, and
-Adduce infers ownership only where CODEOWNERS or a catalog file already says
+Evigraph infers ownership only where CODEOWNERS or a catalog file already says
 so. A catalog is also a place for humans to record intent, which a derived
 graph structurally cannot be.
 
-**Where Adduce wins:** a catalog is a statement of intent, and it drifts the
-first time someone ships without updating it. Adduce derives from what is
+**Where Evigraph wins:** a catalog is a statement of intent, and it drifts the
+first time someone ships without updating it. Evigraph derives from what is
 actually in the repositories, so it cannot drift from the code — only from
 reality, and only where extraction is incomplete.
 
@@ -85,9 +85,9 @@ Datadog, Kiali, Jaeger, eBPF-based maps.
   call sites.** Twelve were built in ways no parser recovers.
 - A runtime map sees what actually happened, including paths nobody predicted.
 
-**Where Adduce wins:** a runtime map shows what *did* happen in an observed
+**Where Evigraph wins:** a runtime map shows what *did* happen in an observed
 window, not what *can*. A path not exercised is invisible, and none of it
-exists before you deploy. Adduce answers "if I change this endpoint, who
+exists before you deploy. Evigraph answers "if I change this endpoint, who
 breaks?" from a git clone, before anything runs.
 
 **Use both if you have both.** They fail in opposite directions, and the
@@ -95,21 +95,21 @@ overlap is where you should be most confident.
 
 ---
 
-## Where Adduce loses outright
+## Where Evigraph loses outright
 
 Stated plainly, because a tool that hides these is worse than one that names
 them.
 
 1. **Dynamic call construction.** 12 of 68 call sites on the measured estate.
    A URL assembled from a database value or a runtime registry lookup has no
-   static evidence, and Adduce declines rather than guessing.
-2. **Symbol-level resolution.** Not attempted. `adduce` cannot tell you which
+   static evidence, and Evigraph declines rather than guessing.
+2. **Symbol-level resolution.** Not attempted. `evigraph` cannot tell you which
    function calls which; that is a different altitude and a different index.
 3. **Ownership and lifecycle** beyond what CODEOWNERS or a catalog states.
 4. **Anything requiring the code to run.** Feature flags evaluated at runtime,
    config fetched from a service, dependency injection resolved by a
    container at startup.
-5. **Recall is not the product.** Precision is. Adduce declines an ambiguous
+5. **Recall is not the product.** Precision is. Evigraph declines an ambiguous
    signal and records the decline; a tool optimising for coverage would emit
    the likeliest answer. If you need every possible edge and can tolerate
    wrong ones, this is the wrong tool.
@@ -135,7 +135,7 @@ connections.
 
 ## The honest summary
 
-Adduce is for the window between writing code and running it in production,
+Evigraph is for the window between writing code and running it in production,
 and for the question a catalog can only answer if somebody remembered to
 update it. It is **static, derived rather than declared, and at contract
 altitude rather than symbol altitude.**

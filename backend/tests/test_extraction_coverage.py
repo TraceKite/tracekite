@@ -11,9 +11,9 @@ import os
 
 import pytest
 
-from adduce import engine_config
-from adduce.services.extraction_coverage import MATRIX, coverage_report
-from adduce.services.http_call_extractor import extract_http_calls
+from evigraph import engine_config
+from evigraph.services.extraction_coverage import MATRIX, coverage_report
+from evigraph.services.http_call_extractor import extract_http_calls
 
 # language -> (filename, source with exactly one route on /owners)
 ROUTE_SNIPPETS = {
@@ -137,7 +137,7 @@ class TestEveryCellIsPinned:
 
 @pytest.mark.parametrize("language", routed_languages())
 def test_route_extraction_through_a_real_scan(language, tmp_path):
-    from adduce.services.scan import scan
+    from evigraph.services.scan import scan
 
     engine_config.configure(graph_hmac_key="coverage-test")
     filename, source = ROUTE_SNIPPETS[language]

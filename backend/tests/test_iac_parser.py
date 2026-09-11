@@ -2,11 +2,11 @@
 
 import pytest
 
-from adduce.parsers.iac_parser import (
+from evigraph.parsers.iac_parser import (
     parse_ecs_task_definition, parse_iac_file, parse_kustomization,
     parse_terraform,
 )
-from adduce.parsers.parser_registry import is_iac_file
+from evigraph.parsers.parser_registry import is_iac_file
 
 TERRAFORM = '''
 terraform {

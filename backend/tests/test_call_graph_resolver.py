@@ -1,7 +1,7 @@
 import pytest
-from adduce.models.graph_models import GraphNode
-from adduce.parsers.base import ParsedMethodCall
-from adduce.services.call_graph_resolver import build_call_graph
+from evigraph.models.graph_models import GraphNode
+from evigraph.parsers.base import ParsedMethodCall
+from evigraph.services.call_graph_resolver import build_call_graph
 
 
 def _make_method_node(repo_id: str, node_id: str, name: str, path: str, start: int, end: int):

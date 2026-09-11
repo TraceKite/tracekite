@@ -4,11 +4,11 @@
 #
 #   jobs:
 #     artifact:
-#       uses: <adduce-repo>/.github/workflows/publish-artifact.yml@main
+#       uses: <evigraph-repo>/.github/workflows/publish-artifact.yml@main
 #       with: { repo-id: my-service }
 #
 # and every merge to its default branch publishes a content-addressed
-# .adduce file carrying the commit it represents ($GITHUB_SHA -> head_sha,
+# .evigraph file carrying the commit it represents ($GITHUB_SHA -> head_sha,
 # which is what anchors temporal queries). Content addressing is what makes
 # publication idempotent: an unchanged tree republishes the identical file.
 name: publish-artifact
@@ -42,14 +42,14 @@ jobs:
           REPO_ID="${{ inputs.repo-id }}"
           REPO_ID="${REPO_ID:-${GITHUB_REPOSITORY##*/}}"
           PATH_OUT=$(cd backend && GRAPH_HMAC_KEY="${GRAPH_HMAC_KEY:-ci-fixed-key}" \
-            ../.venv/bin/python -m adduce.cli artifact "$GITHUB_WORKSPACE" \
-              --out /tmp/adduce-artifacts \
+            ../.venv/bin/python -m evigraph.cli artifact "$GITHUB_WORKSPACE" \
+              --out /tmp/evigraph-artifacts \
               --repo-id "$REPO_ID" \
               --head-sha "$GITHUB_SHA")
           echo "path=$PATH_OUT" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: adduce-artifact
+          name: evigraph-artifact
           path: ${{ steps.scan.outputs.path }}
           retention-days: ${{ inputs.retention-days }}

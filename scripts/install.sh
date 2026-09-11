@@ -8,7 +8,7 @@ usage() {
   printf '%s\n' "Usage: scripts/install.sh [--yes] [--client CLIENT]" \
     "       scripts/install.sh [--claude] [--codex] [--kimi] [--antigravity]" \
     "" \
-    "Installs the adduce CLI and selected global skill files." \
+    "Installs the evigraph CLI and selected global skill files." \
     "MCP server registration remains an explicit per-client step."
 }
 
@@ -68,9 +68,9 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 printf '%s\n' \
-  "Adduce setup will:" \
-  "  1. Install the adduce CLI as a uv tool." \
-  "  2. Install the selected global Adduce skill files." \
+  "Evigraph setup will:" \
+  "  1. Install the evigraph CLI as a uv tool." \
+  "  2. Install the selected global Evigraph skill files." \
   "  3. Leave existing skill files and all MCP client configuration untouched."
 
 if [[ "$auto_confirm" == false ]]; then
@@ -84,17 +84,17 @@ fi
 cd "$repo_root"
 uv tool install --no-cache --force .
 
-if command -v adduce >/dev/null 2>&1; then
-  adduce install-skill "${client_flags[@]}"
+if command -v evigraph >/dev/null 2>&1; then
+  evigraph install-skill "${client_flags[@]}"
 else
-  uv tool run --from "$repo_root" adduce install-skill "${client_flags[@]}"
+  uv tool run --from "$repo_root" evigraph install-skill "${client_flags[@]}"
 fi
 
 printf '%s\n' \
   "" \
-  "Adduce CLI and skills are ready." \
+  "Evigraph CLI and skills are ready." \
   "Register the MCP server for each client using the commands in:" \
   "  docs/plugins-and-mcp-guide.md" \
   "" \
-  "Verify: adduce --help" \
-  "Serve:  adduce mcp /absolute/path/to/repo-a /absolute/path/to/repo-b"
+  "Verify: evigraph --help" \
+  "Serve:  evigraph mcp /absolute/path/to/repo-a /absolute/path/to/repo-b"

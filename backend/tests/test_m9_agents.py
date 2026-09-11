@@ -8,14 +8,14 @@ claiming one server name is a declined coin flip.
 
 from types import SimpleNamespace
 
-from adduce.parsers.parser_registry import parse_file
-from adduce.services.agents_extractor import parse_agent_card, parse_mcp_config
-from adduce.services.ingest_claims import (
+from evigraph.parsers.parser_registry import parse_file
+from evigraph.services.agents_extractor import parse_agent_card, parse_mcp_config
+from evigraph.services.ingest_claims import (
     emit_agent_card_claims, emit_agent_claims, emit_mcp_config_claims,
 )
-from adduce.services.ingest_source import IngestSink
-from adduce.services.linker import r11_agent
-from adduce.services.linker.base import (
+from evigraph.services.ingest_source import IngestSink
+from evigraph.services.linker import r11_agent
+from evigraph.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, ResolverOutput, load_confidence,
 )
 

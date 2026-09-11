@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 
-from adduce.main import app
+from evigraph.main import app
 
 client = TestClient(app, raise_server_exceptions=False)
 
@@ -18,7 +18,7 @@ def _session_ctx(session):
 
 class TestLinksRebuild:
     def test_rebuild_queues_link_full(self, auth_headers):
-        with patch("adduce.routes.links.job_queue") as queue:
+        with patch("evigraph.routes.links.job_queue") as queue:
             queue.submit.return_value = "job-link-1"
             response = client.post("/api/v2/links/rebuild", headers=auth_headers)
         assert response.status_code == 202
@@ -34,8 +34,8 @@ class TestLinksStatus:
         runs = [{"run_id": "run-1"}, {"run_id": "run-2"}]
         session = MagicMock()
         session.run.return_value = [{"id": "repo-a"}, {"id": "repo-b"}]
-        with patch("adduce.routes.links.list_link_runs", return_value=runs), \
-             patch("adduce.routes.links.get_session",
+        with patch("evigraph.routes.links.list_link_runs", return_value=runs), \
+             patch("evigraph.routes.links.get_session",
                    return_value=_session_ctx(session)):
             body = client.get("/api/v2/links/status", headers=auth_headers).json()
         assert body["runs"] == runs
@@ -49,8 +49,8 @@ class TestLinksStatus:
     def test_status_without_stale_repos(self, auth_headers):
         session = MagicMock()
         session.run.return_value = []
-        with patch("adduce.routes.links.list_link_runs", return_value=[]), \
-             patch("adduce.routes.links.get_session",
+        with patch("evigraph.routes.links.list_link_runs", return_value=[]), \
+             patch("evigraph.routes.links.get_session",
                    return_value=_session_ctx(session)):
             body = client.get("/api/v2/links/status", headers=auth_headers).json()
         assert body["runs"] == []
@@ -102,7 +102,7 @@ class TestServiceMap:
         edge_result.data.return_value = edge_rows
         session.run.side_effect = [node_result, edge_result,
                                    _count_result(len(edge_rows))]
-        with patch("adduce.db.impact_reader.get_session",
+        with patch("evigraph.db.impact_reader.get_session",
                    return_value=_session_ctx(session)):
             body = client.get("/api/v2/service-map?min_confidence=0.5",
                               headers=auth_headers).json()
@@ -164,7 +164,7 @@ class TestServiceMap:
         edge_result.data.return_value = edge_rows[:1]
         session.run.side_effect = [node_result, edge_result,
                                    _count_result(len(edge_rows))]
-        with patch("adduce.db.impact_reader.get_session",
+        with patch("evigraph.db.impact_reader.get_session",
                    return_value=_session_ctx(session)):
             body = client.get("/api/v2/service-map?limit=1",
                               headers=auth_headers).json()
@@ -179,7 +179,7 @@ class TestServiceMap:
         edge_result = MagicMock()
         edge_result.data.return_value = []
         session.run.side_effect = [node_result, edge_result, _count_result(0)]
-        with patch("adduce.db.impact_reader.get_session",
+        with patch("evigraph.db.impact_reader.get_session",
                    return_value=_session_ctx(session)):
             body = client.get("/api/v2/service-map", headers=auth_headers).json()
         assert body["nodes"] == []
@@ -239,7 +239,7 @@ class TestTrace:
         # Build many services to exercise the 20-suggestion cap.
         rows = [{"id": f"svc-{i}", "name": f"Svc{i}"} for i in range(30)]
         session = _fake_trace_session(rows)
-        with patch("adduce.routes.trace.get_session",
+        with patch("evigraph.routes.trace.get_session",
                    return_value=_session_ctx(session)):
             response = client.get(
                 "/api/v2/trace?from_service=nope&to_service=Svc0",
@@ -270,7 +270,7 @@ class TestTrace:
 
         session = _fake_trace_session(rows, path_rows=[path_row],
                                       on_path_query=check)
-        with patch("adduce.routes.trace.get_session",
+        with patch("evigraph.routes.trace.get_session",
                    return_value=_session_ctx(session)):
             # from by exact id, to by case-insensitive name
             body = client.get(
@@ -293,7 +293,7 @@ class TestTrace:
     def test_trace_by_exact_name(self, auth_headers):
         rows = _resolve_rows()
         session = _fake_trace_session(rows, path_rows=[])
-        with patch("adduce.routes.trace.get_session",
+        with patch("evigraph.routes.trace.get_session",
                    return_value=_session_ctx(session)):
             body = client.get(
                 "/api/v2/trace?from_service=Alpha&to_service=Beta",
@@ -347,7 +347,7 @@ class TestTrace:
 
         session = MagicMock()
         session.run.side_effect = run_side_effect
-        with patch("adduce.routes.trace.get_session",
+        with patch("evigraph.routes.trace.get_session",
                    return_value=_session_ctx(session)):
             body = client.get(
                 "/api/v2/trace?from_service=svc-1&to_service=svc-2"
@@ -384,7 +384,7 @@ class TestTrace:
 
         session = MagicMock()
         session.run.side_effect = run_side_effect
-        with patch("adduce.routes.trace.get_session",
+        with patch("evigraph.routes.trace.get_session",
                    return_value=_session_ctx(session)):
             body = client.get(
                 "/api/v2/trace?from_service=svc-1&to_service=svc-2"
@@ -395,9 +395,9 @@ class TestTrace:
 
 class TestAuthMiddleware:
     def test_rate_limiter_window_eviction(self):
-        from adduce.middleware.auth import RateLimiter
+        from evigraph.middleware.auth import RateLimiter
         clock = {"t": 100.0}
-        with patch("adduce.middleware.auth.time.monotonic",
+        with patch("evigraph.middleware.auth.time.monotonic",
                    side_effect=lambda: clock["t"]):
             limiter = RateLimiter(limit=1, window_s=0.01)
             assert limiter.allow("k") is True
@@ -408,11 +408,11 @@ class TestAuthMiddleware:
             assert limiter.allow("k") is True
 
     def test_audit_swallows_oserror(self):
-        from adduce.middleware.auth import audit
-        with patch("adduce.middleware.auth.open",
+        from evigraph.middleware.auth import audit
+        with patch("evigraph.middleware.auth.open",
                    side_effect=OSError("disk full")), \
-             patch("adduce.middleware.auth.os.makedirs"), \
-             patch("adduce.middleware.auth.logger") as log:
+             patch("evigraph.middleware.auth.os.makedirs"), \
+             patch("evigraph.middleware.auth.logger") as log:
             audit("tid", "POST", "/api/x", 200)
         assert log.error.called
 
@@ -421,8 +421,8 @@ class TestAuthMiddleware:
         resolve_result = MagicMock()
         resolve_result.data.return_value = []
         session.run.return_value = resolve_result
-        with patch("adduce.middleware.auth._limiter.allow", return_value=False), \
-             patch("adduce.routes.trace.get_session",
+        with patch("evigraph.middleware.auth._limiter.allow", return_value=False), \
+             patch("evigraph.routes.trace.get_session",
                    return_value=_session_ctx(session)):
             response = client.get(
                 "/api/v2/trace?from_service=a&to_service=b",
@@ -439,14 +439,14 @@ class TestRateLimitBuckets:
     was the only expensive one with no budget at all."""
 
     def test_rebuild_has_its_own_tighter_bucket(self):
-        from adduce.middleware.auth import _rate_bucket
+        from evigraph.middleware.auth import _rate_bucket
         assert _rate_bucket("/api/v2/links/rebuild") == ("rebuild", 4)
         assert _rate_bucket("/api/v2/trace") == ("trace", 30)
         assert _rate_bucket("/api/repos/ingest") == ("ingest", 20)
         assert _rate_bucket("/api/repos") is None
 
     def test_buckets_are_independent(self):
-        from adduce.middleware.auth import RateLimiter
+        from evigraph.middleware.auth import RateLimiter
         limiter = RateLimiter()
         for _ in range(4):
             assert limiter.allow("tok:rebuild", 4) is True
@@ -455,9 +455,9 @@ class TestRateLimitBuckets:
         assert limiter.allow("tok:trace", 30) is True
 
     def test_rebuild_429_after_budget(self, auth_headers):
-        from adduce.middleware.auth import _limiter
+        from evigraph.middleware.auth import _limiter
         _limiter._hits.clear()
-        with patch("adduce.routes.links.job_queue") as queue:
+        with patch("evigraph.routes.links.job_queue") as queue:
             queue.submit.return_value = "job-1"
             codes = [client.post("/api/v2/links/rebuild",
                                  headers=auth_headers).status_code
@@ -483,7 +483,7 @@ class TestTraceHonesty:
         session = _fake_trace_session(
             _resolve_rows(), path_rows=[path_row],
             stale_repos=["org_orders"], failed_partial=2)
-        with patch("adduce.routes.trace.get_session",
+        with patch("evigraph.routes.trace.get_session",
                    return_value=_session_ctx(session)):
             body = client.get("/api/v2/trace?from_service=svc-1&to_service=svc-2",
                               headers=auth_headers).json()
@@ -498,7 +498,7 @@ class TestTraceHonesty:
         session = _fake_trace_session(
             _resolve_rows(), path_rows=[],
             on_path_query=lambda kw: captured.update(kw))
-        with patch("adduce.routes.trace.get_session",
+        with patch("evigraph.routes.trace.get_session",
                    return_value=_session_ctx(session)):
             client.get("/api/v2/trace?from_service=svc-1&to_service=svc-2",
                        headers=auth_headers)

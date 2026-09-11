@@ -1,6 +1,6 @@
 # Measuring the graph against real repositories
 
-The calibration harness in `backend/adduce/services/calibration.py` scores the
+The calibration harness in `backend/evigraph/services/calibration.py` scores the
 resolvers on hand-built labelled estates. It is necessary but not sufficient:
 it can only be as good as the cases someone thought to write, and a tier with
 no estate scores nothing at all while still reporting 1.0 overall.

@@ -7,7 +7,7 @@ counters shipped with the result.
 ## Inspect one repository
 
 ```bash
-adduce scan /absolute/path/orders --repo-id orders
+evigraph scan /absolute/path/orders --repo-id orders
 ```
 
 This prints claim counts, parser coverage, and explicit absence information.
@@ -16,7 +16,7 @@ It does not create cross-repository edges.
 ## Link related repositories
 
 ```bash
-adduce link /absolute/path/orders /absolute/path/billing \
+evigraph link /absolute/path/orders /absolute/path/billing \
   --now 2026-01-01T00:00:00+00:00
 ```
 
@@ -25,10 +25,10 @@ resolver counters. A fixed `--now` makes time-dependent output reproducible.
 
 ## Explain one edge
 
-First copy the exact source and target IDs from `adduce link`, then run:
+First copy the exact source and target IDs from `evigraph link`, then run:
 
 ```bash
-adduce explain /absolute/path/orders /absolute/path/billing \
+evigraph explain /absolute/path/orders /absolute/path/billing \
   --edge 'SOURCE_NODE_ID' 'TARGET_NODE_ID'
 ```
 
@@ -38,7 +38,7 @@ explanation.
 ## Publish portable artifacts
 
 ```bash
-adduce artifact /absolute/path/orders \
+evigraph artifact /absolute/path/orders \
   --repo-id orders --head-sha "$GIT_COMMIT" --out ./artifacts
 ```
 
@@ -50,9 +50,9 @@ repository.
 Create base and head artifacts for every repository in scope, then run:
 
 ```bash
-adduce pr \
-  --base ./base/orders-<digest>.adduce ./base/billing-<digest>.adduce \
-  --head ./head/orders-<digest>.adduce ./head/billing-<digest>.adduce \
+evigraph pr \
+  --base ./base/orders-<digest>.evigraph ./base/billing-<digest>.evigraph \
+  --head ./head/orders-<digest>.evigraph ./head/billing-<digest>.evigraph \
   --changed-repo orders --comment
 ```
 
@@ -62,11 +62,11 @@ The base and head options take artifact lists, not git branch names. The
 ## Find contract drift and live deprecations
 
 ```bash
-adduce drift ./head/orders-<digest>.adduce \
-  --base ./base/orders-<digest>.adduce
+evigraph drift ./head/orders-<digest>.evigraph \
+  --base ./base/orders-<digest>.evigraph
 
-adduce deprecations ./head/orders-<digest>.adduce \
-  ./head/billing-<digest>.adduce
+evigraph deprecations ./head/orders-<digest>.evigraph \
+  ./head/billing-<digest>.evigraph
 ```
 
 Drift compares declared and observed contracts. Deprecations reports only
@@ -79,7 +79,7 @@ Register the stdio server as described in
 directories or artifacts:
 
 ```bash
-adduce mcp /absolute/path/orders /absolute/path/billing
+evigraph mcp /absolute/path/orders /absolute/path/billing
 ```
 
 Useful questions map directly to tools:
@@ -96,19 +96,19 @@ making a method-level claim.
 
 ## Embed the engine
 
-The standalone core wheel is built from `packaging/adduce-core`:
+The standalone core wheel is built from `packaging/evigraph-core`:
 
 ```bash
-uv build --wheel --project packaging/adduce-core --out-dir dist
+uv build --wheel --project packaging/evigraph-core --out-dir dist
 ```
 
 A host can call the same pure scan and link surfaces:
 
 ```python
-from adduce import engine_config
-from adduce.db.memory_store import InMemoryLinkerStore
-from adduce.services.linker.engine import link
-from adduce.services.scan import scan
+from evigraph import engine_config
+from evigraph.db.memory_store import InMemoryLinkerStore
+from evigraph.services.linker.engine import link
+from evigraph.services.scan import scan
 
 engine_config.configure(graph_hmac_key="host-owned-redaction-key")
 sinks = [

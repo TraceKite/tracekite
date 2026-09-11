@@ -81,13 +81,13 @@ def _skew(claims) -> dict:
 
 
 def probe(count: int) -> dict:
-    from adduce import engine_config
-    from adduce.db.memory_store import InMemoryLinkerStore
-    from adduce.services.linker.engine import link
-    from adduce.services.scan import scan
+    from evigraph import engine_config
+    from evigraph.db.memory_store import InMemoryLinkerStore
+    from evigraph.services.linker.engine import link
+    from evigraph.services.scan import scan
 
     engine_config.configure(graph_hmac_key="scale-probe-key")
-    workdir = tempfile.mkdtemp(prefix="adduce-scale-")
+    workdir = tempfile.mkdtemp(prefix="evigraph-scale-")
     try:
         repos = _replicate(count, workdir)
 

@@ -19,7 +19,7 @@ import os
 
 from fastapi.routing import APIRoute
 
-from adduce.routes import graph, health, jobs, links, repos, rollup, trace
+from evigraph.routes import graph, health, jobs, links, repos, rollup, trace
 from tools.export_openapi import SPEC_PATH, build_spec, render
 
 ROUTERS = (health.router, repos.router, jobs.router, graph.router,

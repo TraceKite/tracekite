@@ -17,10 +17,10 @@ import os
 import pytest
 import yaml
 
-from adduce import engine_config
-from adduce.db.memory_store import InMemoryLinkerStore
-from adduce.services.linker.engine import link
-from adduce.services.scan import scan
+from evigraph import engine_config
+from evigraph.db.memory_store import InMemoryLinkerStore
+from evigraph.services.linker.engine import link
+from evigraph.services.scan import scan
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 LABELS = os.path.join(ROOT, "corpus", "labels.yml")

@@ -2,7 +2,7 @@
 
 import pytest
 
-from adduce.services.graph_reader import VIEW_MODES
+from evigraph.services.graph_reader import VIEW_MODES
 
 
 BROAD_MODES = ("overview", "architecture", "code", "api", "dependencies")

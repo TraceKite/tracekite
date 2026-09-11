@@ -15,7 +15,7 @@ import random
 
 import pytest
 
-from adduce.parsers.parser_registry import parse_file
+from evigraph.parsers.parser_registry import parse_file
 
 SEED_FILES = {
     "docker-compose.yml": (
@@ -95,11 +95,11 @@ def test_no_parser_raises_on_damaged_input(path):
 
 def test_extractors_survive_the_same_damage():
     """The direct-call extractors sit outside parse_file's registry."""
-    from adduce.services.http_call_extractor import (
+    from evigraph.services.http_call_extractor import (
         extract_http_calls, extract_webhook_registrations,
     )
-    from adduce.services.php_route_extractor import extract_php_routes
-    from adduce.services.rb_route_extractor import extract_rb_routes
+    from evigraph.services.php_route_extractor import extract_php_routes
+    from evigraph.services.rb_route_extractor import extract_rb_routes
 
     rng = random.Random(0xADDCE)
     for path, seed in sorted(SEED_FILES.items()):

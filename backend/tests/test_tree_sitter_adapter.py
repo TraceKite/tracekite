@@ -1,5 +1,5 @@
 """
-Unit and integration tests for adduce.parsers.tree_sitter.adapter.
+Unit and integration tests for evigraph.parsers.tree_sitter.adapter.
 
 Covers:
 - TreeSitterSourceParser.parse() for every supported language.
@@ -13,8 +13,8 @@ Tests that actually parse ASTs are skipped when Tree-sitter is not installed.
 
 import pytest
 
-from adduce.parsers.base import ParsedApiEndpoint, ParsedMethodCall
-from adduce.parsers.tree_sitter.adapter import (
+from evigraph.parsers.base import ParsedApiEndpoint, ParsedMethodCall
+from evigraph.parsers.tree_sitter.adapter import (
     TreeSitterSourceParser,
     _convert_method_call,
     _convert_symbol,
@@ -28,8 +28,8 @@ from adduce.parsers.tree_sitter.adapter import (
     _parse_endpoint_annotation,
     _parse_request_mapping_path,
 )
-from adduce.parsers.tree_sitter.core.models import LanguageType, SymbolInfo
-from adduce.parsers.tree_sitter.core.parser import TREE_SITTER_AVAILABLE
+from evigraph.parsers.tree_sitter.core.models import LanguageType, SymbolInfo
+from evigraph.parsers.tree_sitter.core.parser import TREE_SITTER_AVAILABLE
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +325,7 @@ class TestTreeSitterAdapterErrors:
         parser = TreeSitterSourceParser()
 
         def _failing_parse(*args, **kwargs):
-            from adduce.parsers.tree_sitter.core.models import ParsingResult
+            from evigraph.parsers.tree_sitter.core.models import ParsingResult
             return ParsingResult(
                 file_path=args[1] if len(args) > 1 else kwargs.get("file_path", ""),
                 language=args[2] if len(args) > 2 else kwargs.get("language"),
@@ -613,7 +613,7 @@ class TestHelperFunctions:
         assert entity.is_public
 
     def test_convert_method_call(self):
-        from adduce.parsers.tree_sitter.core.models import MethodCall
+        from evigraph.parsers.tree_sitter.core.models import MethodCall
         call = MethodCall(
             caller_method="main",
             called_method="helper",
@@ -703,8 +703,8 @@ class TestGoRouteCallGates:
     and the trailing comma that means a handler argument follows."""
 
     def _endpoints(self, context):
-        from adduce.parsers.base import ParsedMethodCall
-        from adduce.parsers.tree_sitter.adapter import _extract_route_calls
+        from evigraph.parsers.base import ParsedMethodCall
+        from evigraph.parsers.tree_sitter.adapter import _extract_route_calls
         call = ParsedMethodCall(caller_name="f", callee_name="Get",
                                 line=7, context=context)
         return _extract_route_calls([call], LanguageType.GO)

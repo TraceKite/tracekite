@@ -6,8 +6,8 @@ for each". So the tests are about the two ways that answer can be wrong:
 naming somebody who did not break, and naming somebody without saying where.
 """
 
-from adduce.models.graph_models import GraphEdge
-from adduce.services.linker.impact import as_comment, impact
+from evigraph.models.graph_models import GraphEdge
+from evigraph.services.linker.impact import as_comment, impact
 
 
 def edge(source, target, *, evidence=("src/billing_client.py:14",),
@@ -44,7 +44,7 @@ class TestBreaks:
 
     def test_an_edge_that_vanished_with_neither_side_changing_is_not_a_break(
             self):
-        """That is a regression in Adduce, not in the branch, and serving it
+        """That is a regression in Evigraph, not in the branch, and serving it
         as somebody's fault is worse than not reporting it."""
         result = impact([CALL], [], changed_repos={"unrelated"})
         assert result.breaks == []
@@ -111,7 +111,7 @@ class TestComment:
         ]
         text = as_comment(impact(granularities, [],
                                  changed_repos={"billing"}))
-        assert text.startswith("**Adduce**: 1 connection(s) lost")
+        assert text.startswith("**Evigraph**: 1 connection(s) lost")
         assert text.count("src/billing_client.py:14") == 1
         assert "also recorded as" in text
 
@@ -128,9 +128,9 @@ class TestComment:
         text = as_comment(impact(many, [], changed_repos={"billing"}), limit=5)
         assert "20 further connection(s) not shown" in text
 
-    def test_an_adduce_regression_is_named_separately(self):
+    def test_an_evigraph_regression_is_named_separately(self):
         result = impact([CALL], [], changed_repos={"unrelated"})
-        assert "regression in Adduce" in as_comment(result)
+        assert "regression in Evigraph" in as_comment(result)
 
 
 class TestEndToEnd:
@@ -140,12 +140,12 @@ class TestEndToEnd:
         import os
         import shutil
 
-        from adduce import engine_config
-        from adduce.db.artifact import write_artifact
-        from adduce.db.artifact_reader import read_artifact
-        from adduce.db.memory_store import InMemoryLinkerStore
-        from adduce.services.linker.engine import link
-        from adduce.services.scan import scan
+        from evigraph import engine_config
+        from evigraph.db.artifact import write_artifact
+        from evigraph.db.artifact_reader import read_artifact
+        from evigraph.db.memory_store import InMemoryLinkerStore
+        from evigraph.services.linker.engine import link
+        from evigraph.services.scan import scan
 
         engine_config.configure(graph_hmac_key="impact-test-key")
         corpus = os.path.join(os.path.dirname(__file__), "..", "..", "corpus")

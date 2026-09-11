@@ -1,4 +1,4 @@
-# Pre-redesign Adduce UI browser review
+# Pre-redesign Evigraph UI browser review
 
 > **Historical baseline.** This document records the UI before the approved
 > hybrid redesign was applied. Its problems are not a description of the
@@ -11,13 +11,13 @@ redesign package and before applying the hybrid implementation.
 ## What was exercised
 
 - The Repo workspace in 2D and 3D.
-- Repository scope with `adduce-labs/adduce` and `sfbayman/lanovyx` selected.
+- Repository scope with `evigraph-labs/evigraph` and `sfbayman/lanovyx` selected.
 - A 310-node, 346-edge multi-repository canvas.
 - Search for `frontend`, selection of `frontend/src/App.tsx`, and the capped
   sample notice with the Show in graph action.
 - Service Map with 14 visible services out of 131 and 146 visible links out of
   337 at 60% minimum confidence.
-- Distributed Trace from `adduce/frontend-external` to `adduce/backend`, which
+- Distributed Trace from `evigraph/frontend-external` to `evigraph/backend`, which
   returned two paths at 96% confidence.
 
 ## What already works and should remain recognizable

@@ -13,12 +13,12 @@ finding nothing, which is the failure this project treats as worst.
 
 import pytest
 
-from adduce.parsers.parser_registry import (
+from evigraph.parsers.parser_registry import (
     clear_registered_parsers, get_parser_for_file, register_parser,
     registered_parsers,
 )
-from adduce.services.linker.base import ClaimIndex, ClaimRecord, LinkContext
-from adduce.services.linker.engine import (
+from evigraph.services.linker.base import ClaimIndex, ClaimRecord, LinkContext
+from evigraph.services.linker.engine import (
     clear_registered_resolvers, register_resolver, registered_resolvers,
     run_resolvers,
 )
@@ -90,7 +90,7 @@ class ThirdPartyResolver:
         self.ran = False
 
     def resolve(self, index, ctx):
-        from adduce.services.linker.base import ResolverOutput
+        from evigraph.services.linker.base import ResolverOutput
 
         self.ran = True
         for claim in index.kind("svcname"):
