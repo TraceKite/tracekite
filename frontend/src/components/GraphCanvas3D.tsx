@@ -63,7 +63,7 @@ export default function GraphCanvas3D() {
     [repos, scopeRepoIds, selectedRepo]);
   const scopeKey = repoIds.join(",");
   const {
-    baseNodes, visibleNodes: sceneNodes, visibleLinks: sceneLinks,
+    baseNodes, baseLinks, visibleNodes: sceneNodes, visibleLinks: sceneLinks,
     projectionMode, expandedGroup, setExpandedGroup, projectedTotalNodeCount,
     openedNodeId, setExpandedNode,
   } = useGraphProjection({
@@ -256,6 +256,7 @@ export default function GraphCanvas3D() {
         visibleNodeCount={sceneNodes.length}
         visibleEdgeCount={sceneLinks.length}
         loadedNodeCount={nodes.length}
+        loadedEdgeCount={links.length}
         eligibleNodeCount={baseNodes.length}
         totalNodeCount={projectedTotalNodeCount}
         activePath={Boolean(activePath3d?.length)}

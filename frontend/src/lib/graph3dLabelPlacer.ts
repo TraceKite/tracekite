@@ -3,6 +3,8 @@ import { getNeighbors } from "./graph3dPath.ts";
 import type { GraphLink } from "./types.ts";
 import type { Node3DPhysicsState } from "./graph3dPhysics.ts";
 
+export const MAX_LABEL_WIDTH = 160;
+
 export interface DomLabelPool {
   elements: HTMLDivElement[];
   destroy: () => void;
@@ -43,6 +45,10 @@ export function createDomLabelPool(
     el.style.border = "1px solid rgba(212, 207, 195, 0.95)";
     el.style.borderRadius = "6px";
     el.style.padding = "2px 7px";
+    el.style.maxWidth = `${MAX_LABEL_WIDTH}px`;
+    el.style.overflow = "hidden";
+    el.style.textOverflow = "ellipsis";
+    el.style.boxSizing = "border-box";
     el.style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)";
     el.style.willChange = "transform, opacity";
     el.style.opacity = "0";
@@ -99,7 +105,11 @@ export function updateDomLabels(
 
   const candidates = nodes.filter((n) => {
     if (!n.vis || n.sz > 1.0) return false;
-    if (n.sx < 30 || n.sx > width - 30 || n.sy < 30 || n.sy > height - 30) return false;
+    const halfWidth = estimateLabelWidth(n.node.label) / 2;
+    const labelTop = n.sy - n.sr - 25;
+    const labelBottom = n.sy - n.sr - 5;
+    if (n.sx < halfWidth + 8 || n.sx > width - halfWidth - 8 ||
+        labelTop < 8 || labelBottom > height - 8) return false;
     return true;
   });
 
@@ -122,7 +132,7 @@ export function updateDomLabels(
   const occupied: Array<{ left: number; right: number; top: number; bottom: number }> = [];
   for (const candidate of candidates) {
     const prioritized = candidate.id === activeFocus || pathSet?.has(candidate.id);
-    const labelWidth = Math.min(160, Math.max(48, candidate.node.label.length * 6.3 + 18));
+    const labelWidth = estimateLabelWidth(candidate.node.label);
     const rect = {
       left: candidate.sx - labelWidth / 2,
       right: candidate.sx + labelWidth / 2,
@@ -190,4 +200,8 @@ export function updateDomLabels(
     delete el.dataset.nodeId;
     el.textContent = "";
   }
+}
+
+export function estimateLabelWidth(label: string): number {
+  return Math.min(MAX_LABEL_WIDTH, Math.max(48, label.length * 7 + 18));
 }

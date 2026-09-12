@@ -86,6 +86,7 @@ export default function GraphCanvas2D() {
   const scopeKey = repoIds.join(",");
   const {
     baseNodes,
+    baseLinks,
     visibleNodes,
     visibleLinks,
     projectionMode,
@@ -246,6 +247,7 @@ export default function GraphCanvas2D() {
         visibleNodeCount={visibleNodes.length}
         visibleEdgeCount={visibleLinks.length}
         loadedNodeCount={nodes.length}
+        loadedEdgeCount={links.length}
         eligibleNodeCount={baseNodes.length}
         totalNodeCount={projectedTotalNodeCount}
         onBack={navigateBack}

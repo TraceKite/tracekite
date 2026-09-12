@@ -14,9 +14,16 @@ first bad message punishes the wrong party.
 
 import json
 import logging
-import os
 import sys
 
+from tracekite.answer import CONFIG_VERSION, ENGINE_VERSION, SnapshotIdentity
+from tracekite.facade import collect_claims as _collect_claims
+from tracekite.mcp_envelope import wrap_answer
+from tracekite.scan_meta import (
+    ScanMeta,
+    repo_scan_meta_from_sink,
+)
+from tracekite.source_meta import collect_input_meta
 from tracekite.utils import rendezvous_ids as rid
 from tracekite.utils.evidence import as_spans
 
@@ -50,13 +57,17 @@ TOOLS = [
 class GraphTools:
     """The four questions, answered from one in-memory link result."""
 
-    def __init__(self, result, commits: dict | None = None):
+    def __init__(self, result, commits: dict | None = None,
+                 snapshot: SnapshotIdentity | None = None,
+                 scan_meta: ScanMeta | None = None):
         self._result = result
         # repo_id -> head_sha from each artifact's own meta. Spans carry no
         # per-string commit because edge evidence merges both sides and
         # guessing which repo a path belongs to would be invented
         # attribution; agents join file paths against this map themselves.
         self._commits = commits or {}
+        self._snapshot = snapshot
+        self._scan_meta = scan_meta
 
     def _known_node_ids(self) -> set[str]:
         active = {
@@ -140,7 +151,8 @@ class GraphTools:
         if not 1 <= hops <= 8:
             raise ValueError("max_hops must be between 1 and 8")
         paths = find_paths(self._result.edges, src, dst, max_hops=hops)
-        return {"from": from_id, "to": to_id, "paths": paths,
+        return {"from": from_id, "to": to_id,
+                "resolved_from": src, "resolved_to": dst, "paths": paths,
                 "found": bool(paths)}
 
     def deprecations(self) -> dict:
@@ -190,6 +202,15 @@ def handle(message: object, tools: GraphTools | None) -> dict | None:
         except (TypeError, ValueError) as exc:
             return _response(request_id, error={
                 "code": -32602, "message": str(exc)})
+        if tools._snapshot is not None:
+            answer = wrap_answer(answer, name, params.get("arguments") or {},
+                                 tools._snapshot,
+                                 known_ids=tools._known_node_ids(),
+                                 scan_meta=tools._scan_meta,
+                                 expected_repos=[
+                                     revision.repo_id
+                                     for revision in tools._snapshot.repos
+                                 ])
         return _response(request_id, {
             "content": [{"type": "text",
                          "text": json.dumps(answer, sort_keys=True)}]})
@@ -197,50 +218,33 @@ def handle(message: object, tools: GraphTools | None) -> dict | None:
         "code": -32601, "message": f"unknown method {method!r}"})
 
 
-def _register_repos(repo_ids: list[str], commits: dict,
-                    head_sha: str = "") -> None:
-    duplicates = sorted(set(repo_ids) & set(commits))
-    if duplicates:
-        raise ValueError(f"duplicate repository inputs: {duplicates}")
-    commits.update((repo_id, head_sha) for repo_id in repo_ids)
-
-
-def _collect_claims(path: str, claims: list, commits: dict) -> None:
-    from tracekite.db.artifact import read_meta
-    from tracekite.db.artifact_reader import read_claims
-    from tracekite.db.memory_store import claims_from_scan
-    from tracekite.services.scan import scan
-
-    if os.path.isfile(path) and path.endswith(".tracekite"):
-        meta = read_meta(path)
-        repo_ids = ([meta["repo_id"]] if meta.get("repo_id") else
-                    list(meta.get("repos") or []))
-        if not repo_ids:
-            raise ValueError(f"artifact has no repository identity: {path}")
-        _register_repos(repo_ids, commits, meta.get("head_sha", ""))
-        claims.extend(read_claims(path))
-        return
-    if os.path.isdir(path):
-        repo_id = os.path.basename(os.path.abspath(path))
-        _register_repos([repo_id], commits)
-        claims.extend(claims_from_scan(scan(path, repo_id=repo_id)))
-        return
-    if os.path.exists(path):
-        raise ValueError(f"unsupported MCP input (expected .tracekite): {path}")
-    raise FileNotFoundError(path)
-
-
 def _load_tools(paths: list[str]) -> GraphTools:
     """Scan or load each input once, when the first graph query arrives."""
+    from tracekite import engine_config
+    from tracekite.scan_meta import config_digest
     from tracekite.services.linker.engine import link
 
-    claims = []
-    commits = {}
+    claims: list = []
+    commits: dict = {}
+    revisions, scan_meta = collect_input_meta(paths)
+    sinks: dict = {}
+    cfg = engine_config.get_config()
     for path in paths:
-        _collect_claims(path, claims, commits)
+        _collect_claims(path, claims, commits, sinks=sinks)
+    for repo_id, sink in sinks.items():
+        scan_meta.add(repo_scan_meta_from_sink(
+            sink, repo_id, budgets={
+                "files": cfg.max_files_per_repo,
+                "claims": cfg.max_claims_per_repo,
+            }))
     result = link(claims, run_id="linkrun_mcp",
                   now="2026-01-01T00:00:00+00:00")
-    return GraphTools(result, commits)
+    snapshot = SnapshotIdentity(
+        repos=revisions, engine_version=ENGINE_VERSION,
+        config_version=CONFIG_VERSION,
+        config_digest=config_digest(cfg))
+    return GraphTools(result, commits=commits, snapshot=snapshot,
+                      scan_meta=scan_meta)
 
 
 def _valid_tool_call(message: object) -> bool:

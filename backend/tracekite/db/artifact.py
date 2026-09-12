@@ -58,6 +58,10 @@ def _meta_rows(sink, repo_id: str, head_sha: str,
     content that gets hashed, so map iteration order would make two identical
     scans produce two different digests.
     """
+    from tracekite.answer import CONFIG_VERSION, ENGINE_VERSION
+    from tracekite import engine_config
+
+    cfg = engine_config.get_config()
     return sorted({
         "repo_id": repo_id,
         "head_sha": head_sha,
@@ -84,6 +88,13 @@ def _meta_rows(sink, repo_id: str, head_sha: str,
         # cannot tell an empty repository from an unparsed one.
         "absence": json.dumps(getattr(sink, "absence", {}),
                               sort_keys=True),
+        "producer": json.dumps({
+            "engine_version": ENGINE_VERSION,
+            "config_version": CONFIG_VERSION,
+            "wire_version": WIRE_VERSION,
+            "max_files_per_repo": cfg.max_files_per_repo,
+            "max_claims_per_repo": cfg.max_claims_per_repo,
+        }, sort_keys=True),
     }.items())
 
 
@@ -224,7 +235,7 @@ def read_meta(path: str) -> dict:
     finally:
         conn.close()
     meta = dict(rows)
-    for field in ("claims", "coverage", "capped", "absence",
+    for field in ("claims", "coverage", "capped", "absence", "producer",
                   "unfetched_submodules", "repos", "skipped"):
         if field in meta:
             meta[field] = json.loads(meta[field])

@@ -56,7 +56,7 @@ services:
       ALLOWED_GIT_HOSTS: "${ALLOWED_GIT_HOSTS:-github.com}"
       # Browser traffic is same-origin through the nginx proxy, so no origin
       # needs to be allowlisted unless the UI is served from elsewhere.
-      TRACEKITE_CORS_ORIGINS: "${TRACEKITE_CORS_ORIGINS:-}"
+      KG_CORS_ORIGINS: "${TRACEKITE_CORS_ORIGINS:-}"
       INGEST_WORKERS: "${INGEST_WORKERS:-2}"
       MAX_SCOPE_REPOS: "${MAX_SCOPE_REPOS:-10}"
     volumes:

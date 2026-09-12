@@ -1,7 +1,7 @@
 """Application configuration loaded from environment variables."""
 
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from tracekite import engine_config
 from tracekite.db import store_config
@@ -10,6 +10,13 @@ _DEFAULT_PASSWORDS = {"", "password", "neo4j"}
 
 
 class Settings(BaseSettings):
+    # `.env` also contains Docker Compose variables that are not app settings.
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
     backend_port: int = 8000
     workspace_dir: str = "/tmp/repos"
 
@@ -63,17 +70,6 @@ class Settings(BaseSettings):
     # Maximum exact nodes shown after expanding one repository/module group.
     # Search remains exhaustive; the canvas stays a bounded reasoning surface.
     graph_detail_node_limit: int = 80
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        # One `.env` serves both this process and docker-compose, so it
-        # carries keys that are not settings: BIND_ADDR, FRONTEND_PORT,
-        # NEO4J_HEAP and the rest are read by compose alone. Pydantic
-        # forbids unknown keys by default, which made the very first step
-        # `.env.example` tells you to take — copy it to `.env` — raise
-        # ValidationError before the app could start.
-        extra = "ignore"
 
     def allowed_hosts_list(self) -> list[str]:
         return [h.strip().lower() for h in self.allowed_git_hosts.split(",") if h.strip()]

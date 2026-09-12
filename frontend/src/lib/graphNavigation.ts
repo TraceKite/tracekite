@@ -89,7 +89,7 @@ export function toggleDraftRepoScope(
   if (draftIds.length === 0) return [repoId];
   if (draftIds.includes(repoId)) {
     return draftIds.length === 1
-      ? draftIds
+      ? []
       : draftIds.filter((id) => id !== repoId);
   }
   return draftIds.length >= maxRepos ? draftIds : [...draftIds, repoId];

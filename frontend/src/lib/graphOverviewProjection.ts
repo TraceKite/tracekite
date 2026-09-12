@@ -73,18 +73,34 @@ export function buildModuleOverview(
     keysByRepo.set(repoKey, [...(keysByRepo.get(repoKey) ?? []), key]);
   }
   const repoKeys = [...keysByRepo.keys()].sort();
+  // Scale inter-repo distance with satellite density so inner satellites
+  // from different repos don't overlap.  The old fixed 180/120 was too
+  // tight for repos with 13+ groups — inner satellites were only ~124 apart.
+  const maxSatellites = Math.max(
+    ...repoKeys.map(k =>
+      (keysByRepo.get(k) ?? []).filter(key => !key.endsWith("/Repo")).length), 1);
+  const repoDistance = Math.max(240, maxSatellites * 32);
+  const repoDistanceY = Math.max(170, maxSatellites * 22);
   const positionByGroup = new Map<string, { x: number; y: number }>();
   repoKeys.forEach((repoKey, repoIndex) => {
     const repoAngle = repoKeys.length === 1 ? 0 : (repoIndex / repoKeys.length) * Math.PI * 2;
-    const centerX = repoKeys.length === 1 ? 0 : Math.cos(repoAngle) * 180;
-    const centerY = repoKeys.length === 1 ? 0 : Math.sin(repoAngle) * 120;
+    const centerX = repoKeys.length === 1 ? 0 : Math.cos(repoAngle) * repoDistance;
+    const centerY = repoKeys.length === 1 ? 0 : Math.sin(repoAngle) * repoDistanceY;
     const keys = (keysByRepo.get(repoKey) ?? []).sort();
     const root = keys.find((key) => key.endsWith("/Repo"));
     if (root) positionByGroup.set(root, { x: centerX, y: centerY });
     const satellites = keys.filter((key) => key !== root);
+    // Radius scales with satellite count — no hard cap, so dense repos
+    // spread out instead of crowding satellites at 118.
+    const radius = Math.max(100, (70 * Math.max(1, satellites.length)) / (2 * Math.PI));
+    // Stagger satellite angles per repo so inner satellites from different
+    // repos don't directly face each other at the same angle.
+    const angleOffset = repoKeys.length > 1
+      ? (repoIndex * Math.PI / repoKeys.length)
+      : 0;
     satellites.forEach((key, index) => {
-      const angle = (index / Math.max(1, satellites.length)) * Math.PI * 2 - Math.PI / 2;
-      const radius = Math.max(82, Math.min(118, 72 + satellites.length * 5));
+      const angle = (index / Math.max(1, satellites.length)) * Math.PI * 2
+        - Math.PI / 2 + angleOffset;
       positionByGroup.set(key, {
         x: centerX + Math.cos(angle) * radius,
         y: centerY + Math.sin(angle) * radius,
@@ -200,34 +216,52 @@ export function buildOneHopNeighborhood(
   };
 }
 
+export type ImpactDirection = "outgoing" | "incoming";
+
 export function buildBoundedImpact(
   nodes: GraphNode[],
   links: GraphLink[],
   focusId: string,
   nodeLimit = 80,
+  maxHops = 2,
+  direction: ImpactDirection = "outgoing",
 ): GraphProjection {
+  // Directed adjacency: outgoing follows source→target (what this node
+  // reaches); incoming follows target→source (who reaches this node).
   const adjacency = new Map<string, Set<string>>();
   for (const link of links) {
     const source = endpointId(link.source);
     const target = endpointId(link.target);
-    const sourceNeighbors = adjacency.get(source) ?? new Set<string>();
-    const targetNeighbors = adjacency.get(target) ?? new Set<string>();
-    sourceNeighbors.add(target);
-    targetNeighbors.add(source);
-    adjacency.set(source, sourceNeighbors);
-    adjacency.set(target, targetNeighbors);
+    const from = direction === "outgoing" ? source : target;
+    const to = direction === "outgoing" ? target : source;
+    const neighbors = adjacency.get(from) ?? new Set<string>();
+    neighbors.add(to);
+    adjacency.set(from, neighbors);
   }
+  // BFS bounded by maxHops — stop expanding once the hop budget is spent.
   const distance = new Map<string, number>([[focusId, 0]]);
   const queue = [focusId];
   for (let index = 0; index < queue.length; index += 1) {
     const current = queue[index];
+    const currentDist = distance.get(current) ?? 0;
+    if (currentDist >= maxHops) continue;
     for (const neighbor of adjacency.get(current) ?? []) {
       if (distance.has(neighbor)) continue;
-      distance.set(neighbor, (distance.get(current) ?? 0) + 1);
+      distance.set(neighbor, currentDist + 1);
       queue.push(neighbor);
     }
   }
-  const selected = [...nodes]
+  // Only nodes within the hop limit are eligible — unreachable nodes
+  // (including disconnected ones) are excluded entirely.
+  const reachableIds = new Set(
+    [...distance.entries()]
+      .filter(([, dist]) => dist <= maxHops)
+      .map(([id]) => id),
+  );
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const selected = [...reachableIds]
+    .map((id) => byId.get(id))
+    .filter((node): node is GraphNode => Boolean(node))
     .sort((left, right) =>
       (left.id === focusId ? -1 : right.id === focusId ? 1 : 0) ||
       (distance.get(left.id) ?? Infinity) - (distance.get(right.id) ?? Infinity) ||
@@ -238,6 +272,6 @@ export function buildBoundedImpact(
     nodes: selected,
     links: links.filter((link) =>
       ids.has(endpointId(link.source)) && ids.has(endpointId(link.target))),
-    totalNodeCount: nodes.length,
+    totalNodeCount: reachableIds.size,
   };
 }
