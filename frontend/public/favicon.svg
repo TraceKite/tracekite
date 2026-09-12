@@ -1,3 +1,14 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="TraceKite">
+  <title>TraceKite</title>
+  <desc>A solid kite with an open junction and a short attached tether.</desc>
+  <!-- The pack ships ink and white micro variants for light and dark grounds.
+       A favicon cannot know its ground ahead of time, so it picks between the
+       two supplied colours here rather than vanishing into a dark tab strip. -->
+  <style>
+    :root { --tk: #121A24; }
+    @media (prefers-color-scheme: dark) { :root { --tk: #FFFFFF; } }
+  </style>
+  <path d="M12 2L20 9L12 18L4 9Z M14 9A2 2 0 1 0 10 9A2 2 0 1 0 14 9Z" fill="var(--tk)" fill-rule="evenodd"/>
+  <path d="M12 17.5Q12 20 10 21" stroke="var(--tk)" stroke-width="1.7" stroke-linecap="round"/>
+  <circle cx="10" cy="21" r="1.1" fill="var(--tk)"/>
 </svg>

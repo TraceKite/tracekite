@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   GitBranch, Plus, ChevronDown, RefreshCw, Layers,
-  Trash2, Loader2, Box
+  Trash2, Loader2
 } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
 import RepoPickerModal from "@/components/RepoPickerModal";
@@ -141,16 +141,11 @@ export default function AppHeader() {
 
   return (
     <header className="h-13 flex items-center px-4 gap-3 z-40 flex-shrink-0 bg-[#f4f1e9]/95 border-b border-[#c9c3b7] shadow-xs">
-      {/* Brand Badge */}
-      <div className="flex items-center gap-2.5 flex-shrink-0">
-        <div className="w-7 h-7 rounded-md bg-[#20241f] flex items-center justify-center shadow-xs">
-          <Box className="w-4 h-4 text-[#f4f1e9]" />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-xs font-bold tracking-tight text-slate-900 leading-none">TRACEKITE</span>
-          <span className="text-[9.5px] font-medium text-slate-400 leading-none mt-0.5">Code Intelligence</span>
-        </div>
-      </div>
+      {/* The pack's compact lockup — micro mark plus outlined wordmark, the
+          variant drawn for navigation at this height. Its 120px minimum width
+          is why this is an asset rather than a mark beside live text. */}
+      <img src="/brand/tracekite-compact.svg" alt="TraceKite"
+        width={130} height={26} className="flex-shrink-0" />
 
       <div className="w-px h-5 bg-slate-200 mx-1" />
 

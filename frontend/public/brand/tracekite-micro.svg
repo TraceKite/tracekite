@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="TraceKite small-size mark">
+  <title>TraceKite</title>
+  <desc>A solid kite with an open junction and a short attached tether.</desc>
+  <path d="M12 2L20 9L12 18L4 9Z M14 9A2 2 0 1 0 10 9A2 2 0 1 0 14 9Z" fill="#121A24" fill-rule="evenodd"/>
+  <path d="M12 17.5Q12 20 10 21" stroke="#121A24" stroke-width="1.7" stroke-linecap="round"/>
+  <circle cx="10" cy="21" r="1.1" fill="#121A24"/>
+</svg>
