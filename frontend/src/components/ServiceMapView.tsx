@@ -9,6 +9,7 @@ import GraphCanvasMessage from "@/components/GraphCanvasMessage";
 import WorkspaceWarning from "@/components/WorkspaceWarning";
 import ServiceMapNavigator from "@/components/ServiceMapNavigator";
 import ServiceMapSidebar from "@/components/ServiceMapSidebar";
+import { projectServiceMap, serviceMapEmptyState } from "@/lib/serviceMapProjection";
 
 /* Stable identities: react-kapsule re-applies a prop whenever its reference
  * changes, so inline arrows here re-set the accessor on every React render. */
@@ -49,57 +50,14 @@ function ServiceMapCanvasComponent() {
     return () => ro.disconnect();
   }, [containerEl]);
 
-  const graphData = useMemo(() => {
-    if (!serviceMapData) return { nodes: [], links: [], dangling: 0, isolated: 0 };
-    // Repo-less rendezvous nodes remain until edge pruning; BUILT_FROM
-    // bookkeeping does not become the visual centre of the architecture.
-    const inScope = (n: any) => {
-      if (scopeRepoIds.length === 0) return true;
-      const ids: string[] = n.repo_ids ?? [];
-      if (ids.length === 0) return true;
-      return ids.some((id) => scopeRepoIds.includes(id));
-    };
-    const scopedNodes = serviceMapData.nodes.filter(inScope);
-    const nodeIds = new Set(scopedNodes.map((n) => n.id));
-    const allIds = new Set(serviceMapData.nodes.map((n) => n.id));
-    const selected = serviceMapData.edges.filter(
-      (e) => e.type !== "BUILT_FROM" && mapEdgeTypes.includes(e.type),
-    );
-    // Repo-less endpoints need edge attribution to avoid leaking another scope.
-    const edgeInScope = (e: any) => {
-      if (scopeRepoIds.length === 0) return true;
-      const src: string = e.source_repo_id || "";
-      if (src) return scopeRepoIds.includes(src);
-      return true;
-    };
-    const links = selected
-      .filter(edgeInScope)
-      .filter((e: any) => nodeIds.has(e.source) && nodeIds.has(e.target))
-      .map((e) => ({ ...e, id: `${e.source}->${e.target}->${e.type}` }));
-    // Scope filtering is not a dangling-edge data error.
-    const dangling = selected.filter(
-      (e: any) => !allIds.has(e.source) || !allIds.has(e.target),
-    ).length;
-    const connected = new Set<string>();
-    links.forEach((e: any) => {
-      connected.add(typeof e.source === "object" ? e.source.id : e.source);
-      connected.add(typeof e.target === "object" ? e.target.id : e.target);
-    });
-    const retained = scopedNodes.filter((n) => {
-        if (connected.has(n.id)) return true;
-        if (n.kind !== "service") return false;
-        if (scopeRepoIds.length === 0) return true;
-        return (n.repo_ids ?? []).some((id: string) => scopeRepoIds.includes(id));
-      });
-    const isolates = retained.filter((node) => !connected.has(node.id));
-    const isolateIndex = new Map(isolates.map((node, index) => [node.id, index]));
-    const nodes = retained.map((node) => {
-      const index = isolateIndex.get(node.id);
-      if (index == null) return { ...node };
-      return { ...node, fx: (index - (isolates.length - 1) / 2) * 90, fy: 180 };
-    });
-    return { nodes, links, dangling, isolated: isolates.length };
-  }, [serviceMapData, mapEdgeTypes, scopeRepoIds]);
+  const graphData = useMemo(
+    () => projectServiceMap(serviceMapData, mapEdgeTypes, scopeRepoIds),
+    [serviceMapData, mapEdgeTypes, scopeRepoIds],
+  );
+  const emptyState = useMemo(
+    () => serviceMapEmptyState(serviceMapData, graphData, scopeRepoIds),
+    [serviceMapData, graphData, scopeRepoIds],
+  );
 
   useEffect(() => {
     if (focusNode && !graphData.nodes.some((node: any) => node.id === focusNode.id)) {
@@ -364,11 +322,16 @@ function ServiceMapCanvasComponent() {
           if (typeof document !== "undefined") document.body.style.cursor = node ? "pointer" : "default";
         }}
       />
-      {!layoutReady && (
+      {/* Nothing is being arranged when nothing was drawable, and the progress
+          message would clear into a blank canvas with no explanation. */}
+      {!layoutReady && !emptyState && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#fbfaf6]/90
                         text-xs font-medium text-[#6e7168]">
           Arranging service map…
         </div>
+      )}
+      {emptyState && (
+        <GraphCanvasMessage title={emptyState.title} detail={emptyState.detail} />
       )}
       {graphData.nodes.length > 0 && <><ServiceMapStatus
         nodeCount={graphData.nodes.length}

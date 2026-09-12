@@ -165,6 +165,9 @@ export interface ServiceMapEdge {
   via: string[];
   weight: number;
   path_prefix?: string;
+  // Which repo the calling side was found in. Absent on edges whose source
+  // carries no repo attribution, so scope filtering must not require it.
+  source_repo_id?: string;
   evidence: string[];
 }
 
