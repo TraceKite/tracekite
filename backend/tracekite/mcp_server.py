@@ -88,16 +88,21 @@ class GraphTools:
         if not query:
             return query, []
         known_ids = self._known_node_ids()
-        if query in known_ids:
-            return query, []
-
-        candidates = set()
+        named = set()
         for s in self._result.services:
             if query != s.service_id and query.lower() != s.name.lower():
                 continue
-            candidates.update(candidate for candidate in (
+            named.update(candidate for candidate in (
                 s.service_id, rid.service_id(s.name)) if candidate in known_ids)
-        ordered = sorted(candidates)
+        if query in known_ids:
+            # The exact id can also be a *different* node's name — a Repo
+            # node whose id equals its Service's name. Answering for one
+            # would silently answer the other question, so decline with
+            # both candidates and let the caller pick the canonical id.
+            if named - {query}:
+                return None, sorted({query} | named)
+            return query, []
+        ordered = sorted(named)
         if len(ordered) == 1:
             return ordered[0], []
         if len(ordered) > 1:

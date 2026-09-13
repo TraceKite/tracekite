@@ -176,6 +176,57 @@ class TestProtocol:
             assert len(consumer["spans"]) == len(consumer["evidence"])
 
 
+class TestNameIdCollision:
+    """A service named exactly like its repo is two nodes at once.
+
+    The linker mints a Repo node whose id is the bare repo id, and the
+    corpus names its services after their repos — so "billing-service"
+    is simultaneously an exact node id (the Repo) and a service's name
+    (the Service cluster). Answering for one would silently answer the
+    other question: the agent asking "who calls billing-service" got
+    BUILT_FROM/DEPENDS_ON_REPO, never the CALLS_SERVICE edge. The
+    resolver must decline and offer both candidates instead.
+    """
+
+    def test_a_colliding_name_is_declined_with_both_candidates(self):
+        answer = GraphTools(linked()).consumers_of("billing-service")
+
+        assert answer["found"] is False
+        assert answer["reason"] == "ambiguous service name"
+        assert answer["candidates"] == [
+            "billing-service", "global:Service:billing-service"]
+
+    def test_the_canonical_service_id_still_resolves(self):
+        answer = GraphTools(linked()).consumers_of(
+            "global:Service:billing-service")
+
+        assert answer["found"] is True
+        assert {c["type"] for c in answer["consumers"]} == {"CALLS_SERVICE"}
+
+    def test_trace_declines_colliding_names_and_traces_canonical_ids(self):
+        tools = GraphTools(linked())
+
+        declined = tools.trace("orders-service", "billing-service")
+        traced = tools.trace("global:Service:orders-service",
+                             "global:Service:billing-service")
+
+        assert declined["found"] is False
+        assert declined["reason"] == "ambiguous service name"
+        assert declined["candidates"]["from"] == [
+            "global:Service:orders-service", "orders-service"]
+        assert traced["found"] is True
+
+    def test_an_uncollided_exact_id_is_not_caught_by_the_decline(self):
+        # "global:Service:typo" is neither known nor a name; a *known*
+        # id like the Repo node of a differently-named service must
+        # still answer for itself. The corpus's Repo nodes collide, so
+        # pin the negative: querying by service id never declines.
+        tools = GraphTools(linked())
+        for service in tools._result.services:
+            answer = tools.consumers_of(service.service_id)
+            assert answer["found"] is True, service.service_id
+
+
 class TestEndToEnd:
     def test_an_agent_conversation_over_stdio(self, tmp_path):
         """The exit criterion, literally: artifacts in, protocol frames
