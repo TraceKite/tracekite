@@ -377,6 +377,11 @@ components:
         repo:
           title: Repo
           type: string
+        source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source
       required:
       - id
       - name
@@ -566,7 +571,8 @@ paths:
         '202':
           content:
             application/json:
-              schema: {}
+              schema:
+                $ref: '#/components/schemas/IngestRepoResponse'
           description: Successful Response
         '422':
           content:

@@ -11,6 +11,7 @@ from tracekite.db.constraints import create_constraints
 from tracekite.db.neo4j_client import close_driver
 from tracekite.middleware.auth import BearerAuthMiddleware
 from tracekite.routes import graph, health, impact, jobs, links, repos, rollup, trace
+from tracekite.services.ingest_upload import sweep_upload_dir
 from tracekite.services.job_handlers import register_all
 from tracekite.services.job_queue import job_queue, reap_stale_jobs
 
@@ -33,6 +34,13 @@ async def lifespan(app: FastAPI):
                            reaped)
     except Exception as exc:
         logger.error("Neo4j not ready at startup (health stays degraded): %s", exc)
+    # The sweep touches only the filesystem, so it must not be skipped when
+    # Neo4j is slow to come up — that restart is exactly the one that orphans
+    # bundles.
+    swept = sweep_upload_dir()
+    if swept:
+        logger.warning("Swept %d orphaned bundle(s) from a previous run",
+                       swept)
     register_all(job_queue)
     job_queue.start()
     yield

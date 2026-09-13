@@ -75,14 +75,21 @@ def cmd_ingest(args) -> int:
 def plan_directory(path: str, name: str | None,
                    branch: str | None) -> DirectoryPlan:
     """Validate a directory target and decide what the bundle will carry."""
-    path = os.path.abspath(path)
+    path = os.path.realpath(path)
+    if _git(path, "rev-parse", "--is-inside-work-tree", check=False) != "true":
+        raise IngestError(f"{path} is not a git repository")
+    # git -C <subdir> bundle create ships the whole repository, not the
+    # subdirectory; resolve to the toplevel so the name and the content agree.
+    toplevel = _git(path, "rev-parse", "--show-toplevel")
+    if toplevel != path:
+        print(f"ingest: {path} is a subdirectory; shipping the whole "
+              f"repository at {toplevel}", file=sys.stderr)
+        path = toplevel
     name = name or os.path.basename(path)
     try:
         upload_repo_id(name)      # the same rule the server will apply
     except ValueError as exc:
         raise IngestError(f"{exc}; pass --name to choose one")
-    if _git(path, "rev-parse", "--is-inside-work-tree", check=False) != "true":
-        raise IngestError(f"{path} is not a git repository")
     if not _git(path, "rev-parse", "--verify", "HEAD", check=False):
         raise IngestError(
             "no commits yet — a bundle of an empty history would ingest "

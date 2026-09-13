@@ -125,4 +125,6 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("services.claims", "core"),
     ("services.redaction", "core"),
     ("services.graph_factories", "core"),
+    ("services.graph_properties", "core"),
+    ("services.repo_summary", "core"),
 )

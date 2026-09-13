@@ -25,6 +25,12 @@ JOB_TYPES = INGEST_LANE + LINKER_LANE
 # Jobs that rewrite shared Layer-1/2 state and must not overlap an ingest.
 EXCLUSIVE_JOBS = frozenset(LINKER_LANE)
 
+# ingest_upload carries a different bundle_path each time, so coalescing a
+# second upload onto a queued first one silently drops the new content — the
+# CLI gets 202 for a job that will ingest the old bundle. ingest/refresh are
+# idempotent (the payload is a URL), so dedup remains sound for them.
+_NO_DEDUP = frozenset({"ingest_upload"})
+
 _SENTINEL = None
 
 
@@ -162,7 +168,7 @@ class JobQueue:
         key = (job_type, repo_id)
         with self._pending_lock:
             existing = self._pending.get(key)
-            if existing:
+            if existing and job_type not in _NO_DEDUP:
                 logger.info("Deduplicated %s for %s -> job %s", job_type, repo_id, existing)
                 return existing
             new_id = job_id or str(uuid.uuid4())

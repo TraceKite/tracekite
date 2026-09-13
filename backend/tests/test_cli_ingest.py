@@ -80,6 +80,25 @@ class TestPlanDirectory:
         plan_directory(str(repo), None, None)
         assert "uncommitted changes" in capsys.readouterr().err
 
+    def test_subdirectory_uses_toplevel_path_and_name(self, tmp_path, capsys):
+        repo = tmp_path / "proj"
+        _make_repo(repo, branch="main")
+        subdir = repo / "backend"
+        subdir.mkdir()
+        plan = plan_directory(str(subdir), None, None)
+        assert plan.path == str(repo)
+        assert plan.name == "proj"
+        assert "subdirectory" in capsys.readouterr().err
+
+    def test_subdirectory_with_explicit_name_keeps_name(self, tmp_path, capsys):
+        repo = tmp_path / "proj"
+        _make_repo(repo, branch="main")
+        subdir = repo / "backend"
+        subdir.mkdir()
+        plan = plan_directory(str(subdir), "my-backend", None)
+        assert plan.path == str(repo)
+        assert plan.name == "my-backend"
+
 
 class TestCreateBundle:
     def test_bundle_is_a_real_bundle_with_the_planned_refs(self, tmp_path):

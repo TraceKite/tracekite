@@ -56,6 +56,7 @@ class ClonedRepo:
     branch: str
     head_sha: str
     path: str
+    source: str         # "hosted" or "upload" — explicit, not inferred from url
 
 
 def run_ingestion(job_id: str, github_url: str, branch: Optional[str] = None,
@@ -78,7 +79,7 @@ def run_ingestion(job_id: str, github_url: str, branch: Optional[str] = None,
         repo = ClonedRepo(owner=owner, name=repo_name, url=normalized_url,
                           branch=branch or get_default_branch(local_path),
                           head_sha=get_head_commit_sha(local_path),
-                          path=local_path)
+                          path=local_path, source="hosted")
     except Exception as exc:
         _mark_failed(job_id, repo_id, exc, cleared=False)
         return
@@ -101,7 +102,7 @@ def run_upload_ingestion(job_id: str, repo_id: str, name: str,
         repo = ClonedRepo(owner="local", name=name, url="",
                           branch=branch or get_default_branch(local_path),
                           head_sha=get_head_commit_sha(local_path),
-                          path=local_path)
+                          path=local_path, source="upload")
     except Exception as exc:
         _mark_failed(job_id, repo_id, exc, cleared=False)
         return
@@ -120,6 +121,15 @@ def _scan_and_write(job_id: str, repo_id: str, repo: ClonedRepo,
         _lifecycle(repo_id, "parsing")
         sink = build_graph(repo_id, repo.owner, repo.name, repo.url,
                            repo.branch, repo.head_sha, scan_result)
+        # Stamp the ingestion source on the Repo node after structure
+        # creation — source is a property of the ingestion context, not
+        # of the graph structure, and this avoids threading it through
+        # scan.py (which is already over the 300-line limit).
+        repo_node = next((n for n in sink.nodes if n.id == repo_id), None)
+        if repo_node is None:
+            raise RuntimeError(
+                f"build_graph produced no Repo node for {repo_id}")
+        repo_node.extra_props["source"] = repo.source
 
         _job(job_id, "running", 60, "Resolving call graph", repo_id=repo_id)
         build_call_graph(repo_id, sink.parse_context, sink.nodes, sink.edges)

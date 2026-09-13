@@ -16,7 +16,9 @@ from tracekite.models.api_models import (
 from tracekite.services.graph_reader import get_repo, list_repos
 from tracekite.services.ingest_upload import store_bundle
 from tracekite.services.job_queue import job_queue
-from tracekite.utils.hashing import extract_git_host, generate_repo_id, normalize_github_url
+from tracekite.utils.hashing import (
+    extract_git_host, generate_repo_id, normalize_github_url, upload_repo_id,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -35,6 +37,18 @@ async def ingest_repo(request: IngestRepoRequest):
         raise HTTPException(status_code=400,
                             detail=f"Git host {host!r} is not allowlisted")
 
+    # A local upload repo_id (local_<name>) can collide with a hosted repo
+    # whose owner happens to be "local". Block only a *completed* upload —
+    # a failed one (source unset or ingestion_status != "completed") should
+    # be replaceable by a hosted ingest, not a permanent brick.
+    existing_repo = get_repo(repo_id)
+    if existing_repo and existing_repo.source == "upload" \
+            and existing_repo.ingestion_status == "completed":
+        raise HTTPException(
+            status_code=400,
+            detail=f"repository id {repo_id} is already in use by a local "
+            "upload; re-run `tracekite ingest .` to update it")
+
     job_type = "refresh" if request.refresh else "ingest"
     job_id = job_queue.submit(job_type, repo_id, payload={
         # The normalized URL is what gets cloned and recorded — never the raw
@@ -50,18 +64,34 @@ async def ingest_repo(request: IngestRepoRequest):
     )
 
 
-@router.post("/api/repos/ingest-upload", status_code=202)
-async def ingest_upload(file: UploadFile = File(...), name: str = Form(...),
-                        branch: Optional[str] = Form(None)):
+@router.post("/api/repos/ingest-upload", response_model=IngestRepoResponse,
+             status_code=202)
+def ingest_upload(file: UploadFile = File(...), name: str = Form(...),
+                  branch: Optional[str] = Form(None)):
     """Queue ingestion of a git bundle shipped by `tracekite ingest .`.
 
     The bundle is the whole contract: the server clones it and runs the
     hosted pipeline unchanged, so a repository that exists only on the
     caller's disk draws exactly what a cloned one would.
     """
-    bundle_path = ""
+    # Validate name and check collision before spooling — upload_repo_id is
+    # pure, and there is no reason to write 512 MB only to discard it.
+    # The upload side checks github_url (not source) because pre-migration
+    # hosted repos have a URL but no source property — source alone would
+    # under-protect them. The hosted side checks source == "upload" because
+    # a failed hosted ingest has neither github_url nor source.
     try:
-        repo_id, bundle_path = store_bundle(file, name)
+        repo_id = upload_repo_id(name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    existing = get_repo(repo_id)
+    if existing and existing.github_url:
+        raise HTTPException(
+            status_code=400,
+            detail=f"repository id {repo_id} is already in use by a hosted "
+            f"repository ({existing.github_url}); choose a different --name")
+    try:
+        _, bundle_path = store_bundle(file, name)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     try:

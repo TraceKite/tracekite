@@ -5,16 +5,17 @@ relationship types or match untyped [r] and report type(r). Lite-tier edges
 omit provenance properties; LITE_DEFAULTS are applied here on read.
 """
 
-import json
 import logging
 from typing import Optional
 
 from tracekite.db.neo4j_client import get_session
+from tracekite.services.graph_properties import json_safe, parse_json
 from tracekite.models.api_models import (
     GraphLink, GraphNode, GraphResponse, GraphStats, NodeDetail,
     RepoSummary, SearchResult,
 )
 from tracekite.models.graph_models import LITE_DEFAULTS
+from tracekite.services.repo_summary import repo_summary
 
 logger = logging.getLogger(__name__)
 
@@ -74,37 +75,11 @@ EDGE_RETURN = (
 )
 
 
-def _parse_json(raw) -> dict:
-    if not raw:
-        return {}
-    if isinstance(raw, dict):
-        return raw
-    try:
-        return json.loads(raw)
-    except (ValueError, TypeError):
-        return {}
-
-
-def _to_native_dt(value):
-    return value.to_native() if hasattr(value, "to_native") else value
-
-
-def _json_safe(value):
-    """Neo4j temporal values are not JSON-serializable; fold them as ISO strings."""
-    if isinstance(value, list):
-        return [_json_safe(item) for item in value]
-    to_native = getattr(value, "to_native", None)
-    if callable(to_native):
-        native = to_native()
-        return native.isoformat() if hasattr(native, "isoformat") else str(native)
-    return value
-
-
 def _node_from_props(props: dict, size_bonus: int = 0) -> GraphNode:
-    metadata = _parse_json(props.get("metadata"))
+    metadata = parse_json(props.get("metadata"))
     for key, value in props.items():
         if key not in CORE_NODE_PROPS and value is not None:
-            metadata.setdefault(key, _json_safe(value))
+            metadata.setdefault(key, json_safe(value))
     node_type = props.get("type") or ""
     name = props.get("name") or ""
     return GraphNode(
@@ -135,34 +110,13 @@ def _link_from_record(record) -> GraphLink:
     )
 
 
-def _repo_summary(props: dict) -> RepoSummary:
-    coverage = _parse_json(props.get("parse_coverage_totals"))
-    return RepoSummary(
-        id=props.get("id") or "",
-        name=props.get("name") or "",
-        owner=props.get("owner") or "",
-        repo=props.get("repo") or "",
-        github_url=props.get("github_url") or "",
-        branch=props.get("branch") or "main",
-        last_ingested_at=_to_native_dt(props.get("last_ingested_at")),
-        ingestion_status=props.get("ingestion_status") or "unknown",
-        lifecycle_state=props.get("lifecycle_state"),
-        head_commit_sha=props.get("head_commit_sha"),
-        node_count=props.get("node_count") or 0,
-        edge_count=props.get("edge_count") or 0,
-        parse_coverage=coverage or None,
-        claims_by_kind=_parse_json(props.get("claims_by_kind")) or None,
-        linked_at=_to_native_dt(props.get("linked_at")),
-    )
-
-
 def get_repo(repo_id: str) -> Optional[RepoSummary]:
     with get_session() as session:
         record = session.run(
             "MATCH (r:Repo {id: $repo_id}) RETURN properties(r) AS props",
             repo_id=repo_id,
         ).single()
-        return _repo_summary(record["props"]) if record else None
+        return repo_summary(record["props"]) if record else None
 
 
 def list_repos() -> list[RepoSummary]:
@@ -171,7 +125,7 @@ def list_repos() -> list[RepoSummary]:
             "MATCH (r:Repo) RETURN properties(r) AS props "
             "ORDER BY r.last_ingested_at DESC"
         )
-        return [_repo_summary(record["props"]) for record in result]
+        return [repo_summary(record["props"]) for record in result]
 
 
 def get_graph(repo_id: str, view: str = "overview",

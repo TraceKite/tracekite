@@ -205,7 +205,10 @@ def get_default_branch(repo_path: str) -> str:
     try:
         return _git_output(repo_path, "symbolic-ref", "--short", "HEAD")
     except CloneError:
-        return "main"
+        # Detached HEAD: return the short SHA rather than inventing "main",
+        # which may not exist in the repository. The field is "what HEAD
+        # points to", and a SHA is the honest answer.
+        return _git_output(repo_path, "rev-parse", "--short", "HEAD")
 
 
 def delete_repository(repo_id: str) -> bool:

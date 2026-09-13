@@ -43,6 +43,7 @@ class RepoSummary(BaseModel):
     ingestion_status: str
     lifecycle_state: Optional[str] = None
     head_commit_sha: Optional[str] = None
+    source: Optional[str] = None
     node_count: int = 0
     edge_count: int = 0
     parse_coverage: Optional[dict] = None

@@ -147,7 +147,8 @@ class TestHealthRoute:
 
 class TestReposRoutes:
     def test_ingest_queues_job(self, auth_headers):
-        with patch("tracekite.routes.repos.job_queue") as queue:
+        with patch("tracekite.routes.repos.get_repo", return_value=None), \
+             patch("tracekite.routes.repos.job_queue") as queue:
             queue.submit.return_value = "job-123"
             response = client.post(
                 "/api/repos/ingest",
@@ -164,7 +165,8 @@ class TestReposRoutes:
             "https://github.com/foo/bar")
 
     def test_ingest_refresh_flag_uses_refresh_lane(self, auth_headers):
-        with patch("tracekite.routes.repos.job_queue") as queue:
+        with patch("tracekite.routes.repos.get_repo", return_value=None), \
+             patch("tracekite.routes.repos.job_queue") as queue:
             queue.submit.return_value = "job-124"
             client.post(
                 "/api/repos/ingest",
@@ -187,6 +189,38 @@ class TestReposRoutes:
             headers=auth_headers,
         )
         assert response.status_code == 400
+
+    def test_ingest_declines_when_upload_repo_exists(self, auth_headers):
+        repo = RepoSummary(id="local_demo", name="local/demo",
+                           owner="local", repo="demo", github_url="",
+                           branch="", ingestion_status="completed",
+                           source="upload")
+        with patch("tracekite.routes.repos.get_repo", return_value=repo):
+            response = client.post(
+                "/api/repos/ingest",
+                json={"github_url": "https://github.com/local/demo"},
+                headers=auth_headers)
+        assert response.status_code == 400
+        assert "already in use" in response.json()["detail"]
+
+    def test_ingest_allows_retry_after_failed_clone(self, auth_headers):
+        # A failed hosted ingest leaves a Repo node with no github_url and
+        # no source — the old check (not github_url) read that absence as
+        # "local upload" and permanently blocked the retry.
+        repo = RepoSummary(id="tracekite-regression-probe_does-not-exist",
+                           name="tracekite-regression-probe/does-not-exist",
+                           owner="tracekite-regression-probe",
+                           repo="does-not-exist", github_url="",
+                           branch="", ingestion_status="failed",
+                           lifecycle_state="failed_clean")
+        with patch("tracekite.routes.repos.get_repo", return_value=repo), \
+             patch("tracekite.routes.repos.job_queue") as queue:
+            queue.submit.return_value = "job-retry"
+            response = client.post(
+                "/api/repos/ingest",
+                json={"github_url": "https://github.com/tracekite-regression-probe/does-not-exist"},
+                headers=auth_headers)
+        assert response.status_code == 202
 
     def test_list_repositories(self, auth_headers):
         with patch("tracekite.routes.repos.list_repos",

@@ -239,13 +239,15 @@ export default function AppHeader() {
 
       {appMode === "repo" && managedRepo && (
         <div className="flex items-center gap-1">
-          <button
-            onClick={handleRefresh}
-            title="Refresh repository"
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
+          {managedRepo.github_url && (
+            <button
+              onClick={handleRefresh}
+              title="Refresh repository"
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             onClick={handleDelete}
             title="Delete repository"

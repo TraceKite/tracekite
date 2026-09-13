@@ -10,6 +10,7 @@ export interface RepoSummary {
   node_count: number;
   edge_count: number;
   head_commit_sha: string | null;
+  source: string | null;
   linked_at: string | null;
   claims_by_kind: Record<string, number> | null;
   parse_coverage: Record<string, number> | null;
