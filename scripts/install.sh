@@ -69,14 +69,19 @@ fi
 
 printf '%s\n' \
   "TraceKite setup will:" \
-  "  1. Install the tracekite CLI as a uv tool." \
-  "  2. Install the selected global TraceKite skill files." \
-  "  3. Leave existing skill files and all MCP client configuration untouched."
+  "  - Install the tracekite CLI as a uv tool." \
+  "  - Install the selected global TraceKite skill files." \
+  "  - Leave existing skill files and all MCP client configuration untouched."
 
 if [[ "$auto_confirm" == false ]]; then
   read -r -p "Proceed? [Y/n] " response
   case "$response" in
     ""|y|Y|yes|YES|Yes) ;;
+    [0-9]*)
+      printf '%s\n' "This is not a menu: type Y to proceed or n to cancel." >&2
+      printf '%s\n' "Installation cancelled."
+      exit 0
+      ;;
     *) printf '%s\n' "Installation cancelled."; exit 0 ;;
   esac
 fi
@@ -84,10 +89,12 @@ fi
 cd "$repo_root"
 uv tool install --no-cache --force .
 
+# ${arr[@]+...} because bash 3.2 (macOS /bin/bash) treats an empty "${arr[@]}"
+# as an unbound variable under set -u.
 if command -v tracekite >/dev/null 2>&1; then
-  tracekite install-skill "${client_flags[@]}"
+  tracekite install-skill ${client_flags[@]+"${client_flags[@]}"}
 else
-  uv tool run --from "$repo_root" tracekite install-skill "${client_flags[@]}"
+  uv tool run --from "$repo_root" tracekite install-skill ${client_flags[@]+"${client_flags[@]}"}
 fi
 
 printf '%s\n' \
