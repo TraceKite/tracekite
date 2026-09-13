@@ -1,0 +1,228 @@
+{
+  "observed_on": "2026-09-13",
+  "source_repository": "https://github.com/spring-petclinic/spring-petclinic-microservices",
+  "source_revision": "3858f9c630cf989bb6809a86edf47c2be78dc9f1",
+  "local_source_clean": true,
+  "repo_id": "spring-petclinic_spring-petclinic-microservices",
+  "last_ingested_at": "2026-09-11T14:31:25.794000Z",
+  "linked_at": "2026-09-13T19:18:18.530036Z",
+  "reported_coverage": {
+    "files_seen": 187,
+    "files_parsed": 116,
+    "files_unparsed": 71,
+    "parse_errors": 31
+  },
+  "query": "GET /api/v2/code-bridges?repos=spring-petclinic_spring-petclinic-microservices&limit=100",
+  "returned_node_count": 20,
+  "returned_link_count": 20,
+  "selection": "Only pet-types and owner-by-id contracts retained below; these are stored graph observations, not endorsed edges or an atomic receipt.",
+  "nodes": [
+    {
+      "id": "spring-petclinic_spring-petclinic-microservices:File:a5921b233d0ad9fb",
+      "name": "owner-form.controller.js",
+      "type": "File",
+      "label": "owner-form.controller.js",
+      "path": "spring-petclinic-api-gateway/src/main/resources/static/scripts/owner-form/owner-form.controller.js",
+      "repo_id": "spring-petclinic_spring-petclinic-microservices",
+      "module": "spring-petclinic-api-gateway",
+      "metadata": {}
+    },
+    {
+      "id": "spring-petclinic_spring-petclinic-microservices:ApiEndpoint:232ed05d1cc56510",
+      "name": "GET /owners/{}",
+      "type": "ApiEndpoint",
+      "label": "GET /owners/{}",
+      "path": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/OwnerResource.java",
+      "repo_id": "spring-petclinic_spring-petclinic-microservices",
+      "module": "spring-petclinic-customers-service",
+      "metadata": {}
+    },
+    {
+      "id": "global:Http:customers-service:GET:/owners/{}",
+      "name": "GET /owners/{}",
+      "type": "HttpContract",
+      "label": "GET /owners/{}",
+      "path": null,
+      "repo_id": null,
+      "is_rendezvous": true,
+      "metadata": {}
+    },
+    {
+      "id": "spring-petclinic_spring-petclinic-microservices:ApiEndpoint:628757cd93e85bd3",
+      "name": "PUT /owners/{}",
+      "type": "ApiEndpoint",
+      "label": "PUT /owners/{}",
+      "path": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/OwnerResource.java",
+      "repo_id": "spring-petclinic_spring-petclinic-microservices",
+      "module": "spring-petclinic-customers-service",
+      "metadata": {}
+    },
+    {
+      "id": "global:Http:customers-service:PUT:/owners/{}",
+      "name": "PUT /owners/{}",
+      "type": "HttpContract",
+      "label": "PUT /owners/{}",
+      "path": null,
+      "repo_id": null,
+      "is_rendezvous": true,
+      "metadata": {}
+    },
+    {
+      "id": "spring-petclinic_spring-petclinic-microservices:File:0f49696e265ad7be",
+      "name": "pet-form.controller.js",
+      "type": "File",
+      "label": "pet-form.controller.js",
+      "path": "spring-petclinic-api-gateway/src/main/resources/static/scripts/pet-form/pet-form.controller.js",
+      "repo_id": "spring-petclinic_spring-petclinic-microservices",
+      "module": "spring-petclinic-api-gateway",
+      "metadata": {}
+    },
+    {
+      "id": "spring-petclinic_spring-petclinic-microservices:ApiEndpoint:17f35156def5b988",
+      "name": "GET /petTypes",
+      "type": "ApiEndpoint",
+      "label": "GET /petTypes",
+      "path": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/PetResource.java",
+      "repo_id": "spring-petclinic_spring-petclinic-microservices",
+      "module": "spring-petclinic-customers-service",
+      "metadata": {}
+    },
+    {
+      "id": "global:Http:customers-service:GET:/petTypes",
+      "name": "GET /petTypes",
+      "type": "HttpContract",
+      "label": "GET /petTypes",
+      "path": null,
+      "repo_id": null,
+      "is_rendezvous": true,
+      "metadata": {}
+    },
+    {
+      "id": "spring-petclinic_spring-petclinic-microservices:File:0b4d4a7cdc177e1b",
+      "name": "CustomersServiceClient.java",
+      "type": "File",
+      "label": "CustomersServiceClient.java",
+      "path": "spring-petclinic-api-gateway/src/main/java/org/springframework/samples/petclinic/api/application/CustomersServiceClient.java",
+      "repo_id": "spring-petclinic_spring-petclinic-microservices",
+      "module": "spring-petclinic-api-gateway",
+      "metadata": {}
+    }
+  ],
+  "links": [
+    {
+      "source": "spring-petclinic_spring-petclinic-microservices:File:a5921b233d0ad9fb",
+      "target": "global:Http:customers-service:GET:/owners/{}",
+      "type": "INVOKES",
+      "confidence": 0.88,
+      "evidence": [
+        "spring-petclinic-api-gateway/src/main/resources/static/scripts/owner-form/owner-form.controller.js:12",
+        "spring-petclinic-api-gateway/src/main/resources/application.yml:33"
+      ]
+    },
+    {
+      "source": "spring-petclinic_spring-petclinic-microservices:ApiEndpoint:232ed05d1cc56510",
+      "target": "global:Http:customers-service:GET:/owners/{}",
+      "type": "EXPOSES",
+      "confidence": 0.98,
+      "evidence": [
+        "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/OwnerResource.java:68"
+      ]
+    },
+    {
+      "source": "spring-petclinic_spring-petclinic-microservices:File:a5921b233d0ad9fb",
+      "target": "global:Http:customers-service:PUT:/owners/{}",
+      "type": "INVOKES",
+      "confidence": 0.88,
+      "evidence": [
+        "spring-petclinic-api-gateway/src/main/resources/static/scripts/owner-form/owner-form.controller.js:21",
+        "spring-petclinic-api-gateway/src/main/resources/application.yml:33"
+      ]
+    },
+    {
+      "source": "spring-petclinic_spring-petclinic-microservices:ApiEndpoint:628757cd93e85bd3",
+      "target": "global:Http:customers-service:PUT:/owners/{}",
+      "type": "EXPOSES",
+      "confidence": 0.98,
+      "evidence": [
+        "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/OwnerResource.java:85"
+      ]
+    },
+    {
+      "source": "spring-petclinic_spring-petclinic-microservices:File:0f49696e265ad7be",
+      "target": "global:Http:customers-service:GET:/petTypes",
+      "type": "INVOKES",
+      "confidence": 0.88,
+      "evidence": [
+        "spring-petclinic-api-gateway/src/main/resources/static/scripts/pet-form/pet-form.controller.js:8",
+        "spring-petclinic-api-gateway/src/main/resources/application.yml:33"
+      ]
+    },
+    {
+      "source": "spring-petclinic_spring-petclinic-microservices:ApiEndpoint:17f35156def5b988",
+      "target": "global:Http:customers-service:GET:/petTypes",
+      "type": "EXPOSES",
+      "confidence": 0.98,
+      "evidence": [
+        "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/PetResource.java:50"
+      ]
+    },
+    {
+      "source": "spring-petclinic_spring-petclinic-microservices:File:0f49696e265ad7be",
+      "target": "global:Http:customers-service:GET:/owners/{}",
+      "type": "INVOKES",
+      "confidence": 0.88,
+      "evidence": [
+        "spring-petclinic-api-gateway/src/main/resources/static/scripts/pet-form/pet-form.controller.js:15",
+        "spring-petclinic-api-gateway/src/main/resources/application.yml:33"
+      ]
+    },
+    {
+      "source": "spring-petclinic_spring-petclinic-microservices:ApiEndpoint:232ed05d1cc56510",
+      "target": "global:Http:customers-service:GET:/owners/{}",
+      "type": "EXPOSES",
+      "confidence": 0.98,
+      "evidence": [
+        "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/OwnerResource.java:68"
+      ]
+    },
+    {
+      "source": "spring-petclinic_spring-petclinic-microservices:File:0f49696e265ad7be",
+      "target": "global:Http:customers-service:PUT:/owners/{}",
+      "type": "INVOKES",
+      "confidence": 0.88,
+      "evidence": [
+        "spring-petclinic-api-gateway/src/main/resources/static/scripts/pet-form/pet-form.controller.js:43",
+        "spring-petclinic-api-gateway/src/main/resources/application.yml:33"
+      ]
+    },
+    {
+      "source": "spring-petclinic_spring-petclinic-microservices:ApiEndpoint:628757cd93e85bd3",
+      "target": "global:Http:customers-service:PUT:/owners/{}",
+      "type": "EXPOSES",
+      "confidence": 0.98,
+      "evidence": [
+        "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/OwnerResource.java:85"
+      ]
+    },
+    {
+      "source": "spring-petclinic_spring-petclinic-microservices:File:0b4d4a7cdc177e1b",
+      "target": "global:Http:customers-service:GET:/owners/{}",
+      "type": "INVOKES",
+      "confidence": 0.95,
+      "evidence": [
+        "spring-petclinic-api-gateway/src/main/java/org/springframework/samples/petclinic/api/application/CustomersServiceClient.java:37"
+      ]
+    },
+    {
+      "source": "spring-petclinic_spring-petclinic-microservices:ApiEndpoint:232ed05d1cc56510",
+      "target": "global:Http:customers-service:GET:/owners/{}",
+      "type": "EXPOSES",
+      "confidence": 0.98,
+      "evidence": [
+        "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/OwnerResource.java:68"
+      ]
+    }
+  ],
+  "missing_in_returned_bridges": "No INVOKES row for VisitsServiceClient.java occurred in the full 20-link response.",
+  "qualification": "The pet-form GET /owners/{} citation at line 15 and PUT /owners/{} citation at line 43 conflict with the complete request paths in that source. No fresh ingestion or PetClinic runtime test was performed."
+}

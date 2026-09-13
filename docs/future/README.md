@@ -1,4 +1,21 @@
-# TraceKite front-end redesign studies
+# TraceKite future designs and research
+
+## Agent intelligence research
+
+The [Evidence Compiler strategy](evidence-compiler-strategy.md) and its
+[Word edition](evidence-compiler-strategy.docx) describe a proposed research
+direction, not implemented features or measured savings. The reviewed design
+requires coherent captured inputs, complete final-payload budget checks and
+invalidation when previously unselected candidates change.
+
+The [PetClinic before and after examples](petclinic-before-after.md) ground the
+proposal in a pinned local Spring Boot checkout. They distinguish current
+source and stored graph evidence from future RWC behavior, and record a nested
+pet-path mislink and missing visits bridge that require follow-up. The
+[evidence observation](petclinic-evidence-observation.json) retains the scoped
+response subset. These examples did not modify PetClinic or its stored graph.
+
+## Front end redesign studies
 
 These two packages replace the earlier concept-first drafts. Both were created
 after reviewing the running application at `http://localhost:28080/`, including
