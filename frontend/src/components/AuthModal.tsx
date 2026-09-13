@@ -10,6 +10,8 @@ type Diagnosis = {
   tokenAtFault: boolean;
 };
 
+const BACKEND_UNREACHABLE = "Cannot reach the backend. Check that the API is running.";
+
 /**
  * Work out what actually went wrong before blaming the user's token.
  *
@@ -39,10 +41,7 @@ async function diagnose(err: unknown): Promise<Diagnosis> {
 
   // No status means fetch itself failed — the backend is unreachable.
   if (status === undefined) {
-    return {
-      message: "Cannot reach the backend. Check that the API is running.",
-      tokenAtFault: false,
-    };
+    return { message: BACKEND_UNREACHABLE, tokenAtFault: false };
   }
 
   try {
@@ -54,7 +53,7 @@ async function diagnose(err: unknown): Promise<Diagnosis> {
       };
     }
   } catch {
-    return { message: "Cannot reach the backend. Check that the API is running.", tokenAtFault: false };
+    return { message: BACKEND_UNREACHABLE, tokenAtFault: false };
   }
 
   return { message: `The server returned an error (${status}).`, tokenAtFault: false };
@@ -76,6 +75,7 @@ export default function AuthModal() {
     window.addEventListener("auth-required", handleAuthReq);
 
     let cancelled = false;
+    let probeFailed = false;
     (async () => {
       // Ask the backend whether a credential is even required before deciding
       // to prompt. /health is public, so this works with no token, and it
@@ -94,10 +94,19 @@ export default function AuthModal() {
           } catch { /* surfaced by the views themselves */ }
           return;
         }
-      } catch { /* health unreachable: fall through to the token flow */ }
+      } catch {
+        // The probe itself failed, so whether auth is required is unknown.
+        // Prompting for a token without saying so blames the reader for an
+        // outage: /health is public, so its failure is never about credentials.
+        probeFailed = true;
+      }
       if (cancelled) return;
 
       if (!getApiToken()) {
+        if (probeFailed) {
+          setError(BACKEND_UNREACHABLE);
+          setDismissible(true);
+        }
         setIsOpen(true);
         return;
       }

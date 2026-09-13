@@ -154,11 +154,21 @@ export interface ServiceMapNode {
   fy?: number;
 }
 
+/** Mirrors MAP_EDGE_TYPES in backend/tracekite/db/impact_reader.py, which is
+ *  what /api/v2/service-map actually queries for. */
+export type ServiceMapEdgeType =
+  | "CALLS_SERVICE"
+  | "ROUTES_TO"
+  | "BUILT_FROM"
+  | "PUBLISHES_TO"
+  | "CONSUMES_FROM"
+  | "FANS_OUT_TO";
+
 export interface ServiceMapEdge {
   id?: string;
   source: string | any;
   target: string | any;
-  type: "CALLS_SERVICE" | "ROUTES_TO" | "BUILT_FROM";
+  type: ServiceMapEdgeType;
   confidence: number;
   min_confidence: number;
   max_confidence: number;

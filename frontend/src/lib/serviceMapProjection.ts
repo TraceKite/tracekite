@@ -18,8 +18,15 @@ function nothingToDraw(): ServiceMapProjection {
   return { nodes: [], links: [], dangling: 0, isolated: 0 };
 }
 
-/** Isolated services are pinned in a row so they read as a list, not a heap. */
-const ISOLATE_SPACING = 90;
+/** Isolated services are pinned in a row so they read as a list, not a heap.
+ *
+ * The gap has to clear a label, not a dot: at the zoom a fitted map settles on,
+ * 90 graph units was ~98px against a ~94px bare service name, so every label
+ * clipped its neighbour's last character. This only became worth widening once
+ * labels were bounded — while they were full repo-qualified names at ~380px, no
+ * spacing could have helped, because zoomToFit shrinks the scale by whatever
+ * factor the row is widened by. */
+const ISOLATE_SPACING = 150;
 const ISOLATE_ROW_Y = 180;
 
 function nodeInScope(node: ServiceMapNode, scopeRepoIds: string[]): boolean {

@@ -55,6 +55,32 @@ test("an edge attributed to another repo is not drawn into this scope", () => {
   assert.deepEqual(projected.nodes.map((n) => n.id), ["svc:a", "svc:b"]);
 });
 
+test("messaging edge types reach the canvas, not just the http ones", () => {
+  const data = response({
+    nodes: [
+      { id: "svc:a", name: "a", kind: "service", repo_ids: ["repo-one"] },
+      { id: "topic:t", name: "t", kind: "node", repo_ids: ["repo-one"] },
+      { id: "svc:b", name: "b", kind: "service", repo_ids: ["repo-one"] },
+    ],
+    edges: [
+      {
+        source: "svc:a", target: "topic:t", type: "PUBLISHES_TO", confidence: 0.9,
+        min_confidence: 0.9, max_confidence: 0.9, via: [], weight: 1, evidence: [],
+      },
+      {
+        source: "svc:b", target: "topic:t", type: "CONSUMES_FROM", confidence: 0.9,
+        min_confidence: 0.9, max_confidence: 0.9, via: [], weight: 1, evidence: [],
+      },
+    ],
+  });
+  const projected = projectServiceMap(
+    data, ["PUBLISHES_TO", "CONSUMES_FROM", "FANS_OUT_TO"], []);
+  assert.equal(projected.links.length, 2);
+  // The topic node is drawn because an edge reaches it, not because it is a
+  // service — that is what keeps rendezvous nodes out of an unlinked map.
+  assert.deepEqual(projected.nodes.map((n) => n.id).sort(), ["svc:a", "svc:b", "topic:t"]);
+});
+
 test("an edge with no repo attribution survives scoping", () => {
   const data = response();
   delete data.edges[0].source_repo_id;
@@ -67,6 +93,18 @@ test("each projection owns its arrays, because force-graph mutates them", () => 
   const second = projectServiceMap(null, EDGE_TYPES, []);
   assert.notEqual(first.nodes, second.nodes);
   assert.notEqual(first.links, second.links);
+});
+
+test("unconnected services are pinned in a row centred on the origin", () => {
+  const projected = projectServiceMap(response(), [], []);
+  const pinned = projected.nodes.filter((n) => n.fx != null);
+  assert.equal(pinned.length, 3);
+  assert.deepEqual(pinned.map((n) => n.fy), [180, 180, 180]);
+  // Symmetric about zero, so zoomToFit does not favour one end of the row.
+  assert.equal(pinned.reduce((sum, n) => sum + (n.fx ?? 0), 0), 0);
+  // Wide enough that a bare service name does not clip its neighbour.
+  const gaps = pinned.slice(1).map((n, i) => (n.fx ?? 0) - (pinned[i].fx ?? 0));
+  assert.deepEqual(gaps, [150, 150]);
 });
 
 test("a scope with no resolved services explains that the services are elsewhere", () => {
