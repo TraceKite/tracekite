@@ -5,12 +5,15 @@ import tomllib
 from pathlib import Path
 
 import pytest
+import yaml
 
 from tracekite.agent_setup import (
+    TARGETS,
     SKILL_CONTENT,
     SkillConflictError,
     install_skills,
 )
+from tracekite.mcp_server import TOOLS
 
 REPO = Path(__file__).resolve().parents[2]
 PLUGIN = REPO / "plugins" / "tracekite"
@@ -92,3 +95,35 @@ def test_plugin_and_package_versions_are_released_together():
 
     assert versions == {
         application["project"]["version"], core["project"]["version"]}
+
+
+def _skill_frontmatter() -> dict:
+    """The YAML header every client parses to decide whether to load us."""
+    _, _, rest = SKILL_CONTENT.partition("---\n")
+    header, sep, _body = rest.partition("\n---\n")
+    assert sep, "skill has no closing frontmatter fence"
+    return yaml.safe_load(header)
+
+
+def test_skill_frontmatter_loads_under_the_name_every_client_installs():
+    front = _skill_frontmatter()
+
+    installed_dirs = {target.relative_path[-2] for target in TARGETS}
+    assert installed_dirs == {front["name"]}
+    assert front["description"].strip()
+
+
+def test_skill_documents_every_tool_the_mcp_server_serves():
+    """A tool the skill omits is a tool the agent never learns to call."""
+    _, _, body = SKILL_CONTENT.partition("\n---\n")
+
+    for name in sorted(tool["name"] for tool in TOOLS):
+        assert f"`{name}(" in body, f"skill does not document {name}"
+
+
+def test_skill_routes_agents_to_the_graph_before_a_filesystem_search():
+    """The routing rule is the fix; a pure tool listing does not fire."""
+    body = SKILL_CONTENT.partition("\n---\n")[2].lower()
+
+    assert "before searching the filesystem" in body
+    assert "candidates" in body
