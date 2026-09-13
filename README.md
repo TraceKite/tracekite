@@ -1,4 +1,7 @@
-# TraceKite
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="frontend/public/brand/tracekite-horizontal-reverse.svg">
+  <img alt="TraceKite" src="frontend/public/brand/tracekite-horizontal.svg" width="300">
+</picture>
 
 *trace* + *kite* — follow every dependency line back to the source that proves it.
 

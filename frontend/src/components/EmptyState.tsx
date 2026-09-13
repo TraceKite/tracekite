@@ -1,4 +1,4 @@
-import { GitGraph, ArrowUp } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 
 export default function EmptyState() {
   return (
@@ -11,7 +11,10 @@ export default function EmptyState() {
               border: "1px solid rgba(59,130,246,0.15)",
               boxShadow: "0 0 20px rgba(59,130,246,0.08)",
             }}>
-            <GitGraph className="w-10 h-10" style={{ color: "#315b47" }} />
+            {/* Primary mark at 56px — above the pack's 48px minimum. Empty alt
+                because the heading below already announces the name. */}
+            <img src="/brand/tracekite-mark.svg" alt=""
+              width={45} height={56} className="h-14 w-auto" />
           </div>
           <div className="absolute inset-0" style={{ animation: "spin 8s linear infinite" }}>
             <div className="absolute -top-1 left-1/2 w-2 h-2 rounded-full"
