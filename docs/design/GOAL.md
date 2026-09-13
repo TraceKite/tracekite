@@ -13,28 +13,48 @@ inference, with a file and line cited on *both* sides of every edge.
 
 ## Where it stands
 
-Working today on six real repositories: 16 resolvers, 19 claim kinds, 19
-tree-sitter languages, 21 config/IaC parsers. 38,696 nodes, 62,854 edges, 141
-service connections, **189 true positives and 0 false positives** across seven
-strata. A full link takes ~10 seconds.
+The repository contains an embeddable scan/link engine, portable artifacts,
+incremental scan reuse, a CLI, an integration facade and MCP tools, alongside
+the FastAPI + Neo4j + React application. `GraphStore` and its SQLite, Neo4j and
+in-memory implementations exist. The narrower `LinkerStore` remains active for
+link runs. Source packaging lives in `packaging/tracekite-core`; distribution
+availability and installed-wheel validation are separate release checks.
 
-It is currently an application: FastAPI + Neo4j + React on Docker Compose.
+`tracekite pr` already compares base/head artifacts and reports indexed consumer
+losses; `drift` and `reverify` also exist. These are not yet a complete stored
+receipt replay and agent-claim verification protocol. A lost indexed connection
+does not by itself prove a runtime failure, and exit zero is not deletion
+permission. See [agent verification](agent-verification-layer.md).
+
+The six-repository figures (38,696 nodes, 62,854 edges and 189 TP / 0 FP) are
+historical reference measurements, not current inventory or universal accuracy.
+Architecture §7.5 records later synthetic runs at 100 and 1,001 repositories,
+including limitations of their claim density. It is no longer accurate to
+describe all scale evidence as extrapolation; production-scale qualification
+still needs representative workloads.
 
 ## The goal
 
-Become an engine that a host embeds, governed by
-`docs/design/architecture.md`, which is normative.
+Maintain one engine that a host embeds, governed by
+`docs/design/architecture.md`, which is normative, and qualify its integrations
+against reproducible source, scope and release evidence.
 
-At the end TraceKite is **two surfaces over one engine**:
+TraceKite has **two surfaces over one engine**:
 
-- `docker compose up` — the product, exactly as today
-- `pip install tracekite-core` — the same engine as a library: no server, no
-  database, host supplies storage or none
+- the Docker Compose application;
+- the `tracekite-core` library/CLI distribution: the host supplies storage or
+  none, without adopting the application server.
 
-…and it answers, on every pull request, **which consumers a change breaks**,
-with a file and line for each, across an estate of a thousand repositories.
+On pull requests, report **which indexed consumers lose supported connections**,
+with source evidence and limitations. Extend this to recheckable structural
+claims across large estates without claiming exhaustive runtime safety.
 
-## Phase gates
+## Historical phase gates and current qualification
+
+These are acceptance areas from the original roadmap, not assertions that every
+component remains unbuilt or every phase is complete. Implementation, installed
+package validation, representative accuracy and release qualification are
+different proof layers; the active tracker and release evidence determine status.
 
 1. **Embeddable** (17) — package split, pure `scan()`/`link()`, GraphStore
    protocol over SQLite/Neo4j/in-memory, determinism, CLI.
@@ -46,14 +66,16 @@ with a file and line for each, across an estate of a thousand repositories.
 3. **Model** (10) — UI_CALLS, vendor catalog, SCIP import for symbol calls,
    `tracekite explain`. *Exit: every edge explains its own derivation.*
 4. **Change** (21) — temporal, PR mode, contract drift, calibrated confidence.
-   *Exit: a PR comment names exactly who breaks.*
+   *Exit: a PR report names supported indexed losses with citations and explicit
+   scope; its runtime implications and missing evidence are not overstated.*
 5. **Breadth** (14) — protocol and IaC long tail, MCP surface, fixtures.
 
 ## Non-negotiable
 
-- **Precision is the product.** 189 TP / 0 FP survives every change, or the
-  change is wrong. Decline-don't-guess stays: a decline is recorded data, never
-  silence.
+- **Precision is the product.** Regressions against the labeled precision gate
+  are defects. The historical 189 TP / 0 FP result applies to its measured
+  cases, not every graph or future input. Decline-don't-guess stays: a decline
+  is recorded data, never silence.
 - **Ten invariants hold** (architecture §6). Two are load-bearing. **I8** —
   side tables stay O(services + rules), never O(claims); the moment one goes
   claim-proportional the estate stops sharding. **I9** — rendezvous keys are
@@ -66,14 +88,16 @@ with a file and line for each, across an estate of a thousand repositories.
   get a worse graph than app users.
 - **No duplicate code.** One implementation, both surfaces.
 
-## What to expect
+## Shared verification and context direction
 
-Phases 1 and 2 are 44 of 89 tasks and add **zero visible features** — the
-screen looks identical when they land. Everything bought is optionality: the
-ability to do Phases 3–4 at all, and to be depended on rather than
-reimplemented.
+Build one shared evidence/receipt foundation. The first new delivery is a scoped
+agent-claim verifier using the existing PR analysis. The optional Evidence
+Compiler consumes that foundation to select and maintain task context under a
+budget. A verifier can ship without a compiler; the compiler must not create a
+second graph, receipt identity or semantic validator.
 
-The riskiest single task is B2, the SQLite backend: it sits on the critical
-path and is a from-scratch port of all CRUD plus four recursive CTEs. The
-1,000-repo figures are extrapolated from six real ones, so H8 probes that at
-100 repos early, before the parallel work is designed on top of it.
+The [verification design](agent-verification-layer.md) owns the proposed shared
+contract and verification policy boundary. The [compiler strategy](../future/evidence-compiler-strategy.md)
+owns the optional context-selection experiment and its economic tests. Neither
+document changes the core prohibition on general agent planning or authorizes
+edits, deletion, merging or deployment from graph evidence alone.

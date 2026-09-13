@@ -63,12 +63,12 @@ picking whichever one supports your change discards it.
 
 Two traps in this repo produce exactly this error:
 
-- **Design documents written in the present tense.** `architecture.md` puts
-  `GraphStore` in its layer diagram and defines `class GraphStore(Protocol)` in
-  §3; §11.13 is the task to migrate `db/neo4j_client.py` onto it. It is the
-  target, not the code. Asserting it exists today is wrong in the most
-  expensive way — confidently, in the project's own vocabulary, to a reader
-  with no reason to doubt it.
+- **Design documents and warnings can both become stale.** `GraphStore` now
+  exists in `db/graph_store.py`, with SQLite, Neo4j and in-memory backends
+  (architecture §5 and §11.13). An older version of this file called it a
+  future target. Its existence does not prove every store call has migrated:
+  `LinkerStore` remains the active narrow port for a link run. Verify the
+  particular implementation or migration claim, not just the class name.
 - **Scaffolding that looks like a contract** — fixed, and worth knowing how,
   because the shape recurs. `lib/api-spec/openapi.yaml` used to declare one
   path, `/healthz`, which the backend does not serve, while nothing imported
@@ -105,8 +105,8 @@ lib/                     shared TS packages consumed across the workspace
 
 **Dependencies point down, never up.** `core` logic imports nothing from the
 layers above it; parsers may import core; only `db/` performs storage I/O;
-nothing imports the UI. `architecture.md` §2 names the three files that
-currently violate this — do not add a fourth.
+nothing imports the UI. `architecture.md` §2 describes the layer checks and
+their historical fixes. Run the check; do not rely on an old violation count.
 
 A route handler that contains a `for` loop over graph nodes is in the wrong
 file. Move the logic to a service and let the route call it.
@@ -223,11 +223,11 @@ takes six flags to reproduce its callers' variations has abstracted nothing.
 The roadmap splits this into a library and a server (`GOAL.md`). Code written
 today should not have to be unpicked to get there.
 
-- **Depend on protocols, not implementations.** Storage is reached through
-  `db/`, and is on its way to the `GraphStore` protocol defined in
-  `architecture.md` §11.13. A service that imports the Neo4j driver directly
-  cannot be used by a host that has no Neo4j, and will have to be rewritten
-  when that protocol lands — so don't write one now.
+- **Depend on protocols, not implementations.** Reach storage through `db/`
+  and the existing `GraphStore` or the linker's narrower `LinkerStore` port
+  (architecture §11.13). A portable service that imports the Neo4j driver
+  directly cannot be used by a host without Neo4j. Keep backend-specific
+  access in its adapter; do not duplicate the engine for another host.
 - **Extend by registration, not by editing a switch.** New parsers register in
   `parser_registry.py`; new resolvers are `rN_name.py` exposing
   `resolve(index, ctx)`. Adding a capability should add a file, not edit five.

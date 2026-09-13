@@ -100,10 +100,10 @@ class SnapshotIdentity(BaseModel):
     def canonical_digest(self) -> str:
         """A stable fingerprint of the inputs that produced this answer.
 
-        Two answers with the same canonical digest are substantively
-        identical.  Observational timing is excluded — the same sources,
-        config and engine yield the same digest regardless of when the
-        query ran.
+        This identifies declared snapshot inputs, not a query or its answer.
+        Query kind, scope, parameters and limits need a separate identity.
+        Observational timing is excluded; equal digests do not establish
+        source completeness, freshness or semantic correctness.
         """
         import hashlib
         import json

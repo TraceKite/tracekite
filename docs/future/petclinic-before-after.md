@@ -5,6 +5,12 @@ to the actual **Spring PetClinic Microservices** checkout in local TraceKite.
 The project is a Spring Boot pet-clinic application, rather than a repository
 named Pet Store.
 
+The [shared verification design](../design/agent-verification-layer.md) now sets
+the delivery order: verification first, optional context compilation later.
+Before an edit, packets organize evidence; after an edit, the verifier checks
+explicit structural claims against new inputs. Both use the same receipts.
+The source observations below remain dated records, not a fresh ingestion.
+
 **Before** describes the current source and stored graph, plus the work an agent
 still has to do. **After** describes the proposed RWC behavior. RWC is not
 implemented, no PetClinic files were changed, and no token or cost savings were

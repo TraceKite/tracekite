@@ -4,6 +4,16 @@
 
 Build both ideas, with a shared intelligence contract behind them. The UI should help a person explore connections and their limits. Framework integrations should receive the same analysis, evidence, scope and uncertainty in a stable machine-readable form.
 
+Here, "both ideas" refers to the original UI exploration and framework-integration
+proposals. The later [agent verification design](agent-verification-layer.md) and
+[compiler strategy](../future/evidence-compiler-strategy.md) are one additional
+staged plan: shared receipts and scoped claim verification first, optional
+context compilation after evaluation. Reuse the existing PR engine. Do not
+create separate receipt stores or validators, and do not require a compiler to
+release the verifier. The basic four-method facade now exists; richer typed
+operations below remain proposed. This clarification does not update tracker
+completion states or establish current package-publication status.
+
 The long-term product is a software intelligence engine that can answer: what depends on this, why the connection exists, what a specified change affects, which conclusions remain uncertain, and what evidence would resolve that uncertainty. A dependable integration can reproduce an answer against a named snapshot and verify it before relying on it.
 
 This is a proposed implementation plan, not a claim that the features below already ship. Reviewed against commit `1151cc36ff74518fbfdc289809b115922f52c707`. The repository was PRIVATE when checked through GitHub during this review. The existing local Docker edit was outside this planning change.

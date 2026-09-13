@@ -7,13 +7,12 @@ traversals are all bounded with edge-type predicates, so recursive CTEs cover
 them. `shortestPath` is deliberately never used — it is the one traversal that
 is genuinely hard to port.
 
-Backends (§5.2): SQLite is the default and doubles as the portable artifact
-format; Neo4j is opt-in for teams already running it; in-memory serves tests.
-None of them exist behind this protocol yet — B1, B2 and B3 are what implement
-it, and A5 is only met when the same suite passes against all three.
+SQLiteGraphStore, Neo4jGraphStore and InMemoryGraphStore implement this protocol
+in sibling modules. SQLite also serves the portable artifact format. Shared
+conformance tests cover the backends; live Neo4j coverage requires its fixture.
 
-`LinkerStore` in `services/linker/ports.py` is a narrower, older port covering
-one link run. It is not superseded until a backend here can serve it.
+`LinkerStore` in `services/linker/ports.py` remains the active narrower port
+covering one link run; the existence of GraphStore does not retire that port.
 """
 
 from dataclasses import dataclass, field
@@ -79,7 +78,7 @@ class Result:
 
 
 class GraphStore(Protocol):
-    """Every storage operation the engine performs (architecture §5.1)."""
+    """Operations supported by the portable backends (architecture §5.1)."""
 
     def upsert_nodes(self, nodes: Iterable[GraphNode]) -> None: ...
 

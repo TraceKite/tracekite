@@ -1,12 +1,12 @@
-# TraceKite strategy for lower cost coding agents
+# TraceKite verification and context strategy
 
-TraceKite should develop an **Evidence Compiler** for coding agents: a system that turns a requested change into a small set of explicit questions, answers the supported questions from source evidence, and supplies more code only when the task requires it. Its purpose is to reduce the total cost of a correctly completed change while making missing and outdated information visible.
+TraceKite should build **one shared evidence foundation** for structural claim verification and economical coding-task context. Deliver the verifier first, reusing existing scan/link/PR analysis. Add an Evidence Compiler as an optional adapter if quality and cost experiments justify it. Both uses must expose missing and outdated evidence; neither establishes general runtime safety.
 
 The most promising initial market is teams making changes across services, repositories, configuration and API boundaries. These are the places where an agent can spend many turns reconstructing a connection that TraceKite can already derive mechanically. A one-file edit is a useful control case, not the main reason to adopt this product.
 
 ### The recommended bet
 
-Build a **Rendezvous Witness Compiler**, or RWC, as the research kernel behind the Evidence Compiler. A witness is the provider, consumer and configuration evidence supporting a connection. The compiler should preserve these witnesses, track unresolved questions, and watch the inputs that could change an answer, including the arrival of a previously unseen consumer.
+For the optional compiler, prototype the **Rendezvous Witness Compiler**, or RWC, over shared analysis receipts. A witness is the provider, consumer and configuration evidence supporting a connection. Selection must preserve these witnesses, track unresolved questions, and watch inputs that could change an answer, including previously unseen consumers. RWC is not a second graph or verification engine.
 
 The intended developer experience is simple. The agent receives the relevant contracts and source locations, an explanation of what remains unknown, and a way to expand exact source. After a code or configuration change, it receives a replacement packet whose validity can be checked. Repeated questions can reuse computation without making yesterday's answer look current.
 
@@ -16,13 +16,36 @@ The intended developer experience is simple. The agent receives the relevant con
 
 The larger opportunity is to make codebase understanding reusable infrastructure. A team should not need every coding agent to rediscover the same service bindings. Verified source facts can be shared within an authorized snapshot; model-generated reasoning and unverified conclusions should not become shared truth. If the evidence layer is useful across models, changing an agent or model should not require rebuilding that layer.
 
-Start with a narrow adoption gate: target at least **30 percent lower cost per accepted task** on the initial workload, measured against the strongest affordable baseline. Require a predeclared quality margin and publish failures. If only the serialized tool response becomes smaller, the central product claim has not been established.
+For the compiler, target at least **30 percent lower cost per accepted task** against a baseline with the same verification policy. Require a predeclared quality margin and publish failures. Measure the verifier's correctness and review value separately. Smaller serialized responses alone do not establish either product benefit.
 
 ### Novelty and open source
 
 Graphs, prompt compression, context compilers, proof-carrying packets and incremental caches already have prior art. Neither the product name nor the combination alone establishes a new algorithm. RWC is a candidate contribution that needs a precise specification, a comparative implementation and reproducible results. There is no basis here for a worldwide-first or patentability claim.
 
 An open-source advantage must survive inspection. Keep the kernel, receipt validator and benchmark public. Build defensibility through cross-repository coverage, integration quality, difficult regression fixtures and measured economics. A hidden ranking formula would provide a weaker foundation for trust.
+
+<!-- page -->
+
+## Verification and context compilation
+
+The [agent verification design](../design/agent-verification-layer.md) defines the proposed shared receipt contract and verification boundary. This strategy covers optional context selection and its economics. Keep both documents as views of one plan, not specifications for separate evidence systems.
+
+| Dimension | Verification layer | Evidence Compiler |
+| --- | --- | --- |
+| Main question | Does a stated structural claim agree with scoped evidence? | Which evidence should the coding task receive within its budget? |
+| Typical use | CI or review after an edit; also pre-edit assertions | Preparing and refreshing context during a task |
+| Existing foundation | Scan, link, base/head PR impact, drift and answer contracts | The same engine, graph queries and answer envelope |
+| New work | Trusted input scope, claim comparison, stored-receipt replay and explicit verdicts | Witness selection, token accounting, source expansion and session lifecycle |
+| Success evidence | Correct scoped verdicts, useful counterexamples, review effort | Cost per accepted task and quality relative to the same verifier without a compiler |
+| Release dependency | Can release without context compilation | Requires shared evidence primitives, not CI posting or signing |
+
+The shared foundation owns source and artifact identity, query/diff identity, derivations, completeness and replay. A context packet references its receipts and adds presentation policy; it must not create competing definitions of truth, freshness or evidence. The current PR command already analyzes losses, but it does not yet verify an agent claim or replay a first-class receipt.
+
+A snapshot hash is not an answer hash. Base/head scope, query parameters, analysis limits, configuration and engine identity must be bound separately. A token budget may shorten presentation but must not silently remove a contradiction from adjudication. A signed receipt authenticates its issuer, not its semantic correctness.
+
+Deliver the shared RWC-02/03/06 work and the verification-specific AV-01/02 adapters first. Run the RWC-01 baseline alongside them. Use full replay initially; selective invalidation and context ranking are not required for an honest verifier. If only one new capability can be funded, choose verification and leave the compiler gated on evaluation.
+
+This changes the earlier compiler-first sequencing. It preserves the cost-reduction research direction while recognizing that PR analysis already exists and that both branches need the same dependable inputs. Existing task statuses and public APIs are unchanged by this plan.
 
 <!-- page -->
 
@@ -105,7 +128,7 @@ A receipt can establish that a result follows from a named snapshot under named 
 
 ## Current TraceKite foundation and architecture
 
-The current source provides useful foundations. `AnswerEnvelope` carries status, snapshot, scope, completeness and freshness. Snapshot identity includes repository revisions and engine/configuration identity. The facade loads a graph once and answers subsequent queries from that in-memory state. These are building blocks for RWC, not evidence that RWC already exists.[^local]
+The current source provides useful foundations. `AnswerEnvelope` carries status, snapshot, scope, completeness and freshness. The facade loads a graph once and answers from memory. The CLI already compares base/head artifacts through `pr`; that analysis is reused by the proposed verifier. Neither a first-class receipt verifier nor RWC is established by those primitives alone.[^local]
 
 The reviewed facade and MCP wrapper set freshness to `UNKNOWN`. The existing re-verification heuristic checks for a claim token near a cited line; it does not validate the complete provider, consumer and configuration derivation. Treat that diagnostic as a diagnostic. A changed method or binding can invalidate a relationship while leaving a familiar token in place.
 
@@ -113,8 +136,8 @@ Snapshot identity is also not answer identity. Two different queries over the sa
 
 | Layer | Responsibility in the proposal | Boundary |
 | --- | --- | --- |
-| Existing deterministic engine | Claims, joins, typed graph answers and derivations | Never let an LLM invent an authoritative edge. |
-| New pure query services | Obligation results, evidence bundles and dependency manifests | Accept explicit inputs; no filesystem, network or clock reads. |
+| Existing deterministic engine | Claims, joins, typed graph answers and base/head impact | Never let an LLM invent an authoritative edge. |
+| Shared receipt and query services | Evidence bundles, scoped verdicts, replay and dependency manifests | One implementation for verifier and compiler; explicit inputs only. |
 | Storage and boundary adapters | Snapshot capture, refresh, content reads and atomic publication | Reuse existing ports and artifact storage. |
 | Optional agent adapter | Task interpretation, context selection, model calls and usage accounting | Keep retrieval/ranking policy outside the normative core scope. |
 
@@ -126,7 +149,7 @@ The MCP compatibility wrapper retains legacy result fields at the top level and 
 
 Before claiming current-source guarantees, add a coherent snapshot capture and revalidation boundary. File reads, metadata collection and source changes must not race into a mixed packet. Repository-qualified source identity must survive joins and serialization, including two repositories with identical relative paths.
 
-The existing release plan already contains receipts, bounded packs, incremental invalidation and optional host selection. Extend CTX-005, CTX-006, CTX-007, INT-004 and CTX-012 rather than create a competing implementation. The local contract check passed 41 tests across answer, facade and completeness tests; this is not an agent-cost or runtime-accuracy benchmark.
+The existing release plan already contains receipts, bounded packs, incremental invalidation and optional host selection. Extend CTX-005, CTX-006, CTX-007, INT-004 and CTX-012 rather than create a competing implementation. An earlier contract check passed 41 tests across answer, facade and completeness tests; this is not an agent-cost or runtime-accuracy benchmark.
 
 <!-- page -->
 
@@ -244,7 +267,7 @@ The provider route alone is insufficient. The web application may call a gateway
 ```json
 {
   "packet_version": "experimental-1", "snapshot_id": "snapshot-A",
-  "query_id": "orders-migration-A", "status": "needs_more_evidence",
+  "analysis_receipt_ref": "receipt-A", "status": "needs_more_evidence",
   "facts": [{"id": "F1", "witness_ref": "W1"}],
   "open_obligations": ["runtime_client_inventory"],
   "omitted": [], "refresh_guard_ref": "G1",
@@ -298,19 +321,19 @@ Measure dollars per accepted task over all attempts. Define acceptance with held
 
 ### Comparison arms
 
-Give each arm the same task, model version, host, repository access, permissions, timeout and output allowance. Compare a well-tuned search/caching baseline A, current TraceKite B, and RWC C. Include a suitable external context/pruning tool where feasible; otherwise limit the competitive claim.
+Use identical tasks, models, access and budgets. Compare tuned search/caching A, current TraceKite tools B, and B plus RWC C. Apply the same verifier and acceptance policy to all arms and count its costs. C versus B isolates the compiler's value. Include an external context baseline where feasible; otherwise limit the claim.
 
 Test mechanisms separately: remove witness bundling; use full-snapshot invalidation; remove progressive expansion; and disable compact encoding. Evaluate small-model routing only after establishing same-model benefits.
 
 ### Workload and leakage controls
 
-Include ordinary single-file fixes, cross-repository API changes, configuration rewrites, shared-library upgrades, newly added consumers, alternative providers, unsupported patterns, dirty trees and high-degree graphs. Hold out repositories and change families, not just random files. Do not use reference patches or hidden tests to construct the agent's context.
+Include single-file fixes, cross-repository API/configuration changes, library upgrades, new consumers, alternative providers, unsupported patterns, dirty trees and high-degree graphs. Hold out repositories and change families. Keep reference patches and hidden tests out of agent context.
 
 Public benchmarks do not establish cross-repository benefits by themselves. Compare with RepoGraph where applicable. A recent SWE-Bench Pro Verified preprint reports leakage and task-quality problems; audit environments and keep evaluation material inaccessible to agents.[^benchmarks]
 
 ### Staged spending
 
-Start with zero-LLM deterministic fixtures. Then run ten tasks with one host and two arms as a 20-run feasibility check. If that survives, a 30-task pilot with two hosts, three arms and two repetitions requires 360 runs. At an explicitly assumed $2–$10 per run, that pilot would cost $720–$3600 before setup and human review. This document authorizes no paid runs.
+Start with offline fixtures, then a 20-run check: ten tasks, one host, two arms. If viable, 30 tasks with two hosts, three arms and two repetitions require 360 runs. At an assumed $2–$10 per run, the pilot costs $720–$3600 before setup and review. No paid runs are authorized here.
 
 ### Predeclared acceptance gates
 
@@ -329,22 +352,22 @@ The following are proposed document-local task IDs. They are not new entries or 
 
 | ID | Deliverable and dependency | Acceptance evidence |
 | --- | --- | --- |
-| RWC-01 | Cost ledger and strong baseline. Start first; extend REL-008. | Provider usage reconciles to priced categories; failed attempts remain counted. |
+| RWC-01 | Quality and cost baseline. Extend REL-008. | Separate verifier review value from compiler economics; count failed attempts and verification costs. |
 | RWC-02 | Coherent snapshots and exact source identity. Extend CTX-005 and CTX-006. | Dirty-tree, concurrent-write, edit-and-revert and duplicate-path fixtures cannot yield falsely current receipts. |
-| RWC-03 | Typed obligations and witness bundles. After 02; extend INT-002. | Supported facts retain all derivation premises; ambiguity and gaps remain explicit. |
+| RWC-03 | Shared receipts, typed analysis and replay. After 02; extend CTX-005/006 and INT-002. | Query/diff identity is explicit; witnesses and gaps survive replay; no duplicate verifier. |
 | RWC-04 | Query guards and conservative fallback. After 03; extend INT-004. | New consumers, alias/config changes and changed unselected ranking inputs trigger the required refresh. |
 | RWC-05 | Deterministic packet selector. After 03; extend CTX-007 and CTX-012. | Final budgets include omissions; trimming preserves support closure and terminates or reports overflow. |
-| RWC-06 | Negotiated compact encoding. After 03; extend INT-003. | Old clients still work; new clients retain every required warning without duplicate result bodies. |
+| RWC-06 | Versioned receipt interfaces and compact encoding. After 03; extend INT-003. | Legacy readers work; new interfaces preserve verdicts, witnesses and warnings. |
 | RWC-07 | Refresh, restore and atomic replacement. After 04 and 05. | Branch changes, missing bases, compaction and access revocation behave correctly. |
 | RWC-08 | One managed host integration. After 01, 06 and 07. | Real model requests, context state and usage receipts are observable; source remains recoverable. |
 | RWC-09 | Paired pilot and independent acceptance. After 08; extend REL-008. | Complete paired outcomes, cost accounting, drift fixtures and failure taxonomy are published. |
-| RWC-10 | Release decision and second host. After 09. | Confirmatory evidence supports the stated workload; install, compatibility and security gates pass. |
+| RWC-10 | Compiler release decision and second host. After 09. | Confirmatory evidence supports the compiler workload; install, compatibility and security gates pass. |
 
 ### The first milestone
 
-Complete RWC-01 and RWC-02, then build the smallest provider–gateway–consumer witness path for RWC-03. Use a full-snapshot cache first. Implement selective guards only when the correctness fixtures and timing show why they matter. This avoids making the hardest optimization a prerequisite for learning whether the product helps agents.
+Build shared RWC-02/03/06 and verification-specific AV-01/02 first, with RWC-01 measurement alongside. AV-01 compares explicit claims using trusted scope; AV-02 integrates CI policy and adversarial evaluation. Their detailed acceptance lives in the verification design. Full replay is sufficient for the first verifier; optional RWC-04/05/07/08 follows later.
 
-Do not train a model, build a hosted fleet or publish savings claims during this milestone. The first decision is whether the ten-task feasibility check shows a credible same-model benefit. Maintain a path back to ordinary source search when the evidence layer cannot answer.
+Do not train a model or build a hosted fleet during this milestone. A verifier may release independently after its correctness and integration gates. The compiler's later ten-task check tests same-model benefit against that foundation. Preserve ordinary source inspection when evidence is insufficient.
 
 ### Engineering constraints
 
@@ -374,9 +397,9 @@ Over time, multiple authorized agents could share immutable evidence computation
 
 ### Decision
 
-Proceed with the narrow Evidence Compiler experiment. Make the new-consumer invalidation example and full cost accounting its defining demonstrations. Keep the broad ambition: a reusable code-evidence layer that lets different agents spend more of their budget on the actual change. Earn that position through measured outcomes rather than a worldwide-first claim.
+Proceed with a shared evidence foundation and scoped verification first. Test the optional compiler using new-consumer invalidation and full cost accounting. The ambition remains reusable code evidence across agents. Verification claims require their own acceptance evidence, and compiler savings require a separate controlled comparison.
 
-The next authorized engineering step should be RWC-01 and RWC-02, followed by the bounded RWC-03 prototype. A successful pilot would justify deeper algorithm work and a second integration. A negative pilot should lead to a smaller scope or a stop, not a renamed promise.
+Begin RWC-02/03/06 and AV-01/02 with RWC-01 measurement. A successful compiler pilot later justifies deeper selection work; a negative pilot leaves the useful verifier intact. These are stages of one product, not two competing engines or a requirement to ship both at once.
 
 [^pricing]: Anthropic. Pricing. Live Claude Platform documentation, accessed September 13 2026. https://platform.claude.com/docs/en/about-claude/pricing
 [^caching]: Anthropic. Prompt caching. Live Claude Platform documentation, accessed September 13 2026. https://platform.claude.com/docs/en/build-with-claude/prompt-caching
@@ -390,5 +413,5 @@ The next authorized engineering step should be RWC-01 and RWC-02, followed by th
 [^contextos]: Piyush Kumar. Proof-Carrying Context Why AI Agents Need More Than a Context Window. ContextOS, August 28 2026. Vendor architecture article. https://contextosai.com/blog/context-proof-carrying-materialized-view
 [^foundations]: Ramakrishna Bairi and colleagues. CodePlan Repository-level Coding using LLMs and Planning, 2023. Bazel project. Remote Caching, live documentation accessed September 13 2026. Edmund Clarke and colleagues. Counterexample-guided Abstraction Refinement, CAV 2000. https://arxiv.org/abs/2309.12499 https://bazel.build/remote/caching https://www.cs.cmu.edu/~emc/papers/Conference%20Papers/Counterexample-guided%20Abstraction%20Refinement.pdf
 [^sufficient]: Cyrus Rashtchian and Da-Cheng Juan. Deeper insights into retrieval augmented generation The role of sufficient context. Google Research, May 14 2025. https://research.google/blog/deeper-insights-into-retrieval-augmented-generation-the-role-of-sufficient-context/
-[^local]: TraceKite source review, September 13 2026. Initial snapshot 417bf80; relevant source and normative documents were unchanged when rechecked at acfbd666d5b2953b28c2c4ac6a75d46a2ff0f260. Relevant files: backend/tracekite/answer.py lines 92–121 and 124–198; facade.py lines 144–188; mcp_envelope.py lines 97–114; source_meta.py lines 39–65 and 116–158; services/evidence_reverify.py lines 25–52; docs/design/architecture.md sections 1–2; docs/design/intelligence-release-plan.md; tasks.csv. Initial contract validation passed 41 tests in test_answer_contract.py, test_facade.py and test_completeness.py. No application changes were made for this report.
+[^local]: TraceKite source baseline 7884982, reviewed September 13 2026; the verification proposal was recorded in 02c1d38. Relevant files: backend/tracekite/answer.py, facade.py, mcp_envelope.py, cli_inspect.py (cmd_pr), services/linker/impact.py, services/evidence_reverify.py and docs/design/architecture.md. The shared proposed contract is docs/design/agent-verification-layer.md. The alignment review passed 72 focused tests covering impact, CLI, packaging and answer contracts. Documentation and docstrings are corrected separately from executable behavior; the proposed verifier and compiler remain unimplemented.
 [^benchmarks]: Siru Ouyang and colleagues. RepoGraph Enhancing AI Software Engineering with Repository-level Code Graph, 2024. Pujun Zheng and colleagues. SWE-Bench Pro Verified A Reliable Benchmark for Software Engineering Agents, September 8 2026. The latter is a recent preprint; its conclusions are author-reported. https://arxiv.org/abs/2410.14684 https://arxiv.org/abs/2609.08149

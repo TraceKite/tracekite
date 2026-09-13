@@ -2,11 +2,17 @@
 
 ## Agent intelligence research
 
-The [Evidence Compiler strategy](evidence-compiler-strategy.md) and its
-[Word edition](evidence-compiler-strategy.docx) describe a proposed research
-direction, not implemented features or measured savings. The reviewed design
-requires coherent captured inputs, complete final-payload budget checks and
-invalidation when previously unselected candidates change.
+The [agent verification design](../design/agent-verification-layer.md) and
+[Evidence Compiler strategy](evidence-compiler-strategy.md) form one staged plan.
+Deliver shared receipts and scoped claim verification first using the existing
+PR engine; evaluate context compilation as an optional adapter over the same
+foundation. The [Word edition](evidence-compiler-strategy.docx) reflects this
+sequence. No new receipt interface or token saving is claimed as implemented.
+
+Verification may release without the compiler. Both reuse source identity,
+derivations and replay; token selection must not hide adjudication failures.
+The context experiment retains coherent captured inputs, complete payload-budget
+checks and invalidation when previously unselected candidates change.
 
 The [PetClinic before and after examples](petclinic-before-after.md) ground the
 proposal in a pinned local Spring Boot checkout. They distinguish current

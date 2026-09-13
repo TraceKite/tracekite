@@ -63,9 +63,9 @@ def cmd_history(args) -> int:
 def cmd_deprecations(args) -> int:
     """Every deprecated contract, and who still calls it.
 
-    One compaction of the given artifacts. An entry with an empty consumer
-    list is the answer that permits deletion — measured, none found — which
-    is why it appears rather than being omitted.
+    One compaction of the given artifacts. An empty consumer list means no
+    matching consumer was found in these inputs, not permission to delete.
+    Scope, coverage and runtime dependencies require separate assessment.
     """
     from tracekite.services.linker.deprecations import deprecation_report
     from tracekite.wire import DeprecationReport
@@ -150,12 +150,11 @@ def _link_artifacts(paths, run_id: str, now: str):
 
 
 def cmd_pr(args) -> int:
-    """Which consumers this branch breaks, with a file and line for each.
+    """Report indexed relationship losses, with available evidence.
 
-    Two compactions, diffed. `--changed-repo` is what the caller knows from
-    git and this does not: without it every loss is reported and none is
-    attributed, which is degraded and says so rather than guessing that the
-    provider is always at fault.
+    The caller supplies `--changed-repo`; this command does not verify Git
+    provenance. Without it, the legacy impact policy treats losses as
+    blocking. Exit zero is not a completeness or runtime-safety verdict.
     """
     from tracekite.services.linker.impact import as_comment, impact
 

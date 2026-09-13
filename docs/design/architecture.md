@@ -17,6 +17,12 @@ ranking, and retrieval belong to hosts.
 Everything below follows from one constraint: **a host must be able to use
 TraceKite without adopting TraceKite's infrastructure.**
 
+The proposed [agent verification and shared receipts](agent-verification-layer.md)
+and [Evidence Compiler](../future/evidence-compiler-strategy.md) consume this
+engine. They share analysis and provenance; task interpretation, context ranking
+and CI action policy remain host responsibilities. These proposals do not claim
+their new receipt or adapter interfaces are implemented.
+
 ---
 
 ## 2. Layering
