@@ -10,6 +10,17 @@ def ensure_workspace():
     os.makedirs(get_config().workspace_dir, exist_ok=True)
 
 
+def get_upload_dir() -> str:
+    """Transient staging for uploaded git bundles, beside the workspace.
+
+    A bundle only needs to survive from the upload route to the ingest job
+    that clones and deletes it, so this deliberately avoids the workspace
+    volume itself — a restart between the two simply fails the job clean.
+    """
+    return os.path.join(
+        os.path.dirname(get_config().workspace_dir.rstrip("/")), "uploads")
+
+
 EXTENSION_LANGUAGE_MAP = {
     ".java": "Java",
     ".kt": "Kotlin",

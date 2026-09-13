@@ -6,6 +6,25 @@
 # generated import paths from it.
 components:
   schemas:
+    Body_ingest_upload_api_repos_ingest_upload_post:
+      properties:
+        branch:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Branch
+        file:
+          contentMediaType: application/octet-stream
+          title: File
+          type: string
+        name:
+          title: Name
+          type: string
+      required:
+      - file
+      - name
+      title: Body_ingest_upload_api_repos_ingest_upload_post
+      type: object
     GraphLink:
       description: A link/edge in the graph response.
       properties:
@@ -526,6 +545,36 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Ingest Repo
+  /api/repos/ingest-upload:
+    post:
+      description: 'Queue ingestion of a git bundle shipped by `tracekite ingest .`.
+
+
+        The bundle is the whole contract: the server clones it and runs the
+
+        hosted pipeline unchanged, so a repository that exists only on the
+
+        caller''s disk draws exactly what a cloned one would.'
+      operationId: ingest_upload_api_repos_ingest_upload_post
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Body_ingest_upload_api_repos_ingest_upload_post'
+        required: true
+      responses:
+        '202':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Ingest Upload
   /api/repos/{repo_id}:
     delete:
       description: Queue repository deletion (serialized through the linker lane).

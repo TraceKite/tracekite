@@ -5,7 +5,8 @@ import logging
 from tracekite.db.constraints import clear_repo_graph, get_repo_claim_keys
 from tracekite.run_logging import run_context
 from tracekite.services.graph_writer import create_or_update_job
-from tracekite.services.ingestion_service import run_ingestion
+from tracekite.services.ingest_upload import discard_bundle
+from tracekite.services.ingestion_service import run_ingestion, run_upload_ingestion
 from tracekite.services.job_queue import Job, JobQueue
 from tracekite.services.repo_service import delete_repository
 
@@ -43,6 +44,18 @@ def _handle_ingest(job: Job) -> None:
 
 def _handle_refresh(job: Job) -> None:
     _ingest(job, refresh=True)
+
+
+def _handle_ingest_upload(job: Job) -> None:
+    payload = job.payload
+    try:
+        run_upload_ingestion(
+            job.id, job.repo_id, payload["name"], payload["bundle_path"],
+            branch=payload.get("branch"))
+    finally:
+        # Transient by design: the clone has its own copy of the content.
+        discard_bundle(payload["bundle_path"])
+    _enqueue_relink(f"upload ingest of {job.repo_id}")
 
 
 def _linker():
@@ -112,6 +125,7 @@ def _handle_repo_delete(job: Job) -> None:
 def register_all(queue: JobQueue) -> None:
     queue.register_handler("ingest", _handle_ingest)
     queue.register_handler("refresh", _handle_refresh)
+    queue.register_handler("ingest_upload", _handle_ingest_upload)
     queue.register_handler("repo_delete", _handle_repo_delete)
     queue.register_handler("link_full", _handle_link_full)
     queue.register_handler("link_delta", _handle_link_delta)

@@ -22,6 +22,8 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("main", "server"),
     # Composes scan + link + a store; imports downward only.
     ("cli", "server"),
+    # The one CLI command that talks to a server: HTTP client for ingest.
+    ("ingest_client", "server"),
     ("agent_setup", "server"),
     ("cli_emit", "server"),
     ("cli_explain", "server"),
@@ -43,6 +45,8 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("routes", "server"),
     ("services.ingestion_service", "server"),
     ("services.job_handlers", "server"),
+    # Validates and spools uploaded git bundles for the ingest route.
+    ("services.ingest_upload", "server"),
     # Spans parsers and store to decide whether to scan at all.
     ("services.reingest", "server"),
     # Drives scan (parsers) into artifacts (store): orchestration.

@@ -40,7 +40,9 @@ export default function EdgeDetailsDrawer() {
             }
 
             const repo = repos.find(r => r.id === repoId);
-            if (repo && repo.head_commit_sha) {
+            // A repo ingested from a local upload has no remote URL, so a
+            // source link built from it would point at the SPA itself.
+            if (repo && repo.head_commit_sha && repo.github_url) {
               const url = `${repo.github_url}/blob/${repo.head_commit_sha}/${path}#L${line}`;
               return (
                 <a key={idx} href={url} target="_blank" rel="noreferrer" 

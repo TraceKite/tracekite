@@ -25,6 +25,26 @@ def generate_repo_id(owner: str, repo: str, host: str = _GITHUB_HOST) -> str:
     return base
 
 
+_UPLOAD_NAME = re.compile(r"^[a-z0-9][a-z0-9._-]{0,98}$")
+
+
+def upload_repo_id(name: str) -> str:
+    """Repo id for a directory shipped by ``tracekite ingest .``.
+
+    A local upload has no host or owner to derive identity from, so the id
+    is the caller-chosen name under a ``local_`` prefix, keeping it out of
+    the ``owner_repo`` namespace host-derived ids live in. The name is
+    validated rather than rewritten — it becomes a filename and a graph id,
+    so silent case-folding would make the CLI and the server disagree about
+    what was ingested.
+    """
+    if not _UPLOAD_NAME.match(name):
+        raise ValueError(
+            f"invalid repository name {name!r}: use lowercase letters, "
+            "digits, '.', '_' or '-', starting with a letter or digit")
+    return f"local_{name}"
+
+
 def generate_node_id(repo_id: str, node_type: str, path: str,
                      name: str = "", extra: str = "") -> str:
     """Layer-0 node id: ``{repo_id}:{Type}:{sha256[:16]}``.

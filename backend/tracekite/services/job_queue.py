@@ -19,7 +19,7 @@ from tracekite.services.graph_writer import create_or_update_job
 
 logger = logging.getLogger(__name__)
 
-INGEST_LANE = ("ingest", "refresh")
+INGEST_LANE = ("ingest", "refresh", "ingest_upload")
 LINKER_LANE = ("repo_delete", "link_full", "link_delta")
 JOB_TYPES = INGEST_LANE + LINKER_LANE
 # Jobs that rewrite shared Layer-1/2 state and must not overlap an ingest.

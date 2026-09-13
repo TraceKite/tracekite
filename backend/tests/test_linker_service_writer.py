@@ -410,8 +410,24 @@ class TestJobHandlers:
         queue = MagicMock()
         job_handlers.register_all(queue)
         registered = {c.args[0] for c in queue.register_handler.call_args_list}
-        assert registered == {"ingest", "refresh", "repo_delete", "link_full",
-                              "link_delta"}
+        assert registered == {"ingest", "refresh", "ingest_upload",
+                              "repo_delete", "link_full", "link_delta"}
+
+    def test_handle_ingest_upload(self):
+        from tracekite.services import job_handlers
+        from tracekite.services.job_queue import Job
+        job = Job(id="j1", type="ingest_upload", repo_id="local_demo",
+                  payload={"name": "demo", "bundle_path": "/tmp/x.bundle",
+                           "branch": None})
+        with patch("tracekite.services.job_handlers.run_upload_ingestion") as run, \
+                patch("tracekite.services.job_handlers.discard_bundle") as discard, \
+                patch("tracekite.services.job_handlers._enqueue_relink"):
+            job_handlers._handle_ingest_upload(job)
+        run.assert_called_once_with("j1", "local_demo", "demo",
+                                    "/tmp/x.bundle", branch=None)
+        # The bundle is transient: deleted whether the ingestion succeeded
+        # or failed, because the clone has its own copy of the content.
+        discard.assert_called_once_with("/tmp/x.bundle")
 
     def test_handle_ingest(self):
         from tracekite.services import job_handlers

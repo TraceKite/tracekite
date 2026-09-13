@@ -163,6 +163,9 @@ def build_parser() -> argparse.ArgumentParser:
         help=".tracekite artifacts or source directories (default: current directory)")
     mcp_p.set_defaults(func=cmd_mcp)
 
+    from tracekite.ingest_client import add_ingest_parser
+    add_ingest_parser(sub)
+
     install_p = sub.add_parser(
         "install-skill", help="install the global TraceKite agent skill")
     install_p.add_argument("--client", "-c", action="append",

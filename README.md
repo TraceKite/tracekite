@@ -348,6 +348,20 @@ time dimension, which is what makes two runs diffable.
 | `tracekite schema` | the published JSON Schema the payloads validate against |
 | `tracekite health` | whether the engine is degraded |
 
+**Send a repository to a running server**
+
+| Command | Answers |
+|---|---|
+| `tracekite ingest <git-url> [--server URL]` | clone-and-index this repository on the server (the UI's Ingest button, scripted) |
+| `tracekite ingest <path> [--server URL]` | ship this directory's committed content as a git bundle — the only path for a repository that exists nowhere but this disk |
+
+`ingest` waits for the job and exits non-zero if it fails; `--no-wait` just
+prints the job id. The server defaults to `$TRACEKITE_SERVER`, else
+`http://127.0.0.1:28080`. A directory upload replaces the repository of the
+same name — it is the refresh path, since a local upload has no remote the
+server could re-clone. Uncommitted changes are not shipped; the command
+warns when it sees them.
+
 **Watch an estate change over time** — each takes artifacts, oldest first
 
 | Command | Answers |

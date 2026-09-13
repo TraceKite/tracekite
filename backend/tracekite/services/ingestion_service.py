@@ -10,6 +10,7 @@ import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeout
+from dataclasses import dataclass
 from typing import Optional
 
 from tracekite.config import settings
@@ -36,8 +37,8 @@ from tracekite.services.ingest_claims import (
 from tracekite.services.ingest_source import IngestSink
 from tracekite.services.scan import build_graph
 from tracekite.services.repo_service import (
-    CloneError, clone_repository, delete_repository, get_default_branch,
-    get_head_commit_sha,
+    CloneError, clone_bundle, clone_repository, delete_repository,
+    get_default_branch, get_head_commit_sha,
 )
 from tracekite.utils.hashing import (
     extract_git_host, generate_repo_id, normalize_github_url,
@@ -46,11 +47,21 @@ from tracekite.utils.hashing import (
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class ClonedRepo:
+    """Everything the clone stage learned that the write stage needs."""
+    owner: str
+    name: str
+    url: str            # "" for local uploads — unknown stays unknown
+    branch: str
+    head_sha: str
+    path: str
+
+
 def run_ingestion(job_id: str, github_url: str, branch: Optional[str] = None,
                   github_token: Optional[str] = None, refresh: bool = False) -> None:
-    """Run the full ingestion pipeline; job + lifecycle records track progress."""
+    """Clone a hosted repository and run the full ingestion pipeline."""
     repo_id = ""
-    cleared = False
     try:
         _job(job_id, "running", 5, "Validating repository")
         normalized_url, owner, repo_name = normalize_github_url(github_url)
@@ -64,16 +75,51 @@ def run_ingestion(job_id: str, github_url: str, branch: Optional[str] = None,
         # host we validated and the host we contact can differ.
         local_path = clone_repository(normalized_url, repo_id, branch,
                                       github_token)
-        actual_branch = branch or get_default_branch(local_path)
-        head_sha = get_head_commit_sha(local_path)
+        repo = ClonedRepo(owner=owner, name=repo_name, url=normalized_url,
+                          branch=branch or get_default_branch(local_path),
+                          head_sha=get_head_commit_sha(local_path),
+                          path=local_path)
+    except Exception as exc:
+        _mark_failed(job_id, repo_id, exc, cleared=False)
+        return
+    _scan_and_write(job_id, repo_id, repo, refresh)
 
+
+def run_upload_ingestion(job_id: str, repo_id: str, name: str,
+                         bundle_path: str, branch: Optional[str] = None) -> None:
+    """Ingest a git bundle uploaded by `tracekite ingest .`.
+
+    After the clone the pipeline is the hosted one unchanged — same scan,
+    same writer — so an uploaded repository draws exactly what a cloned one
+    would. Uploads always replace: re-shipping a name is the refresh path,
+    since a local upload has no URL the refresh route could re-clone.
+    """
+    try:
+        _job(job_id, "running", 10, "Cloning uploaded bundle", repo_id=repo_id)
+        _lifecycle(repo_id, "cloning")
+        local_path = clone_bundle(bundle_path, repo_id, branch)
+        repo = ClonedRepo(owner="local", name=name, url="",
+                          branch=branch or get_default_branch(local_path),
+                          head_sha=get_head_commit_sha(local_path),
+                          path=local_path)
+    except Exception as exc:
+        _mark_failed(job_id, repo_id, exc, cleared=False)
+        return
+    _scan_and_write(job_id, repo_id, repo, refresh=True)
+
+
+def _scan_and_write(job_id: str, repo_id: str, repo: ClonedRepo,
+                    refresh: bool) -> None:
+    """Scan → parse → (clear) → write. Shared by hosted and upload ingests."""
+    cleared = False
+    try:
         _job(job_id, "running", 20, "Scanning files", repo_id=repo_id)
-        scan_result = scan_repository(local_path)
+        scan_result = scan_repository(repo.path)
 
         _job(job_id, "running", 30, "Parsing repository", repo_id=repo_id)
         _lifecycle(repo_id, "parsing")
-        sink = build_graph(repo_id, owner, repo_name, normalized_url,
-                            actual_branch, head_sha, scan_result)
+        sink = build_graph(repo_id, repo.owner, repo.name, repo.url,
+                           repo.branch, repo.head_sha, scan_result)
 
         _job(job_id, "running", 60, "Resolving call graph", repo_id=repo_id)
         build_call_graph(repo_id, sink.parse_context, sink.nodes, sink.edges)
@@ -105,13 +151,20 @@ def run_ingestion(job_id: str, github_url: str, branch: Optional[str] = None,
                     edges_written)
 
     except Exception as exc:
-        state = "failed_partial" if cleared else "failed_clean"
-        message = f"Ingestion failed ({state}): {exc}"
-        logger.error("%s (job %s)", message, job_id)
-        _job(job_id, "failed", 0, message, error=str(exc)[:500], repo_id=repo_id)
-        if repo_id:
-            _lifecycle(repo_id, state, error=str(exc)[:500])
-            _set_ingestion_status(repo_id, "failed")
+        _mark_failed(job_id, repo_id, exc, cleared)
+
+
+def _mark_failed(job_id: str, repo_id: str, exc: Exception,
+                 cleared: bool) -> None:
+    """failed_partial once Neo4j was mutated, failed_clean before — the
+    difference is whether the served graph can still be trusted."""
+    state = "failed_partial" if cleared else "failed_clean"
+    message = f"Ingestion failed ({state}): {exc}"
+    logger.error("%s (job %s)", message, job_id)
+    _job(job_id, "failed", 0, message, error=str(exc)[:500], repo_id=repo_id)
+    if repo_id:
+        _lifecycle(repo_id, state, error=str(exc)[:500])
+        _set_ingestion_status(repo_id, "failed")
 
 
 def _stamp_coverage(repo_id: str, coverage: dict, claims: dict | None = None) -> None:

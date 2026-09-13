@@ -78,8 +78,6 @@ def clone_repository(git_url: str, repo_id: str, branch: Optional[str] = None,
     ensure_workspace()
     dest = get_repo_workspace_path(repo_id)
     staging = f"{dest}.incoming"
-    if os.path.exists(staging):
-        shutil.rmtree(staging)
 
     env = {
         "PATH": os.environ.get("PATH", ""),
@@ -98,10 +96,50 @@ def clone_repository(git_url: str, repo_id: str, branch: Optional[str] = None,
         cmd += ["--branch", branch]
     cmd += [git_url, staging]
 
+    try:
+        return _staged_clone(cmd, env, repo_id, staging, dest, what=git_url)
+    finally:
+        if askpass_path:
+            os.unlink(askpass_path)
+
+
+def clone_bundle(bundle_path: str, repo_id: str,
+                 branch: Optional[str] = None) -> str:
+    """Clone an uploaded git bundle into the workspace.
+
+    clone_repository's host allowlist answers "may we contact this network
+    host"; a bundle crossed that boundary when the upload route validated
+    and stored it, so this clones the local file directly. `--depth` and
+    `--filter` are omitted: bundle transport ignores them. The staging
+    discipline is the shared one — a failed clone leaves the previous tree
+    exactly as it was.
+    """
+    ensure_workspace()
+    dest = get_repo_workspace_path(repo_id)
+    staging = f"{dest}.incoming"
+    cmd = ["git", "clone", "--single-branch"]
+    if branch:
+        cmd += ["--branch", branch]
+    cmd += [bundle_path, staging]
+    env = {
+        "PATH": os.environ.get("PATH", ""),
+        "HOME": os.environ.get("HOME", "/tmp"),
+        "GIT_TERMINAL_PROMPT": "0",
+    }
+    return _staged_clone(cmd, env, repo_id, staging, dest, what="uploaded bundle")
+
+
+def _staged_clone(cmd: list[str], env: dict, repo_id: str, staging: str,
+                  dest: str, what: str) -> str:
+    """Run one git clone into `staging`, swap it over `dest` on success.
+
     # One flag checked in `finally`, rather than cleanup in each except
     # clause: `except TimeoutExpired: raise CloneError` propagates the NEW
     # exception, so a sibling `except` never runs and the timeout path would
     # leak its staging tree.
+    """
+    if os.path.exists(staging):
+        shutil.rmtree(staging)
     cloned = False
     try:
         result = subprocess.run(
@@ -110,14 +148,12 @@ def clone_repository(git_url: str, repo_id: str, branch: Optional[str] = None,
         )
         if result.returncode != 0:
             stderr = (result.stderr or "").strip()[-500:]
-            raise CloneError(f"git clone failed for {git_url}: {stderr}")
+            raise CloneError(f"git clone failed for {what}: {stderr}")
         _assert_no_credentials(staging)
         cloned = True
     except subprocess.TimeoutExpired:
         raise CloneError(f"git clone timed out after {settings.clone_timeout_s}s")
     finally:
-        if askpass_path:
-            os.unlink(askpass_path)
         # Discards the staging tree and only that: `dest` is still the last
         # good clone. Unconditional on failure, because git creates the
         # target directory before it can fail, so "has a .git" does not
@@ -126,7 +162,7 @@ def clone_repository(git_url: str, repo_id: str, branch: Optional[str] = None,
             shutil.rmtree(staging, ignore_errors=True)
 
     _swap_in(staging, dest)
-    logger.info("Cloned %s into %s", git_url, dest)
+    logger.info("Cloned %s into %s", what, dest)
     return dest
 
 
