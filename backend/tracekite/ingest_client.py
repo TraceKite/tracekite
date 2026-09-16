@@ -14,7 +14,14 @@ import tempfile
 import time
 from dataclasses import dataclass
 
-import httpx
+# httpx is a server-extra dependency, but this module ships in the core wheel
+# so the CLI parser can register the `ingest` subcommand. A guarded import
+# lets `tracekite --help` work without httpx; the command itself declines
+# cleanly via _ensure_httpx() when someone actually runs it.
+try:
+    import httpx
+except ImportError:
+    httpx = None
 
 from tracekite.utils.hashing import normalize_github_url, upload_repo_id
 
@@ -24,6 +31,14 @@ _TERMINAL = {"completed", "failed"}
 
 class IngestError(RuntimeError):
     pass
+
+
+def _ensure_httpx():
+    """Decline cleanly when the core wheel is installed without the server
+    extra. The parser must construct without httpx; the command cannot run."""
+    if httpx is None:
+        raise IngestError(
+            "requires httpx — install with 'pip install tracekite-core[server]'")
 
 
 @dataclass(frozen=True)
@@ -58,6 +73,7 @@ def add_ingest_parser(sub) -> None:
 
 def cmd_ingest(args) -> int:
     try:
+        _ensure_httpx()
         if os.path.isdir(args.target):
             job = _ingest_directory(args)
         else:
@@ -122,12 +138,16 @@ def _ingest_directory(args) -> dict:
         if plan.server_branch:
             data["branch"] = plan.server_branch
         with open(bundle_path, "rb") as handle:
-            response = httpx.post(
-                f"{args.server}/api/repos/ingest-upload",
-                data=data,
-                files={"file": (f"{plan.name}.bundle", handle,
-                                "application/octet-stream")},
-                timeout=httpx.Timeout(600, connect=30))
+            try:
+                response = httpx.post(
+                    f"{args.server}/api/repos/ingest-upload",
+                    data=data,
+                    files={"file": (f"{plan.name}.bundle", handle,
+                                    "application/octet-stream")},
+                    timeout=httpx.Timeout(600, connect=30))
+            except httpx.HTTPError as exc:
+                raise IngestError(
+                    f"cannot reach server at {args.server}: {exc}")
     return _expect_202(response)
 
 
@@ -136,11 +156,14 @@ def _ingest_url(args) -> dict:
         normalize_github_url(args.target)
     except ValueError as exc:
         raise IngestError(f"{exc} (and it is not a directory either)")
-    response = httpx.post(
-        f"{args.server}/api/repos/ingest",
-        json={"github_url": args.target, "branch": args.branch,
-              "github_token": args.token},
-        timeout=30)
+    try:
+        response = httpx.post(
+            f"{args.server}/api/repos/ingest",
+            json={"github_url": args.target, "branch": args.branch,
+                  "github_token": args.token},
+            timeout=30)
+    except httpx.HTTPError as exc:
+        raise IngestError(f"cannot reach server at {args.server}: {exc}")
     return _expect_202(response)
 
 

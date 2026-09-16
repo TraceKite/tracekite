@@ -9,6 +9,7 @@ upload.
 import subprocess
 from types import SimpleNamespace
 
+import httpx
 import pytest
 
 from tracekite import ingest_client
@@ -204,3 +205,68 @@ class TestCmdIngest:
         assert sent["data"] == {"name": "proj"}
         assert sent["filename"] == "proj.bundle"
         assert sent["head"].startswith(b"# v")
+
+
+class TestHttpxOptional:
+    """The core wheel ships without httpx; parser construction and --help
+    must work anyway, and `ingest` must decline with a clear message."""
+
+    def test_add_ingest_parser_works_without_httpx(self, monkeypatch):
+        monkeypatch.setattr(ingest_client, "httpx", None)
+        import argparse
+        parser = argparse.ArgumentParser()
+        sub = parser.add_subparsers()
+        ingest_client.add_ingest_parser(sub)
+        args = parser.parse_args(["ingest", "https://github.com/o/r"])
+        assert args.target == "https://github.com/o/r"
+
+    def test_cmd_ingest_declines_cleanly_without_httpx(self, monkeypatch,
+                                                       capsys):
+        monkeypatch.setattr(ingest_client, "httpx", None)
+        args = SimpleNamespace(target="https://github.com/o/r",
+                               server="http://s", branch=None, token=None,
+                               name=None, no_wait=True)
+        assert cmd_ingest(args) == 2
+        assert "httpx" in capsys.readouterr().err.lower()
+
+
+class TestUnreachableServer:
+    """A server that cannot be reached must produce a clean IngestError, not
+    a raw httpx traceback. The initial POST is the one that bites: the poll
+    loop in _wait_for_job already catches httpx.HTTPError."""
+
+    def test_url_ingest_reports_unreachable_server(self, monkeypatch):
+        def raise_connect_error(*a, **kw):
+            raise httpx.ConnectError("Connection refused")
+        monkeypatch.setattr(ingest_client.httpx, "post", raise_connect_error)
+        args = SimpleNamespace(target="https://github.com/o/r",
+                               server="http://127.0.0.1:9",
+                               branch=None, token=None)
+        with pytest.raises(IngestError, match="cannot reach server"):
+            ingest_client._ingest_url(args)
+
+    def test_directory_ingest_reports_unreachable_server(self, tmp_path,
+                                                         monkeypatch):
+        repo = tmp_path / "proj"
+        _make_repo(repo)
+
+        def raise_connect_error(*a, **kw):
+            raise httpx.ConnectError("Connection refused")
+        monkeypatch.setattr(ingest_client.httpx, "post", raise_connect_error)
+        args = SimpleNamespace(target=str(repo), server="http://127.0.0.1:9",
+                               branch=None, token=None, name=None,
+                               no_wait=True)
+        with pytest.raises(IngestError, match="cannot reach server"):
+            ingest_client._ingest_directory(args)
+
+    def test_cmd_ingest_returns_clean_exit_on_unreachable_server(
+            self, monkeypatch, capsys):
+        def raise_connect_error(*a, **kw):
+            raise httpx.ConnectError("Connection refused")
+        monkeypatch.setattr(ingest_client.httpx, "post", raise_connect_error)
+        args = SimpleNamespace(target="https://github.com/o/r",
+                               server="http://127.0.0.1:9",
+                               branch=None, token=None, name=None,
+                               no_wait=True)
+        assert cmd_ingest(args) == 2
+        assert "cannot reach server" in capsys.readouterr().err
