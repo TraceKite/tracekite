@@ -96,11 +96,14 @@ making a method-level claim.
 
 ## Embed the engine
 
-The standalone core wheel is built from `packaging/tracekite-core`:
+Install the standalone core distribution:
 
 ```bash
-uv build --wheel --project packaging/tracekite-core --out-dir dist
+pip install tracekite-core
 ```
+
+For unreleased source, build it from `packaging/tracekite-core` with
+`uv build --project packaging/tracekite-core --out-dir dist`.
 
 A host can call the same pure scan and link surfaces:
 

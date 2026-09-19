@@ -9,8 +9,8 @@ services:
     image: neo4j:5.26-community
     container_name: tracekite-neo4j
     ports:
-      - "${NEO4J_HTTP_PORT:-27474}:7474"
-      - "${NEO4J_BOLT_PORT:-27687}:7687"
+      - "${BIND_ADDR:-127.0.0.1}:${NEO4J_HTTP_PORT:-27474}:7474"
+      - "${BIND_ADDR:-127.0.0.1}:${NEO4J_BOLT_PORT:-27687}:7687"
     environment:
       NEO4J_AUTH: "neo4j/${NEO4J_PASSWORD:?NEO4J_PASSWORD is required}"
       NEO4J_PLUGINS: '["apoc"]'
@@ -91,9 +91,13 @@ services:
 
 volumes:
   neo4j_data:
+    name: "${TRACEKITE_NEO4J_DATA_VOLUME:-tracekite_neo4j_data}"
   neo4j_logs:
+    name: "${TRACEKITE_NEO4J_LOGS_VOLUME:-tracekite_neo4j_logs}"
   repo_workspace:
+    name: "${TRACEKITE_REPO_WORKSPACE_VOLUME:-tracekite_repo_workspace}"
   backend_var:
+    name: "${TRACEKITE_BACKEND_VAR_VOLUME:-tracekite_backend_var}"
 
 networks:
   tracekite:

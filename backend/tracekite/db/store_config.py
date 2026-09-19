@@ -13,7 +13,14 @@ from dataclasses import dataclass, replace
 
 # A deployment that never set a password is indistinguishable from one that
 # set the vendor default, and both are reachable by anything on the network.
-_DEFAULT_PASSWORDS = {"", "password", "neo4j"}
+_DEFAULT_PASSWORDS = {
+    "", "password", "neo4j", "change-me-to-something-long",
+}
+
+
+def is_unsafe_neo4j_password(password: str) -> bool:
+    """Whether a password is empty or one distributed as a known default."""
+    return password in _DEFAULT_PASSWORDS
 
 
 @dataclass(frozen=True)
@@ -54,7 +61,7 @@ def reset() -> None:
 def require_neo4j_password() -> str:
     """Startup refuses default or unset Neo4j passwords (design §9)."""
     password = _active.neo4j_password
-    if password in _DEFAULT_PASSWORDS:
+    if is_unsafe_neo4j_password(password):
         raise RuntimeError(
             "NEO4J_PASSWORD is unset or a known default; refusing to start")
     return password

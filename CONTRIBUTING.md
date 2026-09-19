@@ -5,6 +5,13 @@ Every ecosystem wires services together differently, and the parsers and
 resolvers here reflect the systems the authors happened to have. If your estate
 joins services through something we miss, that gap is the contribution.
 
+By participating, you agree to follow the
+[Code of Conduct](CODE_OF_CONDUCT.md). Use the issue templates for public bug
+reports and feature requests. Report vulnerabilities privately as described in
+[SECURITY.md](SECURITY.md); never put secrets or private source in an issue.
+Project decisions and maintainer responsibilities are described in
+[GOVERNANCE.md](GOVERNANCE.md).
+
 ## Getting set up
 
 ```bash
@@ -28,6 +35,8 @@ Frontend typecheck:
 
 ```bash
 pnpm --filter @tracekite/web run typecheck
+pnpm --filter @tracekite/web run test
+pnpm --filter @tracekite/web run build
 ```
 
 ## The one rule that matters
@@ -153,6 +162,9 @@ the call site.
 
 ```bash
 .venv/bin/python -m pytest backend/tests -q
+pnpm --filter @tracekite/web run typecheck
+pnpm --filter @tracekite/web run test
+pnpm --filter @tracekite/web run build
 ```
 
 If you touched extraction or linking, also re-ingest a repo and run the
@@ -175,8 +187,8 @@ it used not to be true:
 
 | | Python | fastapi | pydantic | neo4j driver |
 |---|---|---|---|---|
-| container (`backend/Dockerfile` → `uv.lock`) | 3.14 | 0.140.0 | 2.13.4 | 6.2.0 |
-| local / CI (`pyproject.toml` → `uv.lock`) | 3.14 | 0.140.0 | 2.13.4 | 6.2.0 |
+| container (`backend/Dockerfile` → `uv.lock`) | 3.14 | 0.141.1 | 2.13.4 | 6.2.0 |
+| local / CI (`pyproject.toml` → `uv.lock`) | 3.14 | 0.141.1 | 2.13.4 | 6.2.0 |
 
 This used not to be true, and it cost three bugs in one afternoon. The image
 was `python:3.12-slim` installing a `backend/requirements.txt` that pinned

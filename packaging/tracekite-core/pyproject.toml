@@ -56,6 +56,8 @@ dependencies = [
 Homepage = "https://github.com/TraceKite/tracekite"
 Repository = "https://github.com/TraceKite/tracekite"
 Issues = "https://github.com/TraceKite/tracekite/issues"
+Documentation = "https://github.com/TraceKite/tracekite#readme"
+Changelog = "https://github.com/TraceKite/tracekite/blob/main/CHANGELOG.md"
 
 # The application's extras, so one repository serves both surfaces without a
 # second copy of the engine (the "no duplicate code" rule, at package level).

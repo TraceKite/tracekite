@@ -37,7 +37,7 @@ Keep the descriptor separate from the logo, especially at small sizes.
 
 ## Source and font
 
-Original concept: https://claude.ai/code/artifact/31a27c6e-43fe-42c5-9786-f73bdda2ae47
+Original concept supplied by the TraceKite project maintainers.
 
 Wordmark: Archivo ExtraBold, 800, with modest optical tracking. Font source: https://github.com/Omnibus-Type/Archivo
 

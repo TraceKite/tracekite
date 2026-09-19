@@ -92,8 +92,20 @@ class TestPyPIWorkflow:
         assert "GITHUB_REF_NAME" in commands
         assert "uv build --project packaging/tracekite-core" in commands
         assert "twine check dist/*" in commands
-        assert ".test-env/bin/tracekite link" in commands
-        assert '".test-env/bin/tracekite", "mcp"' in commands
+        assert commands.count("scripts/release_smoke.py") == 2
+        assert "dist/tracekite_core-*.whl" in commands
+        assert "dist/tracekite_core-*.tar.gz" in commands
+
+    def test_release_assets_wait_for_registry_verification(self):
+        doc = _pypi_workflow()
+        assets = doc["jobs"]["release-assets"]
+
+        assert "verify-registry" in assets["needs"]
+        upload = "\n".join(
+            str(step.get("run", "")) for step in assets["steps"])
+        assert "gh release upload" in upload
+        assert any(step.get("env", {}).get("GH_REPO") ==
+                   "${{ github.repository }}" for step in assets["steps"])
 
     def test_oidc_permission_is_scoped_to_the_protected_publish_job(self):
         doc = _pypi_workflow()

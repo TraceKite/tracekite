@@ -21,6 +21,10 @@ jobs:
         with:
           python-version: "3.13"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -33,6 +37,25 @@ jobs:
             exit 1
           fi
 
+      - name: Verify the checked-out release commit
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Test the release source
+        run: |
+          uv sync --frozen
+          .venv/bin/python -m pytest backend/tests -q
+          .venv/bin/python backend/tools/check_layers.py
+          .venv/bin/python backend/tools/check_invariants.py
+          .venv/bin/python backend/tools/export_openapi.py --check
+
+      - name: Test and build the web application
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile --filter '@tracekite/web...'
+          pnpm --filter @tracekite/web run typecheck
+          pnpm --filter @tracekite/web run test
+          pnpm --filter @tracekite/web run build
+
       - name: Build source and wheel distributions
         run: uv build --project packaging/tracekite-core --out-dir dist
 
@@ -41,35 +64,27 @@ jobs:
 
       - name: Smoke-test the installed wheel
         run: |
-          uv venv --python 3.13 .test-env
-          uv pip install --python .test-env/bin/python dist/tracekite_core-*.whl
-          .test-env/bin/tracekite --help
-          GRAPH_HMAC_KEY=release-smoke .test-env/bin/tracekite link \
-            corpus/orders-service corpus/billing-service \
-            --now 2026-01-01T00:00:00+00:00 > /tmp/tracekite-smoke.json
-          .test-env/bin/python -c 'import json; p=json.load(open("/tmp/tracekite-smoke.json")); assert p["edges"] and all(e["evidence"] for e in p["edges"])'
-          GRAPH_HMAC_KEY=release-smoke .test-env/bin/python - <<'PY'
-          import json
-          import subprocess
+          uv venv --python 3.13 .wheel-env
+          uv pip install --python .wheel-env/bin/python dist/tracekite_core-*.whl
+          .wheel-env/bin/python scripts/release_smoke.py \
+            --tracekite .wheel-env/bin/tracekite
 
-          frames = [
-              {"jsonrpc": "2.0", "id": 1, "method": "initialize"},
-              {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
-               "params": {"name": "services", "arguments": {}}},
-          ]
-          result = subprocess.run(
-              [".test-env/bin/tracekite", "mcp", "corpus/orders-service"],
-              input="\n".join(json.dumps(frame) for frame in frames) + "\n",
-              check=True, capture_output=True, text=True)
-          replies = [json.loads(line) for line in result.stdout.splitlines()]
-          services = json.loads(replies[1]["result"]["content"][0]["text"])
-          assert services["services"]
-          PY
+      - name: Smoke-test the installed source distribution
+        run: |
+          uv venv --python 3.13 .sdist-env
+          uv pip install --python .sdist-env/bin/python dist/tracekite_core-*.tar.gz
+          .sdist-env/bin/python scripts/release_smoke.py \
+            --tracekite .sdist-env/bin/tracekite
+
+      - name: Record distribution checksums
+        run: (cd dist && sha256sum *) > SHA256SUMS
 
       - uses: actions/upload-artifact@v4
         with:
           name: tracekite-core-dist
-          path: dist/
+          path: |
+            dist/
+            SHA256SUMS
           if-no-files-found: error
           retention-days: 7
 
@@ -85,8 +100,40 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: tracekite-core-dist
-          path: dist/
 
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+
+  verify-registry:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install the published version from PyPI
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          for attempt in 1 2 3 4 5; do
+            python -m pip install --no-cache-dir "tracekite-core==${VERSION}" \
+              && break
+            if [ "$attempt" = 5 ]; then exit 1; fi
+            sleep 15
+          done
+          tracekite --help
+
+  release-assets:
+    needs: [build, verify-registry]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: tracekite-core-dist
+      - name: Attach distributions and checksums to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/* SHA256SUMS --clobber

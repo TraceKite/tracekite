@@ -6,8 +6,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from tracekite import engine_config
 from tracekite.db import store_config
 
-_DEFAULT_PASSWORDS = {"", "password", "neo4j"}
-
 
 class Settings(BaseSettings):
     # `.env` also contains Docker Compose variables that are not app settings.
@@ -79,7 +77,7 @@ class Settings(BaseSettings):
 
     def require_neo4j_password(self) -> str:
         """Startup refuses default/unset Neo4j passwords (design §9)."""
-        if self.neo4j_password in _DEFAULT_PASSWORDS:
+        if store_config.is_unsafe_neo4j_password(self.neo4j_password):
             raise RuntimeError(
                 "NEO4J_PASSWORD is unset or a known default; refusing to start"
             )

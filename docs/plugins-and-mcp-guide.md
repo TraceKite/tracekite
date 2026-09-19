@@ -7,14 +7,20 @@ format.
 
 ## Install the CLI and skill
 
-From this checkout:
+Install the released CLI:
 
 ```bash
-uv tool install .
+uv tool install tracekite-core
 tracekite install-skill
 ```
 
-`install-skill` supports `claude`, `codex`, `kimi`, and
+Alternatively, clone this repository and run the combined installer:
+
+```bash
+./scripts/install.sh
+```
+
+The repository's `install-skill` command supports `claude`, `codex`, `kimi`, and
 `antigravity`. Repeat `--client` to select more than one:
 
 ```bash
@@ -52,8 +58,9 @@ Pass each repository as its own source directory:
 tracekite mcp /absolute/path/orders /absolute/path/billing
 ```
 
-Source directories are fully scanned when the server starts. A parent
-directory is not treated as a collection of repositories.
+Source directories are fully scanned on the first graph tool call, after the
+MCP handshake completes. A parent directory is not treated as a collection of
+repositories.
 
 For repeatable CI or faster startup, create one artifact per repository and
 pass the resulting filenames:

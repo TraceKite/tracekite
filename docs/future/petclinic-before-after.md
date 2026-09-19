@@ -25,7 +25,7 @@ measured. The code changes below are hypothetical developer requests.
 - Source and local API reviewed on September 13 2026. The source revision agrees
   with the indexed repository metadata. The stored ingest is dated September 11;
   this review did not re-ingest it.
-- The connected MCP `services()` response contained only an unrelated `adduce`
+- The connected MCP `services()` response contained only an unrelated
   graph. The PetClinic evidence instead comes from the local TraceKite HTTP
   instance and direct reads of the exact indexed source paths.
 

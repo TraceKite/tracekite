@@ -1,0 +1,40 @@
+name: Feature request
+description: Propose a supported use case or coverage improvement
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What decision or dependency can TraceKite not represent today?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Available evidence
+      description: Describe the source/configuration signals without sharing private code.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Include how ambiguity and unsupported cases should decline.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Parser or language coverage
+        - Resolver or edge type
+        - CLI or MCP
+        - Server API
+        - Web UI
+        - Packaging or integration
+        - Documentation
+    validations:
+      required: true

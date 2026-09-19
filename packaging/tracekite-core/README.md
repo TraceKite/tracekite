@@ -16,5 +16,12 @@ Use `tracekite mcp` to expose `services`, `consumers_of`, `trace`, and
 `deprecations` over MCP stdio. With no path arguments, it scans the current
 repository on the first graph query.
 
+`tracekite ingest` talks to a running TraceKite server and needs the server
+extra:
+
+```bash
+pip install 'tracekite-core[server]'
+```
+
 Documentation and source are available in the
 [TraceKite repository](https://github.com/TraceKite/tracekite).

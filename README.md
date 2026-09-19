@@ -145,8 +145,8 @@ TraceKite is available as a **standalone CLI tool** (`tracekite`), an **embeddab
 
 | Interface | Installation & Execution | Primary Use Case |
 |---|---|---|
-| **Standalone CLI Tool** | `uv tool install .` $\rightarrow$ `tracekite link ...` | Terminal graph queries, PR impact checks, and MCP stdio |
-| **Embeddable Library** | `pip install dist/tracekite_core-*.whl` | Embed `scan()` and `link()` into Python CI scripts without a server |
+| **Standalone CLI Tool** | `uv tool install tracekite-core` after release → `tracekite link ...` | Terminal graph queries, PR impact checks, and MCP stdio |
+| **Embeddable Library** | `pip install tracekite-core` after release | Embed the public `TraceKite` facade into Python without a server |
 | **Full Web Application** | `docker compose up -d` | Grouped 2D/3D code exploration, Service Map and Trace UI |
 
 ### 1. One-Line Setup
@@ -167,13 +167,17 @@ Pass `--yes` to skip the prompt (CI), or target a single client:
 ./scripts/install.sh --codex     # OpenAI Codex only
 ```
 
-Or install manually without the script:
+After `v0.1.0` is published, install the core CLI without cloning:
 
 ```bash
-uv tool install .
-tracekite install-skill             # all clients, or --client claude
+uv tool install tracekite-core
+tracekite install-skill             # explicit; all clients by default
 tracekite --help
 ```
+
+Installing the package does not edit MCP client configuration or global skill
+files. `tracekite install-skill` is the explicit opt-in for the skill; it
+refuses to overwrite a different existing file.
 
 > **Agent plugin** — The cross-client [TraceKite plugin](plugins/tracekite/)
 > bundles the skill and MCP server declarations for Claude Code, Codex, and
@@ -198,9 +202,12 @@ tracekite mcp /absolute/path/repo-a /absolute/path/repo-b
 No container, no database. Install the pure engine on its own:
 
 ```bash
-uv build --wheel --project packaging/tracekite-core --out-dir dist
-pip install dist/tracekite_core-0.1.0-py3-none-any.whl
+pip install tracekite-core
 ```
+
+To validate unreleased source, build it locally with
+`uv build --project packaging/tracekite-core --out-dir dist` and install the
+resulting wheel in a clean environment.
 
 See [Developer use cases](docs/use-cases.md#embed-the-engine) for a direct
 embedding example.
@@ -229,19 +236,24 @@ The key is required because configuration values are redacted before they
 enter the graph. The facade fails closed rather than producing a graph with
 an unsafe or invented redaction identity.
 
-```json
-{ "wire_version": "1.0.0",
-  "claims_loaded": 7,
-  "edges": [ { "type": "CALLS_SERVICE", "confidence": 0.94,
-               "source": "...", "target": "...",
-               "evidence": ["src/clients/VetsClient.java:42"] } ],
-  "counters": { "r7.ambiguous_host": 3, "r7.fanout_exceeded": 1 } }
+```python
+answer = tk.services()
+payload = answer.model_dump(mode="json")
+
+print(payload["answer_version"])
+print(payload["status"])
+print(payload["snapshot"])
+print(payload["scope"])
+print(payload["completeness"])
+print(payload["result"]["services"])
 ```
 
-`counters` ships with every answer on purpose: a decline is recorded data, not
-silence. `python -m tracekite.cli schema` prints the JSON Schema those payloads
-validate against — published under [`schemas/`](schemas/) and frozen, so a
-non-Python consumer can validate without a binding.
+Facade answers carry versioned status, snapshot, scope, completeness, freshness,
+result, candidates, and reason fields. CLI link reports include resolver
+`counters` on purpose: a decline is recorded data, not silence.
+`python -m tracekite.cli schema` prints the CLI JSON Schemas published under
+[`schemas/`](schemas/) and frozen, so a non-Python consumer can validate them
+without a binding.
 
 In Python, the same two calls the CLI makes:
 
@@ -264,7 +276,7 @@ checks they are absent. The `tracekite-core` wheel builds from
 [`packaging/tracekite-core`](packaging/tracekite-core) and installs into a clean
 environment pulling neither; `scan()` and `link()` both work from it. It
 installs one top-level package, `tracekite`, so it coexists with a host that
-has its own `app/` — a test pins that. It is not yet published to PyPI.
+has its own `app/` — a test pins that.
 
 ## Quickstart
 
@@ -324,9 +336,10 @@ repository picker, search, highlighting, and how module boundaries are drawn.
 
 ## The CLI
 
-Every command works on the library alone — no server, no database — and prints
-JSON on stdout so it pipes. `--now` fixes the clock wherever a command has a
-time dimension, which is what makes two runs diffable.
+Every core analysis command works with no server or database and prints JSON on
+stdout so it pipes. `--now` fixes the clock wherever a command has a time
+dimension, which is what makes two runs diffable. `ingest` is the exception: it
+talks to a running server and requires `tracekite-core[server]`.
 
 **Look at one repository, or a whole estate**
 
@@ -527,6 +540,11 @@ safe only because nothing off your machine can reach it. If you change
 values are HMAC-redacted at parse time, so secrets found in ingested repos
 never reach nodes, claims, or evidence.
 
+See [Security and privacy boundary](docs/security-and-privacy.md) before
+sharing artifacts or exposing the server. Existing installations created
+before the current name should follow the
+[rename migration](docs/rename-migration.md) to retain Docker volumes.
+
 ## Documentation
 
 | Document | Covers |
@@ -541,6 +559,9 @@ never reach nodes, claims, or evidence.
 | [CONTRIBUTING](CONTRIBUTING.md) | setup, the one rule that matters, adding a parser or resolver |
 | [Intelligence release plan](docs/design/intelligence-release-plan.md) | the reviewed plan for context intelligence, UI density, integration API and public release |
 | [Release tasks](tasks.csv) | the public task tracker — 32 prioritized tasks with dependencies, acceptance criteria and source references |
+| [Security and privacy](docs/security-and-privacy.md) | local processing, network, telemetry and output boundaries |
+| [Rename migration](docs/rename-migration.md) | CLI, skill, environment and Docker-volume migration |
+| [Release process](docs/releasing.md) | candidate checks, trusted publishing and registry verification |
 
 
 ## Contributing

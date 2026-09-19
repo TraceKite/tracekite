@@ -106,6 +106,23 @@ jobs:
           sys.exit(1 if failed else 0)
           PY
 
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: corepack enable
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile --filter '@tracekite/web...'
+      - name: Typecheck
+        run: pnpm --filter @tracekite/web run typecheck
+      - name: Test
+        run: pnpm --filter @tracekite/web run test
+      - name: Build
+        run: pnpm --filter @tracekite/web run build
+
   wheel-smoke:
     # The core wheel omits server-extra deps (httpx, fastapi, neo4j). A
     # clean install must still run `tracekite --help` and `tracekite link`
@@ -119,17 +136,22 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - name: Build the core wheel
-        run: uv build --wheel --project packaging/tracekite-core --out-dir dist
-      - name: Clean install runs --help and link
+      - name: Build and validate core distributions
         run: |
-          uv venv --python 3.13 .test-env
-          uv pip install --python .test-env/bin/python dist/tracekite_core-*.whl
-          .test-env/bin/tracekite --help
-          GRAPH_HMAC_KEY=ci-smoke .test-env/bin/tracekite link \
-            corpus/orders-service corpus/billing-service \
-            --now 2026-01-01T00:00:00+00:00 > /tmp/tracekite-smoke.json
-          .test-env/bin/python -c 'import json; p=json.load(open("/tmp/tracekite-smoke.json")); assert p["edges"] and all(e["evidence"] for e in p["edges"])'
+          uv build --project packaging/tracekite-core --out-dir dist
+          uvx --from twine twine check dist/*
+      - name: Smoke-test a clean wheel install
+        run: |
+          uv venv --python 3.13 .wheel-env
+          uv pip install --python .wheel-env/bin/python dist/tracekite_core-*.whl
+          .wheel-env/bin/python scripts/release_smoke.py \
+            --tracekite .wheel-env/bin/tracekite
+      - name: Smoke-test a clean source-distribution install
+        run: |
+          uv venv --python 3.13 .sdist-env
+          uv pip install --python .sdist-env/bin/python dist/tracekite_core-*.tar.gz
+          .sdist-env/bin/python scripts/release_smoke.py \
+            --tracekite .sdist-env/bin/tracekite
 
   graph-diff:
     # What did this change do to the graph?
