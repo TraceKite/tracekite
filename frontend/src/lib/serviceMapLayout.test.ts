@@ -29,8 +29,12 @@ test("link distance has no step for a map to fall just short of", () => {
 });
 
 test("the measured sizes get the distances they were measured at", () => {
-  assert.equal(serviceMapForces(38).linkDistance, 488);
-  assert.equal(serviceMapForces(55).linkDistance, 590);
+  // Retuned once the layout gained forceX/forceY containment. Containment
+  // compacts the cloud, which raises the fitted zoom, which means the same
+  // on-screen link length needs far fewer graph units: 590 became a hairball
+  // of 194px edges, and 230 puts the median back at 69px.
+  assert.equal(serviceMapForces(38).linkDistance, 196);
+  assert.equal(serviceMapForces(55).linkDistance, 230);
 });
 
 test("a pathological node count is capped rather than run away", () => {

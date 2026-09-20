@@ -24,6 +24,22 @@ export interface FitTarget {
  */
 export const MAX_FIT_ZOOM = 2.5;
 
+/**
+ * How far the automatic fit may zoom out.
+ *
+ * The other end of the same idea, and the one that costs something: below this
+ * the fit stops shrinking and the scene is allowed to run past the edges of
+ * the viewport, to be panned rather than taken in at a glance.
+ *
+ * That is the better trade. Labels and node discs are painted at a fixed size
+ * in SCREEN pixels, so zooming out buys nothing but crowding — at 0.3 a
+ * bounded 180px label already spans 600 graph units, more than a settled
+ * layout puts between two linked services. Past that point a map that "fits"
+ * is one whose labels have been dropped and whose nodes sit inside one
+ * another; showing part of it legibly is worth more than all of it as a smudge.
+ */
+export const MIN_FIT_ZOOM = 0.3;
+
 export function fitTarget(
   bbox: GraphBbox | null | undefined,
   viewport: Viewport,
@@ -40,6 +56,9 @@ export function fitTarget(
   return {
     x: (bbox.x[0] + bbox.x[1]) / 2,
     y: (bbox.y[0] + bbox.y[1]) / 2,
-    zoom: Math.min(MAX_FIT_ZOOM, usableWidth / spanX, usableHeight / spanY),
+    zoom: Math.max(
+      MIN_FIT_ZOOM,
+      Math.min(MAX_FIT_ZOOM, usableWidth / spanX, usableHeight / spanY),
+    ),
   };
 }

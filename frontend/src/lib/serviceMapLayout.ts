@@ -44,8 +44,8 @@ export interface ServiceMapForces {
  * short of it, thirty of the sixty-eight drawn lines were still under ten
  * pixels. The crowding does not start at a particular size; it comes on
  * steadily, so the answer has to as well. */
-const LINK_DISTANCE_BASE = 260;
-const LINK_DISTANCE_PER_NODE = 6;
+const LINK_DISTANCE_BASE = 120;
+const LINK_DISTANCE_PER_NODE = 2;
 
 /** Not a tuned value — a stop so a pathological node count cannot run away. */
 const MAX_LINK_DISTANCE = 1200;

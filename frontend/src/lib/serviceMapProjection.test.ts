@@ -104,9 +104,12 @@ test("unconnected services are pinned in a row centred on the origin", () => {
   // Symmetric about zero, so zoomToFit does not favour one end of the row.
   assert.equal(pinned.reduce((sum, n) => sum + (n.fx ?? 0), 0), 0);
   // Evenly spaced, and wide enough that a name does not clip its neighbour.
+  // The gap is no longer a flat number: the block is sized against the graph
+  // it shares a canvas with, so `serviceMapIsolateBlock` owns that rule and
+  // its own tests pin it.
   const gaps = pinned.slice(1).map((n, i) => (n.fx ?? 0) - (pinned[i].fx ?? 0));
   assert.equal(new Set(gaps).size, 1);
-  assert.ok(gaps[0] >= 150, `a row gap of ${gaps[0]} clips bare service names`);
+  assert.ok(gaps[0] > 0, `a row gap of ${gaps[0]} stacks the isolates`);
 });
 
 test("the isolate row widens with the map it is pinned beside", () => {

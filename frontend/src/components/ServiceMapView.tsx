@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import { forceCollide } from "d3-force";
+import { forceCollide, forceX, forceY } from "d3-force";
 import { useGraphStore } from "@/store/graphStore";
 import { api } from "@/lib/api";
 import { Loader2 } from "lucide-react";
@@ -15,6 +15,10 @@ import { MAX_SERVICE_LABEL_PX, serviceDisplayNames } from "@/lib/serviceMapLabel
 import { nodeRadius, paintServiceLink, paintServiceNode } from "@/lib/serviceMapPainter";
 import { useServiceMapLabels } from "@/hooks/useServiceMapLabels";
 import { serviceMapForces } from "@/lib/serviceMapLayout";
+import { fitTarget } from "@/lib/graphCameraFit";
+
+const FIT_MS = 400;
+const FIT_PADDING = 90;
 
 /* Stable identities: react-kapsule re-applies a prop whenever its reference
  * changes, so inline arrows here re-set the accessor on every React render. */
@@ -33,6 +37,10 @@ function ServiceMapCanvasComponent() {
   const [layoutReady, setLayoutReady] = useState(false);
   const fgRef = useRef<any>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  // Read at fit time, so framing never depends on a stale measurement and
+  // never re-runs the layout just because the panel resized.
+  const dimensionsRef = useRef(dimensions);
+  dimensionsRef.current = dimensions;
 
   useEffect(() => {
     let mounted = true;
@@ -50,9 +58,23 @@ function ServiceMapCanvasComponent() {
     return () => ro.disconnect();
   }, [containerEl]);
 
+  /* Framed through the shared fit rather than zoomToFit, which is bounded at
+   * neither end: it scales a two-node map until the discs fill the screen, and
+   * shrinks a large one until its labels have to be dropped. Below the floor
+   * the map runs past the viewport and is panned. */
+  const frame = useCallback(() => {
+    const graph = fgRef.current;
+    if (!graph) return;
+    const target = fitTarget(graph.getGraphBbox?.(), dimensionsRef.current, FIT_PADDING);
+    if (!target) return;
+    graph.centerAt(target.x, target.y, FIT_MS);
+    graph.zoom(target.zoom, FIT_MS);
+  }, []);
+
   const graphData = useMemo(
-    () => projectServiceMap(serviceMapData, mapEdgeTypes, scopeRepoIds),
-    [serviceMapData, mapEdgeTypes, scopeRepoIds],
+    () => projectServiceMap(serviceMapData, mapEdgeTypes, scopeRepoIds,
+                            { canvasWidthPx: dimensions.width }),
+    [serviceMapData, mapEdgeTypes, scopeRepoIds, dimensions.width],
   );
   const emptyState = useMemo(
     () => serviceMapEmptyState(serviceMapData, graphData, scopeRepoIds),
@@ -87,19 +109,26 @@ function ServiceMapCanvasComponent() {
       charge.strength(forces.chargeStrength).distanceMax(forces.chargeDistanceMax);
       graph.d3Force("link")?.distance(forces.linkDistance);
       graph.d3Force("center")?.strength(forces.centerStrength);
+      // Read through the ref: re-applying forces is cheap, but reheating
+      // restarts a settled layout and moves every node, and a panel opening
+      // must not do that.
+      const { width, height } = dimensionsRef.current;
+      const aspect = Math.max(width / Math.max(height, 1), 0.2);
+      graph.d3Force("x", forceX(0).strength(0.05 / aspect));
+      graph.d3Force("y", forceY(0).strength(0.05 * aspect));
       graph.d3Force("collide", forceCollide(forces.collideRadius).iterations(2));
       graph.d3ReheatSimulation?.();
       // Fit after the layout has had time to settle, in case onEngineStop
       // does not fire (it does not when the sim is already cool).
       setTimeout(() => {
         if (cancelled) return;
-        fgRef.current?.zoomToFit(400, 90);
+        frame();
         setLayoutReady(true);
       }, 1400);
     };
     apply();
     return () => { cancelled = true; };
-  }, [graphData, ForceGraphComponent]);
+  }, [graphData, ForceGraphComponent, frame]);
 
   /** Edges touching the focused service, split by direction. */
   const focus = useMemo(() => {
@@ -191,7 +220,7 @@ function ServiceMapCanvasComponent() {
         // Bound d3 work instead of using its 15-second default.
         cooldownTicks={220}
         onEngineStop={() => {
-          fgRef.current?.zoomToFit(400, 80);
+          frame();
           setLayoutReady(true);
         }}
         onLinkClick={(link: any) => {

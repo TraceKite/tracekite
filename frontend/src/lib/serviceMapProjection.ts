@@ -1,5 +1,7 @@
 import type { ServiceMapEdge, ServiceMapNode, ServiceMapResponse } from "./types.ts";
 import { serviceMapForces } from "./serviceMapLayout.ts";
+import { isolateBlock } from "./serviceMapIsolateBlock.ts";
+import { MAX_SERVICE_LABEL_PX } from "./serviceMapLabel.ts";
 
 export interface ServiceMapProjection {
   nodes: ServiceMapNode[];
@@ -19,23 +21,12 @@ function nothingToDraw(): ServiceMapProjection {
   return { nodes: [], links: [], dangling: 0, isolated: 0 };
 }
 
-/** Isolated services are pinned in a row so they read as a list, not a heap.
+/** How wide the canvas is assumed to be when the caller does not say.
  *
- * The gap has to clear a label, not a dot: at the zoom a fitted map settles on,
- * 90 graph units was ~98px against a ~94px bare service name, so every label
- * clipped its neighbour's last character. This only became worth widening once
- * labels were bounded — while they were full repo-qualified names at ~380px, no
- * spacing could have helped, because zoomToFit shrinks the scale by whatever
- * factor the row is widened by.
- *
- * Both are held as shares of the link distance rather than as the flat 150 and
- * 180 they were, because that distance now grows with the map. Left fixed, the
- * row stayed small-map sized while the graph around it grew past it, and the
- * pinned nodes ended up parked inside a cluster. The shares are written as the
- * fractions they came from: 150 and 180 against the 220 the row was tuned
- * beside, so the relationship survives even though neither number does. */
-const ISOLATE_SPACING_SHARE = 150 / 220;
-const ISOLATE_ROW_SHARE = 180 / 220;
+ * Only the picker leaves it out, and it reads node and link COUNTS, which no
+ * isolate position can change. The canvas itself always passes its real width,
+ * because how many names fit across it is the whole question. */
+const ASSUMED_CANVAS_PX = 900;
 
 function nodeInScope(node: ServiceMapNode, scopeRepoIds: string[]): boolean {
   if (scopeRepoIds.length === 0) return true;
@@ -58,10 +49,16 @@ function edgeInScope(edge: ServiceMapEdge, scopeRepoIds: string[]): boolean {
   return scopeRepoIds.includes(edge.source_repo_id);
 }
 
+/** What the canvas knows and the projection cannot work out for itself. */
+export interface ServiceMapViewport {
+  canvasWidthPx: number;
+}
+
 export function projectServiceMap(
   data: ServiceMapResponse | null,
   mapEdgeTypes: string[],
   scopeRepoIds: string[],
+  viewport?: ServiceMapViewport,
 ): ServiceMapProjection {
   if (!data) return nothingToDraw();
 
@@ -94,15 +91,17 @@ export function projectServiceMap(
   });
   const isolates = retained.filter((node) => !connected.has(node.id));
   const isolateIndex = new Map(isolates.map((node, index) => [node.id, index]));
-  const { linkDistance } = serviceMapForces(retained.length);
+  const placements = isolateBlock({
+    count: isolates.length,
+    nodeCount: retained.length,
+    linkDistance: serviceMapForces(retained.length).linkDistance,
+    canvasWidthPx: viewport?.canvasWidthPx ?? ASSUMED_CANVAS_PX,
+    labelBudgetPx: MAX_SERVICE_LABEL_PX,
+  });
   const nodes = retained.map((node) => {
     const index = isolateIndex.get(node.id);
     if (index == null) return { ...node };
-    return {
-      ...node,
-      fx: (index - (isolates.length - 1) / 2) * linkDistance * ISOLATE_SPACING_SHARE,
-      fy: linkDistance * ISOLATE_ROW_SHARE,
-    };
+    return { ...node, ...placements[index] };
   });
 
   return { nodes, links, dangling, isolated: isolates.length };
