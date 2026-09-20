@@ -13,6 +13,7 @@ import {
   buildNodeIndex,
   computeFocusContext,
 } from "@/lib/graph2dProjection";
+import { LabelSpace } from "@/lib/canvasLabelSpace";
 import {
   paintLink,
   paintModuleRegions,
@@ -55,9 +56,9 @@ export default function GraphCanvas2D() {
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const graphRef = useRef<ForceGraph2DMethods | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const labelOccupancyRef = useRef<Array<{
-    left: number; right: number; top: number; bottom: number;
-  }>>([]);
+  /** One frame's worth of taken label space, shared by the hull captions and
+   * the node pills so the two cannot both claim the same spot. */
+  const labelSpaceRef = useRef(new LabelSpace());
 
   useEffect(() => {
     let mounted = true;
@@ -173,7 +174,7 @@ export default function GraphCanvas2D() {
       labels: labelBudget,
       showLabels,
       moduleOrder,
-      labelOccupancy: labelOccupancyRef.current,
+      labelSpace: labelSpaceRef.current,
     });
   }, [focus, highlightedNodeIds, hoverNode?.id, labelBudget, moduleOrder,
       selectedNode?.id, showLabels]);
@@ -266,9 +267,9 @@ export default function GraphCanvas2D() {
         height={dimensions.height}
         backgroundColor="#fbfaf6"
         onRenderFramePre={(context: CanvasRenderingContext2D, scale: number) => {
-          labelOccupancyRef.current = [];
+          labelSpaceRef.current.reset();
           paintModuleRegions(context, visibleNodes as any, scale, moduleOrder,
-            labelOccupancyRef.current);
+            labelSpaceRef.current);
         }}
         nodeCanvasObject={drawNode}
         nodeCanvasObjectMode={() => "replace"}

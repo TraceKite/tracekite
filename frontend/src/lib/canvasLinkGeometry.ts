@@ -1,5 +1,11 @@
 /** Where a link's line starts and ends once both node discs are cleared.
  *
+ * Every canvas in the app draws edges between round nodes and so needs this,
+ * and all three had their own version with three different answers to the one
+ * case that matters — a link shorter than the clearances trimming it. The repo
+ * graph capped the trim at 45% of the length, the service map refused to draw,
+ * and the trace canvas refuses to this day. One decision, one implementation.
+ *
  * Every length the map paints is screen-space, so the clearances arrive in
  * pixels and are divided by the zoom to reach graph units. They are screen-space
  * for a reason worth keeping: a fixed graph-unit gap of 12 was tuned for one
@@ -29,6 +35,9 @@ export interface LinkTrim {
   endClearancePx: number;
   /** Arrowhead length in screen pixels. */
   arrowPx: number;
+  /** Canvas zoom, converting those pixels to the graph units a node sits in.
+   * Pass 1 where the clearances are already graph units, as the repo graph's
+   * node radii are. */
   globalScale: number;
 }
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { trimLinkToNodes } from "./serviceMapLinkGeometry.ts";
+import { trimLinkToNodes } from "./canvasLinkGeometry.ts";
 
 /** The zoom a fitted 55-node map settles on, and the layout's link distance. */
 const FITTED_SCALE = 0.1545;

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { MODULE_HUE_LIST, graphGroupOf } from "@/lib/graphStyle";
 import type { Node3DPhysicsState } from "@/lib/graph3dPhysics";
+import { LabelSpace } from "@/lib/canvasLabelSpace";
 
 export interface ClusterInfo {
   id: string;
@@ -128,7 +129,7 @@ export function updateClusterHolo(
   onFocus?: (c: ClusterInfo) => void
 ) {
   const vec = new THREE.Vector3();
-  const occupied: Array<{ left: number; right: number; top: number; bottom: number }> = [];
+  const occupied = new LabelSpace();
   let visibleCount = 0;
   const ordered = [...clusters].sort((a, b) => b.count - a.count || a.id.localeCompare(b.id));
 
@@ -149,11 +150,7 @@ export function updateClusterHolo(
         top: c.sy - 12,
         bottom: c.sy + 12,
       };
-      const overlaps = occupied.some((item) =>
-        rect.left < item.right && rect.right > item.left &&
-        rect.top < item.bottom && rect.bottom > item.top);
-      if (overlaps) return;
-      occupied.push(rect);
+      if (!occupied.claim(rect)) return;
       const el = pool.elements[visibleCount++];
       el.style.transform = `translate(-50%, -50%) translate(${c.sx.toFixed(1)}px, ${c.sy.toFixed(1)}px)`;
       el.style.opacity = "0.95";

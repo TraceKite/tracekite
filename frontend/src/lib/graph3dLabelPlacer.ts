@@ -1,5 +1,6 @@
 import { getNodeColor } from "./graphStyle.ts";
 import { getNeighbors } from "./graph3dPath.ts";
+import { LabelSpace } from "./canvasLabelSpace.ts";
 import type { GraphLink } from "./types.ts";
 import type { Node3DPhysicsState } from "./graph3dPhysics.ts";
 
@@ -129,7 +130,7 @@ export function updateDomLabels(
   });
 
   const chosen: Node3DPhysicsState[] = [];
-  const occupied: Array<{ left: number; right: number; top: number; bottom: number }> = [];
+  const occupied = new LabelSpace();
   for (const candidate of candidates) {
     const prioritized = candidate.id === activeFocus || pathSet?.has(candidate.id);
     const labelWidth = estimateLabelWidth(candidate.node.label);
@@ -139,12 +140,11 @@ export function updateDomLabels(
       top: candidate.sy - candidate.sr - 25,
       bottom: candidate.sy - candidate.sr - 5,
     };
-    const overlaps = occupied.some((item) =>
-      rect.left < item.right && rect.right > item.left &&
-      rect.top < item.bottom && rect.bottom > item.top);
-    if (!prioritized && overlaps) continue;
+    // The focused node and the traced path keep their names whatever they land
+    // on, and still reserve the space so what yields does not print through.
+    if (prioritized) occupied.reserve(rect);
+    else if (!occupied.claim(rect)) continue;
     chosen.push(candidate);
-    occupied.push(rect);
     if (chosen.length >= Math.min(pool.elements.length, maxLabels)) break;
   }
 

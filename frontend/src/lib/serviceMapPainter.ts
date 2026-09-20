@@ -1,5 +1,6 @@
-import { fitServiceLabel } from "./serviceMapLabel.ts";
-import { trimLinkToNodes } from "./serviceMapLinkGeometry.ts";
+import { trimLinkToNodes } from "./canvasLinkGeometry.ts";
+import { labelPillFor, paintLabelPill } from "./canvasLabelPill.ts";
+import type { LabelPill } from "./canvasLabelPill.ts";
 
 /** On-screen node radius in CSS pixels, before the zoom divide. */
 export function nodeRadius(node: any): number {
@@ -83,30 +84,13 @@ export function paintServiceNode(
     return;
   }
 
-  const { x0, y0, w, h, text } = serviceLabelBox(node, ctx, globalScale, label, labelBudgetPx);
-  ctx.fillStyle = "rgba(255, 254, 250, 0.96)";
-  ctx.beginPath();
-  ctx.roundRect(x0, y0, w, h, 3 / globalScale);
-  ctx.fill();
-
-  ctx.fillStyle = isDeadEnd ? "#dc2626" : "#1a1d23";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(text, node.x, y0 + (12 / globalScale) * 0.7);
-
+  paintLabelPill(ctx, globalScale,
+                 serviceLabelBox(node, ctx, globalScale, label, labelBudgetPx),
+                 isDeadEnd ? "#dc2626" : "#1a1d23");
   ctx.restore();
 }
 
-export interface ServiceLabelBox {
-  x0: number;
-  y0: number;
-  w: number;
-  h: number;
-  /** The label after shortening — what actually gets drawn and measured. */
-  text: string;
-}
-
-/** The box a node's label will occupy, in graph units.
+/** The box a node's label will occupy.
  *
  * The placer needs this before anything is painted and the painter needs it
  * again to draw, and the two must agree exactly or a label is placed against
@@ -118,21 +102,13 @@ export function serviceLabelBox(
   globalScale: number,
   label: string,
   labelBudgetPx: number,
-): ServiceLabelBox {
-  const labelSize = 12 / globalScale;
-  ctx.font = `600 ${labelSize}px ui-sans-serif, system-ui, sans-serif`;
-  // measureText returns graph units at this font, and the budget is in screen
-  // pixels, so the scale has to come back out before comparing.
-  const text = fitServiceLabel(
-    label, labelBudgetPx, (candidate) => ctx.measureText(candidate).width * globalScale);
-  const width = ctx.measureText(text).width;
-  return {
-    x0: node.x - width / 2 - 3 / globalScale,
-    y0: node.y + nodeRadius(node) / globalScale + 2 / globalScale,
-    w: width + 6 / globalScale,
-    h: labelSize * 1.35,
-    text,
-  };
+): LabelPill {
+  return labelPillFor(ctx, globalScale, {
+    centerX: node.x,
+    anchorY: node.y + nodeRadius(node) / globalScale,
+    text: label,
+    budgetPx: labelBudgetPx,
+  });
 }
 
 export interface ServiceLinkPaint {

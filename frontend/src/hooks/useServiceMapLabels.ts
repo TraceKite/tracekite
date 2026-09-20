@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef } from "react";
 
-import { chooseServiceLabels } from "@/lib/serviceMapLabelPlacer";
+import { placeLabels } from "@/lib/canvasLabelSpace";
 import { serviceLabelBox } from "@/lib/serviceMapPainter";
 import { MAX_SERVICE_LABEL_PX } from "@/lib/serviceMapLabel";
 
@@ -22,6 +22,9 @@ export interface ServiceMapLabels {
  * Whether a label fits depends on every other label, so it cannot be settled
  * inside the per-node paint callback, which sees one node at a time. It is
  * settled here instead and the paint reads the answer.
+ *
+ * `canvasLabelSpace` owns the fitting; what this hook contributes is the
+ * service map's own idea of which label deserves a contested spot.
  *
  * The result lives in a ref, not in state: it is recomputed every frame, and
  * setting state per frame would re-render the canvas out from under itself.
@@ -49,19 +52,16 @@ export function useServiceMapLabels(
   }, [graphData]);
 
   const place = useCallback((ctx: CanvasRenderingContext2D, globalScale: number) => {
-    shown.current = chooseServiceLabels(
+    shown.current = placeLabels(
       graphData.nodes
         .filter((node) => node.x != null && node.y != null)
         .map((node) => {
-          const box = serviceLabelBox(
+          const pill = serviceLabelBox(
             node, ctx, globalScale,
             displayNames.get(node.id) ?? node.name, MAX_SERVICE_LABEL_PX);
           return {
             id: node.id,
-            x0: box.x0,
-            y0: box.y0,
-            x1: box.x0 + box.w,
-            y1: box.y0 + box.h,
+            rect: pill.rect,
             priority: priority.get(node.id) ?? 0,
             pinned: node.id === focusId || node.id === hoverId,
           };
