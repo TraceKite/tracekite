@@ -7,12 +7,18 @@
 # assets, so the runtime stage below stays on the host architecture.
 FROM --platform=linux/amd64 node:25-slim AS build
 
-RUN corepack enable
-
 WORKDIR /repo
 
 # Workspace metadata first so the dependency layer caches independently of source.
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+
+# node 25 dropped the bundled corepack, so `corepack enable` fails the build.
+# The version still comes from package.json's packageManager pin rather than a
+# literal here: that pin exists because an unpinned pnpm 11 could not install a
+# v10 lockfile, and a second copy of the number is how that returns.
+RUN npm install --global \
+        "pnpm@$(node -p "require('./package.json').packageManager.split('@')[1]")"
+
 COPY frontend/package.json ./frontend/
 COPY lib/api-client-react/package.json ./lib/api-client-react/
 COPY lib/api-spec/package.json ./lib/api-spec/
