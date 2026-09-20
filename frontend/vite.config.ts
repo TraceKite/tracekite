@@ -34,8 +34,10 @@ export default defineConfig({
     chunkSizeWarningLimit: 550,
     rollupOptions: {
       output: {
-        manualChunks: {
-          three: ['three'],
+        // Rolldown (vite 8) accepts only the function form of manualChunks;
+        // the object form also type-checks but fails the build at runtime.
+        manualChunks(id: string) {
+          return id.includes('node_modules/three/') ? 'three' : undefined;
         },
       },
     },
