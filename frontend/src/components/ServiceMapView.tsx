@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { forceCollide } from "d3-force";
 import { useGraphStore } from "@/store/graphStore";
 import { api } from "@/lib/api";
 import { Loader2 } from "lucide-react";
@@ -12,6 +13,7 @@ import ServiceMapSidebar from "@/components/ServiceMapSidebar";
 import { projectServiceMap, serviceMapEmptyState } from "@/lib/serviceMapProjection";
 import { MAX_SERVICE_LABEL_PX, serviceDisplayNames } from "@/lib/serviceMapLabel";
 import { nodeRadius, paintServiceLink, paintServiceNode } from "@/lib/serviceMapPainter";
+import { useServiceMapLabels } from "@/hooks/useServiceMapLabels";
 import { serviceMapForces } from "@/lib/serviceMapLayout";
 
 /* Stable identities: react-kapsule re-applies a prop whenever its reference
@@ -60,7 +62,8 @@ function ServiceMapCanvasComponent() {
   // from the projected set rather than baked into the node on the way in.
   const displayNames = useMemo(
     () => serviceDisplayNames(graphData.nodes), [graphData.nodes]);
-
+  const labels = useServiceMapLabels(
+    graphData as any, displayNames, focusNode?.id, hoverNode?.id);
   useEffect(() => {
     if (focusNode && !graphData.nodes.some((node: any) => node.id === focusNode.id)) {
       setFocusNode(null);
@@ -84,6 +87,7 @@ function ServiceMapCanvasComponent() {
       charge.strength(forces.chargeStrength).distanceMax(forces.chargeDistanceMax);
       graph.d3Force("link")?.distance(forces.linkDistance);
       graph.d3Force("center")?.strength(forces.centerStrength);
+      graph.d3Force("collide", forceCollide(forces.collideRadius).iterations(2));
       graph.d3ReheatSimulation?.();
       // Fit after the layout has had time to settle, in case onEngineStop
       // does not fire (it does not when the sim is already cool).
@@ -121,8 +125,9 @@ function ServiceMapCanvasComponent() {
       dimmed: isDimmed(node),
       label: displayNames.get(node.id) ?? node.name,
       labelBudgetPx: MAX_SERVICE_LABEL_PX,
+      showLabel: labels.shown.current.has(node.id),
     });
-  }, [isDimmed, displayNames]);
+  }, [isDimmed, displayNames, labels]);
 
   const drawLink = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const confStyle = getConfidenceStyle(link.confidence);
@@ -160,6 +165,7 @@ function ServiceMapCanvasComponent() {
         width={dimensions.width}
         height={dimensions.height}
         backgroundColor="transparent"
+        onRenderFramePre={labels.place}
         nodeCanvasObject={drawNode}
         nodeCanvasObjectMode={nodeReplaceMode}
         linkCanvasObject={drawLink}

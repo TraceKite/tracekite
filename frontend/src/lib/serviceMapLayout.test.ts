@@ -37,9 +37,20 @@ test("a pathological node count is capped rather than run away", () => {
   assert.equal(serviceMapForces(100000).linkDistance, 1200);
 });
 
+test("the collide radius clears two discs without expanding the whole map", () => {
+  const forces = serviceMapForces(55);
+
+  // At 0.32 of the link distance this was a uniform expansion that zoomToFit
+  // handed straight back, and the median drawn link got shorter.
+  assert.ok(forces.collideRadius < forces.linkDistance * 0.2,
+            `${forces.collideRadius} against a ${forces.linkDistance} link is an expansion`);
+  assert.ok(forces.collideRadius > 0);
+});
+
 test("an empty map still produces usable forces", () => {
   const forces = serviceMapForces(0);
 
   assert.ok(forces.linkDistance > 0);
   assert.ok(forces.chargeStrength < 0);
+  assert.ok(forces.collideRadius > 0);
 });

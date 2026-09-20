@@ -13,18 +13,18 @@
  * estate: at the old 130 only 15 of 64 links were long enough to draw at all;
  * at 590 every one draws, the median is ~60px and none are under ten.
  *
- * Two things that look like they should help do not, both for the same reason —
- * `zoomToFit` gives back whatever a uniform expansion takes:
+ * The collide radius is what stops two discs sharing a spot, and its size is
+ * the whole story. Sized to the link distance it is a uniform expansion, and
+ * `zoomToFit` gives uniform expansions straight back: at 0.32 of the link
+ * distance the median drawn link FELL from 35px to 31px and the count under
+ * ten pixels rose from three to ten. Sized to the discs it has to separate —
+ * 0.13, about two 9px radii at the zoom a fitted estate settles on — it only
+ * acts where nodes genuinely touch, and every measure improves at once: disc
+ * overlaps 8 to 0, labels drawn 26 to 29, median link 62px to 65px.
  *
- * - A collide force. It pushes every pair apart, the bounding box grows by the
- *   same factor, and the fit cancels it: median drawn link fell from 35px to
- *   31px, and the count under ten pixels rose from three to ten.
- * - Weaker charge, which works for the repo graph next door. That one is
- *   penned in by forceX/forceY; this map is not, and at -300 its many
- *   disconnected components simply piled into the middle.
- *
- * What is left is the ratio between link distance and the charge that opens
- * the voids between clusters, so only the link distance moves.
+ * Weaker charge is the one that really does not work, though it is what the
+ * repo graph next door uses. That one is penned in by forceX/forceY; this map
+ * is not, and at -300 its many disconnected components piled into the middle.
  */
 
 export interface ServiceMapForces {
@@ -32,6 +32,8 @@ export interface ServiceMapForces {
   chargeDistanceMax: number;
   linkDistance: number;
   centerStrength: number;
+  /** Graph-unit radius no two nodes may overlap, linked or not. */
+  collideRadius: number;
 }
 
 /** Graph units of link distance per node on the map, and the floor it adds to.
@@ -48,15 +50,19 @@ const LINK_DISTANCE_PER_NODE = 6;
 /** Not a tuned value — a stop so a pathological node count cannot run away. */
 const MAX_LINK_DISTANCE = 1200;
 
+/** Share of the link distance a node keeps to itself: roughly the two 9px
+ * radii that would otherwise overlap, at the zoom a fitted estate settles on. */
+const COLLIDE_SHARE = 0.13;
+
 export function serviceMapForces(nodeCount: number): ServiceMapForces {
   const n = Math.max(nodeCount, 1);
+  const linkDistance = Math.min(
+    LINK_DISTANCE_BASE + n * LINK_DISTANCE_PER_NODE, MAX_LINK_DISTANCE);
   return {
     chargeStrength: -900,
     chargeDistanceMax: 1200,
-    linkDistance: Math.min(
-      LINK_DISTANCE_BASE + n * LINK_DISTANCE_PER_NODE,
-      MAX_LINK_DISTANCE,
-    ),
+    linkDistance,
     centerStrength: 0.05,
+    collideRadius: linkDistance * COLLIDE_SHARE,
   };
 }

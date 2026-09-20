@@ -11,13 +11,15 @@ export interface ServiceNodePaint {
   /** Already disambiguated; this function only has to make it fit. */
   label: string;
   labelBudgetPx: number;
+  /** False when the placer gave this node's box to a label that outranked it. */
+  showLabel: boolean;
 }
 
 export function paintServiceNode(
   node: any,
   ctx: CanvasRenderingContext2D,
   globalScale: number,
-  { dimmed, label, labelBudgetPx }: ServiceNodePaint,
+  { dimmed, label, labelBudgetPx, showLabel }: ServiceNodePaint,
 ): void {
   const isGateway = node.is_gateway;
   const isDeadEnd = node.dead_end;
@@ -76,25 +78,61 @@ export function paintServiceNode(
     ctx.fillText(scopeText, node.x, node.y - radius - scopeSize);
   }
 
-  const labelSize = 12 / globalScale;
-  ctx.font = `600 ${labelSize}px ui-sans-serif, system-ui, sans-serif`;
-  // measureText returns graph units at this font, and the budget is in screen
-  // pixels, so the scale has to come back out before comparing.
-  const shown = fitServiceLabel(
-    label, labelBudgetPx, (text) => ctx.measureText(text).width * globalScale);
-  const tm = ctx.measureText(shown);
+  if (!showLabel) {
+    ctx.restore();
+    return;
+  }
+
+  const { x0, y0, w, h, text } = serviceLabelBox(node, ctx, globalScale, label, labelBudgetPx);
   ctx.fillStyle = "rgba(255, 254, 250, 0.96)";
   ctx.beginPath();
-  ctx.roundRect(node.x - tm.width / 2 - 3 / globalScale, node.y + radius + 2 / globalScale,
-                tm.width + 6 / globalScale, labelSize * 1.35, 3 / globalScale);
+  ctx.roundRect(x0, y0, w, h, 3 / globalScale);
   ctx.fill();
 
   ctx.fillStyle = isDeadEnd ? "#dc2626" : "#1a1d23";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(shown, node.x, node.y + radius + 2 / globalScale + labelSize * 0.7);
+  ctx.fillText(text, node.x, y0 + (12 / globalScale) * 0.7);
 
   ctx.restore();
+}
+
+export interface ServiceLabelBox {
+  x0: number;
+  y0: number;
+  w: number;
+  h: number;
+  /** The label after shortening — what actually gets drawn and measured. */
+  text: string;
+}
+
+/** The box a node's label will occupy, in graph units.
+ *
+ * The placer needs this before anything is painted and the painter needs it
+ * again to draw, and the two must agree exactly or a label is placed against
+ * one rectangle and drawn as another. So there is one function and both call
+ * it, rather than the box being derived twice from the same constants. */
+export function serviceLabelBox(
+  node: any,
+  ctx: CanvasRenderingContext2D,
+  globalScale: number,
+  label: string,
+  labelBudgetPx: number,
+): ServiceLabelBox {
+  const labelSize = 12 / globalScale;
+  ctx.font = `600 ${labelSize}px ui-sans-serif, system-ui, sans-serif`;
+  // measureText returns graph units at this font, and the budget is in screen
+  // pixels, so the scale has to come back out before comparing.
+  const text = fitServiceLabel(
+    label, labelBudgetPx, (candidate) => ctx.measureText(candidate).width * globalScale);
+  const width = ctx.measureText(text).width;
+  return {
+    x0: node.x - width / 2 - 3 / globalScale,
+    y0: node.y + nodeRadius(node) / globalScale + 2 / globalScale,
+    w: width + 6 / globalScale,
+    h: labelSize * 1.35,
+    text,
+  };
 }
 
 export interface ServiceLinkPaint {
