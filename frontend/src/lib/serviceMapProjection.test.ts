@@ -99,12 +99,29 @@ test("unconnected services are pinned in a row centred on the origin", () => {
   const projected = projectServiceMap(response(), [], []);
   const pinned = projected.nodes.filter((n) => n.fx != null);
   assert.equal(pinned.length, 3);
-  assert.deepEqual(pinned.map((n) => n.fy), [180, 180, 180]);
+  // One row, so the reader reads a list rather than hunting a scatter.
+  assert.equal(new Set(pinned.map((n) => n.fy)).size, 1);
   // Symmetric about zero, so zoomToFit does not favour one end of the row.
   assert.equal(pinned.reduce((sum, n) => sum + (n.fx ?? 0), 0), 0);
-  // Wide enough that a bare service name does not clip its neighbour.
+  // Evenly spaced, and wide enough that a name does not clip its neighbour.
   const gaps = pinned.slice(1).map((n, i) => (n.fx ?? 0) - (pinned[i].fx ?? 0));
-  assert.deepEqual(gaps, [150, 150]);
+  assert.equal(new Set(gaps).size, 1);
+  assert.ok(gaps[0] >= 150, `a row gap of ${gaps[0]} clips bare service names`);
+});
+
+test("the isolate row widens with the map it is pinned beside", () => {
+  // Left at a fixed 150, the row stayed small-map sized while the layout around
+  // it grew, and the pinned nodes ended up parked inside a cluster.
+  const many = Array.from({ length: 60 }, (_, i) => ({
+    id: `svc:${i}`, name: `s${i}`, kind: "service", repo_ids: ["repo-one"],
+  }));
+  const projected = projectServiceMap(
+    response({ nodes: many, edges: [] }), EDGE_TYPES, []);
+
+  const pinned = projected.nodes.filter((n) => n.fx != null);
+  assert.equal(pinned.length, 60);
+  const gap = (pinned[1].fx ?? 0) - (pinned[0].fx ?? 0);
+  assert.ok(gap > 150, `a 60-node map should space its isolates past 150, got ${gap}`);
 });
 
 test("a scope with no resolved services explains that the services are elsewhere", () => {

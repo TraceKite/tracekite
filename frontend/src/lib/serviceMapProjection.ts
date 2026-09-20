@@ -1,4 +1,5 @@
 import type { ServiceMapEdge, ServiceMapNode, ServiceMapResponse } from "./types.ts";
+import { serviceMapForces } from "./serviceMapLayout.ts";
 
 export interface ServiceMapProjection {
   nodes: ServiceMapNode[];
@@ -25,9 +26,16 @@ function nothingToDraw(): ServiceMapProjection {
  * clipped its neighbour's last character. This only became worth widening once
  * labels were bounded — while they were full repo-qualified names at ~380px, no
  * spacing could have helped, because zoomToFit shrinks the scale by whatever
- * factor the row is widened by. */
-const ISOLATE_SPACING = 150;
-const ISOLATE_ROW_Y = 180;
+ * factor the row is widened by.
+ *
+ * Both are held as shares of the link distance rather than as the flat 150 and
+ * 180 they were, because that distance now grows with the map. Left fixed, the
+ * row stayed small-map sized while the graph around it grew past it, and the
+ * pinned nodes ended up parked inside a cluster. The shares are written as the
+ * fractions they came from: 150 and 180 against the 220 the row was tuned
+ * beside, so the relationship survives even though neither number does. */
+const ISOLATE_SPACING_SHARE = 150 / 220;
+const ISOLATE_ROW_SHARE = 180 / 220;
 
 function nodeInScope(node: ServiceMapNode, scopeRepoIds: string[]): boolean {
   if (scopeRepoIds.length === 0) return true;
@@ -86,13 +94,14 @@ export function projectServiceMap(
   });
   const isolates = retained.filter((node) => !connected.has(node.id));
   const isolateIndex = new Map(isolates.map((node, index) => [node.id, index]));
+  const { linkDistance } = serviceMapForces(retained.length);
   const nodes = retained.map((node) => {
     const index = isolateIndex.get(node.id);
     if (index == null) return { ...node };
     return {
       ...node,
-      fx: (index - (isolates.length - 1) / 2) * ISOLATE_SPACING,
-      fy: ISOLATE_ROW_Y,
+      fx: (index - (isolates.length - 1) / 2) * linkDistance * ISOLATE_SPACING_SHARE,
+      fy: linkDistance * ISOLATE_ROW_SHARE,
     };
   });
 
