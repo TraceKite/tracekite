@@ -5,7 +5,7 @@
 # every native binary except *-linux-x64-gnu (esbuild, rollup, lightningcss,
 # @tailwindcss/oxide). Emulation costs only build time: the output is static
 # assets, so the runtime stage below stays on the host architecture.
-FROM --platform=linux/amd64 node:25-slim AS build
+FROM --platform=linux/amd64 node:26-slim AS build
 
 RUN corepack enable
 
