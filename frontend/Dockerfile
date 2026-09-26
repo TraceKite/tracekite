@@ -31,7 +31,7 @@ ENV NODE_ENV=production
 RUN pnpm --filter '@tracekite/web' build
 
 
-FROM nginx:1.29-alpine AS runtime
+FROM nginx:1.31-alpine AS runtime
 
 COPY --from=build /repo/frontend/dist/public /usr/share/nginx/html
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
