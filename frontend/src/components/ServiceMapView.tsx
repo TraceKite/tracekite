@@ -16,11 +16,8 @@ import {
   nodeRadius, paintServiceLabel, paintServiceLink, paintServiceNode,
 } from "@/lib/serviceMapPainter";
 import { useServiceMapLabels } from "@/hooks/useServiceMapLabels";
-import { serviceMapForces } from "@/lib/serviceMapLayout";
-import { fitTarget } from "@/lib/graphCameraFit";
-
-const FIT_MS = 400;
-const FIT_PADDING = 90;
+import { SERVICE_MAP_FRAMING, serviceMapForces } from "@/lib/serviceMapLayout";
+import { frameGraph } from "@/lib/graphCameraFit";
 
 /* Stable identities: react-kapsule re-applies a prop whenever its reference
  * changes, so inline arrows here re-set the accessor on every React render. */
@@ -62,15 +59,10 @@ function ServiceMapCanvasComponent() {
 
   /* Framed through the shared fit rather than zoomToFit, which is bounded at
    * neither end: it scales a two-node map until the discs fill the screen, and
-   * shrinks a large one until its labels have to be dropped. Below the floor
-   * the map runs past the viewport and is panned. */
+   * shrinks a large one until its labels have to be dropped. Below this map's
+   * floor it runs past the viewport and is panned. */
   const frame = useCallback(() => {
-    const graph = fgRef.current;
-    if (!graph) return;
-    const target = fitTarget(graph.getGraphBbox?.(), dimensionsRef.current, FIT_PADDING);
-    if (!target) return;
-    graph.centerAt(target.x, target.y, FIT_MS);
-    graph.zoom(target.zoom, FIT_MS);
+    frameGraph(fgRef.current, dimensionsRef.current, SERVICE_MAP_FRAMING);
   }, []);
 
   const graphData = useMemo(

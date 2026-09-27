@@ -3,6 +3,12 @@ import { EDGE_COLORS, getConfidenceStyle } from "@/lib/graphStyle";
 import { useGraphStore } from "@/store/graphStore";
 import { labelPillFor, paintLabelPill } from "@/lib/canvasLabelPill";
 import { trimLinkToNodes } from "@/lib/canvasLinkGeometry";
+import { frameGraph } from "@/lib/graphCameraFit";
+
+/* Framed through the shared fit rather than zoomToFit, which has no upper
+ * bound: a one-hop trace is two nodes 240 units apart, and zoomToFit scaled
+ * them until the discs filled the screen. No floor — a trace is framed whole. */
+const FRAMING = { padding: 90, durationMs: 400 };
 
 export default function TraceCanvas() {
   const { traceData, setSelectedEdge, selectedEdge } = useGraphStore();
@@ -10,6 +16,10 @@ export default function TraceCanvas() {
   const [ForceGraphComponent, setForceGraphComponent] = useState<any>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const fgRef = useRef<any>(null);
+  const dimensionsRef = useRef(dimensions);
+  dimensionsRef.current = dimensions;
+  const frame = useCallback(
+    () => frameGraph(fgRef.current, dimensionsRef.current, FRAMING), []);
 
   useEffect(() => {
     let mounted = true;
@@ -99,11 +109,11 @@ export default function TraceCanvas() {
       charge.strength(0);
       graph.d3Force("link")?.strength(0);
       graph.d3Force("center", null);
-      setTimeout(() => !cancelled && fgRef.current?.zoomToFit(400, 110), 300);
+      setTimeout(() => !cancelled && frame(), 300);
     };
     apply();
     return () => { cancelled = true; };
-  }, [graphData, ForceGraphComponent]);
+  }, [graphData, ForceGraphComponent, frame]);
 
   const drawNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     // Screen-constant so fitting the path does not inflate the nodes.
@@ -217,7 +227,7 @@ export default function TraceCanvas() {
         cooldownTicks={0}
         // Frame the path once it settles; this was never called, so a trace
         // rendered tiny and off-centre.
-        onEngineStop={() => fgRef.current?.zoomToFit(400, 90)}
+        onEngineStop={frame}
         onLinkClick={(link: any) => {
           setSelectedEdge(link);
         }}
