@@ -31,6 +31,21 @@ export function rectsOverlap(a: LabelRect, b: LabelRect): boolean {
   return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 }
 
+/** A rectangle that cannot be placed: a coordinate that is not a number, or
+ * sides the wrong way round. It is refused rather than filed, because a NaN
+ * edge compares false against everything and would sit in the space unseen. */
+function isPlaceable(rect: LabelRect): boolean {
+  return Number.isFinite(rect.left) && Number.isFinite(rect.right)
+    && Number.isFinite(rect.top) && Number.isFinite(rect.bottom)
+    && rect.right >= rect.left && rect.bottom >= rect.top;
+}
+
+/** How many bands one rectangle may straddle before the bands are rebuilt
+ * taller. It bounds the work per rectangle whatever heights arrive in
+ * whatever order — a sliver first must not turn every later label into
+ * millions of bands. */
+const MAX_BANDS_PER_RECT = 8;
+
 /**
  * The space labels have already taken on the frame being painted.
  *
@@ -38,22 +53,25 @@ export function rectsOverlap(a: LabelRect, b: LabelRect): boolean {
  * gets one node at a time and cannot see the others. Reset it once per frame.
  */
 export class LabelSpace {
+  private rects: LabelRect[] = [];
   private bands = new Map<number, LabelRect[]>();
   private bandHeight = 0;
 
   /** Takes the rectangle if it is still clear, and reports whether it got it. */
   claim(rect: LabelRect): boolean {
-    if (this.collides(rect)) return false;
+    if (!isPlaceable(rect) || this.collides(rect)) return false;
     this.occupy(rect);
     return true;
   }
 
   /** Takes the rectangle whatever is under it — for a label that must appear. */
   reserve(rect: LabelRect): void {
-    this.occupy(rect);
+    if (isPlaceable(rect)) this.occupy(rect);
   }
 
   collides(rect: LabelRect): boolean {
+    if (!isPlaceable(rect)) return false;
+    this.fitBandsTo(rect);
     for (const band of this.bandsOf(rect)) {
       const taken = this.bands.get(band);
       if (taken?.some((other) => rectsOverlap(rect, other))) return true;
@@ -62,11 +80,18 @@ export class LabelSpace {
   }
 
   reset(): void {
+    this.rects = [];
     this.bands.clear();
     this.bandHeight = 0;
   }
 
   private occupy(rect: LabelRect): void {
+    this.fitBandsTo(rect);
+    this.rects.push(rect);
+    this.file(rect);
+  }
+
+  private file(rect: LabelRect): void {
     for (const band of this.bandsOf(rect)) {
       const taken = this.bands.get(band);
       if (taken) taken.push(rect);
@@ -80,12 +105,24 @@ export class LabelSpace {
    * uniform height and the caller should not have to say so.
    *
    * Band size is a speed knob and never a correctness one: a rectangle always
-   * lists every band it touches, so a band too small merely means more of
-   * them and a band too large merely means longer lists. */
-  private bandsOf(rect: LabelRect): number[] {
+   * lists every band it touches. What keeps it only a speed knob is the
+   * rebuild below — a band far shorter than the rectangles arriving would
+   * otherwise make every rectangle list an unbounded number of them. */
+  private fitBandsTo(rect: LabelRect): void {
+    const height = rect.bottom - rect.top;
     if (this.bandHeight <= 0) {
-      this.bandHeight = Math.max(rect.bottom - rect.top, Number.MIN_VALUE);
+      // Any positive height is correct; a zero-height first label gets one
+      // unit and the rebuild corrects it as soon as a real height arrives.
+      this.bandHeight = height > 0 ? height : 1;
+      return;
     }
+    if (height <= this.bandHeight * MAX_BANDS_PER_RECT) return;
+    this.bandHeight = height;
+    this.bands.clear();
+    for (const taken of this.rects) this.file(taken);
+  }
+
+  private bandsOf(rect: LabelRect): number[] {
     const first = Math.floor(rect.top / this.bandHeight);
     const last = Math.floor(rect.bottom / this.bandHeight);
     const bands: number[] = [];

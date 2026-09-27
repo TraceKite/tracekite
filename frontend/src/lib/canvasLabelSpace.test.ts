@@ -65,6 +65,45 @@ test("a collision that straddles a band boundary is still a collision", () => {
   assert.equal(space.claim(rect(0, 25)), false);
 });
 
+test("a zero-height first rectangle does not stall the next claim", () => {
+  // Deriving the band height from a zero-height label once made it
+  // Number.MIN_VALUE, and the next label spanned bands Infinity..Infinity:
+  // a loop that never ended and took the tab with it.
+  const space = new LabelSpace();
+  space.claim({ left: 0, right: 100, top: 5, bottom: 5 });
+
+  assert.equal(space.claim(rect(0, 0)), false);
+  assert.equal(space.claim(rect(0, 40)), true);
+});
+
+test("a sliver first still lets a tall rectangle collide correctly", () => {
+  const space = new LabelSpace();
+  space.claim({ left: 0, right: 100, top: 0, bottom: 1e-9 });
+  space.claim(rect(300, 900));
+
+  assert.equal(space.collides({ left: 0, right: 400, top: -1e6, bottom: 1e6 }), true);
+  assert.equal(space.collides({ left: 500, right: 600, top: -1e6, bottom: 1e6 }), false);
+});
+
+test("a rectangle with no position is refused and poisons nothing", () => {
+  // A NaN first rectangle once set the band height to NaN for the rest of the
+  // frame, after which nothing ever collided and every label printed.
+  const space = new LabelSpace();
+  const nowhere = { left: NaN, right: NaN, top: NaN, bottom: NaN };
+
+  assert.equal(space.claim(nowhere), false);
+  space.reserve(nowhere);
+  assert.equal(space.claim(rect(0, 0)), true);
+  assert.equal(space.claim(rect(10, 0)), false);
+});
+
+test("a rectangle with its sides the wrong way round is refused", () => {
+  const space = new LabelSpace();
+
+  assert.equal(space.claim({ left: 100, right: 0, top: 0, bottom: 20 }), false);
+  assert.equal(space.claim(rect(0, 0)), true);
+});
+
 test("labels that do not collide are all placed", () => {
   const chosen = placeLabels([bid("a", 0, 0), bid("b", 200, 0), bid("c", 400, 0)]);
 
