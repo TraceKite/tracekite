@@ -241,17 +241,17 @@ export function paintLink(
   const width = aggregateWidth * (emphasized ? 1.8 : 1);
   const dx = end.x - start.x;
   const dy = end.y - start.y;
-  // These radii are already graph units, not screen pixels, so the trim is
-  // asked for at a scale of 1. The clamping is the shared part, and this file
-  // had its own: `Math.min(len * 0.45, radius + 2)` at each of four lines.
+  // The radii are graph units and the arrow is divided into them here, so the
+  // trim is asked for at a scale of 1. Asking for the arrow too is what keeps
+  // it no longer than half the line a short link has left.
   const line = trimLinkToNodes(start as Required<PositionedNode>, end as Required<PositionedNode>, {
     startClearancePx: getNodeSize(start.type, Math.min(start.size || 5, 10)) * 0.55 + 2,
     endClearancePx: getNodeSize(end.type, Math.min(end.size || 5, 10)) * 0.55 + 2,
-    arrowPx: 0,
+    arrowPx: (6 + width) / globalScale,
     globalScale: 1,
   });
   if (!line) return;
-  const { sx, sy, ex, ey } = line;
+  const { sx, sy, ex, ey, arrowLength: arrow } = line;
   const confidence = getConfidenceStyle(link.confidence);
   ctx.save();
   ctx.globalAlpha = alpha * confidence.opacity;
@@ -268,7 +268,6 @@ export function paintLink(
   const showDirection = incident && (link.aggregate || focusActive || emphasized || globalScale > 1.35);
   if (showDirection) {
     const angle = Math.atan2(dy, dx);
-    const arrow = (6 + width) / globalScale;
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(ex, ey);
