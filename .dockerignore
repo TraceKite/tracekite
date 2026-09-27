@@ -26,3 +26,9 @@ frontend/dist
 .agents
 .claude
 **/.DS_Store
+
+# Local secrets. No COPY reaches them today, but the build context is still
+# sent to the builder and its cache, and one broad COPY would bake them in.
+**/.env
+**/.env.*
+!**/.env.example
