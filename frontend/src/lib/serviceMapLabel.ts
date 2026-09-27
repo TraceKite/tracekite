@@ -51,7 +51,8 @@ function sharedPrefix(values: readonly string[]): string {
  * whole. The cut backs off to a separator so a token is never halved: two ids
  * sharing `abc` with no boundary in it keep their full qualifiers rather than
  * being served as `def` and `xyz`. Likewise if trimming would leave any of
- * them empty — a long label beats a blank one.
+ * them empty — a long label beats a blank one — or make two of them equal,
+ * which dropping leading separators can: `org-x` and `org--x` both leave `x`.
  */
 function distinguishingQualifiers(qualifiers: readonly string[]): Map<string, string> {
   const distinct = [...new Set(qualifiers)];
@@ -64,7 +65,8 @@ function distinguishingQualifiers(qualifiers: readonly string[]): Map<string, st
   for (const qualifier of distinct) {
     trimmed.set(qualifier, qualifier.slice(boundary).replace(/^[-_/.]+/, ""));
   }
-  if ([...trimmed.values()].some((value) => value.length === 0)) {
+  const values = [...trimmed.values()];
+  if (values.some((value) => value.length === 0) || new Set(values).size < values.length) {
     return new Map(distinct.map((qualifier) => [qualifier, qualifier]));
   }
   return trimmed;

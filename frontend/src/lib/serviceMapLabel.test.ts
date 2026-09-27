@@ -65,6 +65,19 @@ test("a shared run with no separator in it is left whole", () => {
   assert.equal(names.get("b"), "abcxyz/config-server");
 });
 
+test("trimming never makes two different qualifiers read the same", () => {
+  // The shared run is `org-`; dropping it and the leading separator it leaves
+  // behind turns both into `x`, which would draw two services under one name.
+  const names = serviceDisplayNames([
+    { id: "a", name: "org-x/api" },
+    { id: "b", name: "org--x/api" },
+  ]);
+
+  assert.notEqual(names.get("a"), names.get("b"));
+  assert.equal(names.get("a"), "org-x/api");
+  assert.equal(names.get("b"), "org--x/api");
+});
+
 test("an unqualified name colliding with a qualified one is not shortened away", () => {
   const names = serviceDisplayNames([
     { id: "a", name: "config-server" },
