@@ -3,11 +3,11 @@
  * They are pinned rather than left to the simulation because a dozen nodes
  * with no edges have nothing to arrange them, and a force layout scatters them
  * through the gaps in the real graph where they read as part of it. Parked in
- * a block, they read as what they are: a list of services linking found no
- * edges for.
+ * a block below the graph, they read as what they are: a list of services
+ * linking found no edges for.
  *
  * A single row cannot be made to work, and the arithmetic says so rather than
- * the taste. `zoomToFit` fits the widest thing on the canvas to the viewport,
+ * the taste. The fit scales the widest thing on the canvas to the viewport,
  * so if the row is that thing each isolate gets `viewportWidth / count` pixels
  * whatever spacing is chosen — widen the row and the fit shrinks the scale by
  * exactly the factor you widened it. Six repo-qualified names want ~900px of a
@@ -26,6 +26,11 @@
  * what it is competing with: a force layout's extent grows with the square
  * root of its node count, so the block's does too, and the two stay comparable
  * from sixteen nodes to fifty-five.
+ *
+ * Its top works the same way until the layout has run, and from then on is
+ * measured rather than estimated: a top that scaled with the link distance
+ * alone left all seven isolates of the 55-node estate inside the graph, where
+ * the whole point of the block was lost.
  */
 
 /** Clear space between one cell's label and the next. */
@@ -37,8 +42,14 @@ const LABEL_GUTTER_PX = 20;
  * than being squeezed by it. */
 const BLOCK_WIDTH_SHARE = 0.9;
 
-/** Where the block starts below the graph, likewise. */
-const BLOCK_TOP_SHARE = 180 / 220;
+/** Where the block starts before the layout has run, against the same extent.
+ * A settled estate reaches about 0.38 of it below the centre on a landscape
+ * canvas, so this starts the block just clear of the graph it will sit under. */
+const BLOCK_TOP_SHARE = 0.45;
+
+/** Clearance between the graph's lowest node and the block, once measured:
+ * room for that node's own label and the first row's. */
+const BLOCK_GAP_SHARE = 0.6;
 
 /** Rows are pitched tighter than columns: a label is far wider than it is tall. */
 const ROW_PITCH_SHARE = 0.3;
@@ -53,6 +64,26 @@ export interface IsolateBlockOptions {
   canvasWidthPx: number;
   /** The widest a label is allowed to be drawn. */
   labelBudgetPx: number;
+  /** The linked graph as laid out; omitted before the layout has run. */
+  graph?: GraphExtent;
+  /** How the canvas will be framed; with `graph`, it lets the cells be sized
+   * for the zoom the fit will actually pick. */
+  framing?: IsolateFraming;
+}
+
+/** Where the linked graph's nodes reach, in graph units. */
+export interface GraphExtent {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+export interface IsolateFraming {
+  canvasHeightPx: number;
+  paddingPx: number;
+  minZoom: number;
+  maxZoom: number;
 }
 
 export interface IsolatePlacement {
@@ -71,30 +102,79 @@ export function isolateColumns(
 }
 
 /**
- * One placement per isolate, in order, centred on the origin.
+ * The narrowest cell whose label keeps its whole budget at the fitted zoom.
+ *
+ * The share-of-extent width assumes the block is what the fit is bound by. It
+ * often is not: under a tall graph the fit is bound by the height, the cells
+ * get whatever pixels that zoom leaves them, and two petclinic repos lost two
+ * of six isolate names that way once the block moved below the graph. So the
+ * zoom is worked out as the fit will work it out — the graph's width against
+ * the whole scene's height — and each cell is given its label's budget at it.
+ * If that makes the block the widest thing instead, the fit is bound by the
+ * block, and the column count already gives every cell its share.
+ */
+function legibleCellWidth(
+  graph: GraphExtent,
+  blockBottom: number,
+  { canvasWidthPx, labelBudgetPx, framing }: Required<Pick<IsolateBlockOptions,
+    "canvasWidthPx" | "labelBudgetPx" | "framing">>,
+): number {
+  const usableWidth = canvasWidthPx - framing.paddingPx * 2;
+  const usableHeight = framing.canvasHeightPx - framing.paddingPx * 2;
+  if (usableWidth <= 0 || usableHeight <= 0) return 0;
+  const zoom = Math.max(framing.minZoom, Math.min(
+    framing.maxZoom,
+    usableWidth / Math.max(graph.right - graph.left, 1),
+    usableHeight / Math.max(blockBottom - graph.top, 1),
+  ));
+  return (labelBudgetPx + LABEL_GUTTER_PX) / zoom;
+}
+
+/**
+ * One placement per isolate, in order, centred under the graph.
  *
  * Every row is centred on its own, so a short last row sits under the middle
- * of the block and the whole thing stays symmetric about zero — `zoomToFit`
- * otherwise favours whichever side the block leans towards.
+ * of the block and the whole thing stays symmetric about the graph's centre —
+ * the fit otherwise favours whichever side the block leans towards.
  */
-export function isolateBlock(
-  { count, nodeCount, linkDistance, canvasWidthPx, labelBudgetPx }: IsolateBlockOptions,
-): IsolatePlacement[] {
+export function isolateBlock(options: IsolateBlockOptions): IsolatePlacement[] {
+  const { count, nodeCount, linkDistance, canvasWidthPx, labelBudgetPx, graph, framing } =
+    options;
   if (count <= 0) return [];
   const columns = isolateColumns(count, canvasWidthPx, labelBudgetPx);
-  const cellWidth =
-    BLOCK_WIDTH_SHARE * Math.sqrt(Math.max(nodeCount, 1)) * linkDistance / columns;
+  const extent = Math.sqrt(Math.max(nodeCount, 1)) * linkDistance;
   const rowPitch = linkDistance * ROW_PITCH_SHARE;
-  const top = linkDistance * BLOCK_TOP_SHARE;
+  const top = graph
+    ? graph.bottom + linkDistance * BLOCK_GAP_SHARE
+    : extent * BLOCK_TOP_SHARE;
+  const bottom = top + (Math.ceil(count / columns) - 1) * rowPitch;
+  const cellWidth = Math.max(
+    BLOCK_WIDTH_SHARE * extent / columns,
+    graph && framing
+      ? legibleCellWidth(graph, bottom, { canvasWidthPx, labelBudgetPx, framing })
+      : 0,
+  );
+  const centerX = graph ? (graph.left + graph.right) / 2 : 0;
+  return gridCells(count, columns, { centerX, top, cellWidth, rowPitch });
+}
 
+interface Grid {
+  centerX: number;
+  top: number;
+  cellWidth: number;
+  rowPitch: number;
+}
+
+/* Every row is centred on its own, so a short last row sits in the middle. */
+function gridCells(count: number, columns: number, grid: Grid): IsolatePlacement[] {
   const placements: IsolatePlacement[] = [];
   for (let index = 0; index < count; index++) {
     const row = Math.floor(index / columns);
     const column = index % columns;
     const inThisRow = Math.min(columns, count - row * columns);
     placements.push({
-      fx: (column - (inThisRow - 1) / 2) * cellWidth,
-      fy: top + row * rowPitch,
+      fx: grid.centerX + (column - (inThisRow - 1) / 2) * grid.cellWidth,
+      fy: grid.top + row * grid.rowPitch,
     });
   }
   return placements;

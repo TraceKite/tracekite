@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import { forceCollide, forceX, forceY } from "d3-force";
 import { useGraphStore } from "@/store/graphStore";
 import { api } from "@/lib/api";
 import { Loader2 } from "lucide-react";
@@ -10,14 +9,13 @@ import GraphCanvasMessage from "@/components/GraphCanvasMessage";
 import WorkspaceWarning from "@/components/WorkspaceWarning";
 import ServiceMapNavigator from "@/components/ServiceMapNavigator";
 import ServiceMapSidebar from "@/components/ServiceMapSidebar";
-import { projectServiceMap, serviceMapEmptyState } from "@/lib/serviceMapProjection";
+import { serviceMapEmptyState } from "@/lib/serviceMapProjection";
 import { serviceDisplayNames } from "@/lib/serviceMapLabel";
 import {
   nodeRadius, paintServiceLabel, paintServiceLink, paintServiceNode,
 } from "@/lib/serviceMapPainter";
 import { useServiceMapLabels } from "@/hooks/useServiceMapLabels";
-import { SERVICE_MAP_FRAMING, serviceMapForces } from "@/lib/serviceMapLayout";
-import { frameGraph } from "@/lib/graphCameraFit";
+import { useServiceMapLayout } from "@/hooks/useServiceMapLayout";
 
 /* Stable identities: react-kapsule re-applies a prop whenever its reference
  * changes, so inline arrows here re-set the accessor on every React render. */
@@ -33,13 +31,8 @@ function ServiceMapCanvasComponent() {
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [hoverNode, setHoverNode] = useState<any>(null);
   const [focusNode, setFocusNode] = useState<any>(null);
-  const [layoutReady, setLayoutReady] = useState(false);
   const fgRef = useRef<any>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  // Read at fit time, so framing never depends on a stale measurement and
-  // never re-runs the layout just because the panel resized.
-  const dimensionsRef = useRef(dimensions);
-  dimensionsRef.current = dimensions;
 
   useEffect(() => {
     let mounted = true;
@@ -57,19 +50,10 @@ function ServiceMapCanvasComponent() {
     return () => ro.disconnect();
   }, [containerEl]);
 
-  /* Framed through the shared fit rather than zoomToFit, which is bounded at
-   * neither end: it scales a two-node map until the discs fill the screen, and
-   * shrinks a large one until its labels have to be dropped. Below this map's
-   * floor it runs past the viewport and is panned. */
-  const frame = useCallback(() => {
-    frameGraph(fgRef.current, dimensionsRef.current, SERVICE_MAP_FRAMING);
-  }, []);
-
-  const graphData = useMemo(
-    () => projectServiceMap(serviceMapData, mapEdgeTypes, scopeRepoIds,
-                            { canvasWidthPx: dimensions.width }),
-    [serviceMapData, mapEdgeTypes, scopeRepoIds, dimensions.width],
-  );
+  const { graphData, layoutReady, onEngineStop } = useServiceMapLayout({
+    graphRef: fgRef, graphLoaded: !!ForceGraphComponent, data: serviceMapData,
+    mapEdgeTypes, scopeRepoIds, dimensions,
+  });
   const emptyState = useMemo(
     () => serviceMapEmptyState(serviceMapData, graphData, scopeRepoIds),
     [serviceMapData, graphData, scopeRepoIds],
@@ -83,44 +67,6 @@ function ServiceMapCanvasComponent() {
       setFocusNode(null);
     }
   }, [focusNode, graphData.nodes]);
-
-  // Retry until react-force-graph has created its d3 forces.
-  useEffect(() => {
-    setLayoutReady(false);
-    let cancelled = false;
-    let tries = 0;
-    const apply = () => {
-      if (cancelled) return;
-      const graph = fgRef.current;
-      const charge = graph?.d3Force?.("charge");
-      if (!charge) {
-        if (tries++ < 25) setTimeout(apply, 80);
-        return;
-      }
-      const forces = serviceMapForces(graphData.nodes.length);
-      charge.strength(forces.chargeStrength).distanceMax(forces.chargeDistanceMax);
-      graph.d3Force("link")?.distance(forces.linkDistance);
-      graph.d3Force("center")?.strength(forces.centerStrength);
-      // Read through the ref: re-applying forces is cheap, but reheating
-      // restarts a settled layout and moves every node, and a panel opening
-      // must not do that.
-      const { width, height } = dimensionsRef.current;
-      const aspect = Math.max(width / Math.max(height, 1), 0.2);
-      graph.d3Force("x", forceX(0).strength(0.05 / aspect));
-      graph.d3Force("y", forceY(0).strength(0.05 * aspect));
-      graph.d3Force("collide", forceCollide(forces.collideRadius).iterations(2));
-      graph.d3ReheatSimulation?.();
-      // Fit after the layout has had time to settle, in case onEngineStop
-      // does not fire (it does not when the sim is already cool).
-      setTimeout(() => {
-        if (cancelled) return;
-        frame();
-        setLayoutReady(true);
-      }, 1400);
-    };
-    apply();
-    return () => { cancelled = true; };
-  }, [graphData, ForceGraphComponent, frame]);
 
   /** Edges touching the focused service, split by direction. */
   const focus = useMemo(() => {
@@ -211,10 +157,7 @@ function ServiceMapCanvasComponent() {
         d3VelocityDecay={0.3}
         // Bound d3 work instead of using its 15-second default.
         cooldownTicks={220}
-        onEngineStop={() => {
-          frame();
-          setLayoutReady(true);
-        }}
+        onEngineStop={onEngineStop}
         onLinkClick={(link: any) => {
           setSelectedEdge(link);
         }}

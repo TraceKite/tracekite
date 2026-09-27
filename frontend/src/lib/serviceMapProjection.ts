@@ -1,6 +1,8 @@
 import type { ServiceMapEdge, ServiceMapNode, ServiceMapResponse } from "./types.ts";
-import { serviceMapForces } from "./serviceMapLayout.ts";
+import { SERVICE_MAP_FRAMING, serviceMapForces } from "./serviceMapLayout.ts";
+import { MAX_FIT_ZOOM } from "./graphCameraFit.ts";
 import { isolateBlock } from "./serviceMapIsolateBlock.ts";
+import type { GraphExtent } from "./serviceMapIsolateBlock.ts";
 import { MAX_SERVICE_LABEL_PX } from "./serviceMapLabel.ts";
 
 export interface ServiceMapProjection {
@@ -52,6 +54,9 @@ function edgeInScope(edge: ServiceMapEdge, scopeRepoIds: string[]): boolean {
 /** What the canvas knows and the projection cannot work out for itself. */
 export interface ServiceMapViewport {
   canvasWidthPx: number;
+  /** Known once the canvas is measured; lets the isolate block size its cells
+   * for the zoom the map will be framed at. */
+  canvasHeightPx?: number;
 }
 
 export function projectServiceMap(
@@ -78,33 +83,83 @@ export function projectServiceMap(
     (edge) => !allIds.has(edge.source) || !allIds.has(edge.target),
   ).length;
 
-  const connected = new Set<string>();
-  for (const link of links) {
-    connected.add(typeof link.source === "object" ? link.source.id : link.source);
-    connected.add(typeof link.target === "object" ? link.target.id : link.target);
-  }
-
+  const connected = linkedIds(links);
   const retained = scopedNodes.filter((node) => {
     if (connected.has(node.id)) return true;
     if (node.kind !== "service") return false;
     return builtFromScope(node, scopeRepoIds);
   });
-  const isolates = retained.filter((node) => !connected.has(node.id));
-  const isolateIndex = new Map(isolates.map((node, index) => [node.id, index]));
+  const nodes = retained.map((node) => ({ ...node }));
+  const isolated = nodes.filter((node) => !connected.has(node.id)).length;
+  const projection = { nodes, links, dangling, isolated };
+  pinIsolates(projection, viewport);
+  return projection;
+}
+
+/** Ids of every node a link touches. Links arrive with string endpoints and
+ * force-graph swaps them for the node objects once drawn, so both are read. */
+export function linkedIds(links: readonly Pick<ServiceMapEdge, "source" | "target">[]): Set<string> {
+  const ids = new Set<string>();
+  for (const link of links) {
+    ids.add(typeof link.source === "object" ? link.source.id : link.source);
+    ids.add(typeof link.target === "object" ? link.target.id : link.target);
+  }
+  return ids;
+}
+
+/** Where the linked graph reaches, or null until all of it has a place. */
+function graphExtent(nodes: readonly ServiceMapNode[]): GraphExtent | null {
+  if (nodes.length === 0) return null;
+  const extent = { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity };
+  for (const node of nodes) {
+    if (node.x == null || node.y == null) return null;
+    extent.left = Math.min(extent.left, node.x);
+    extent.right = Math.max(extent.right, node.x);
+    extent.top = Math.min(extent.top, node.y);
+    extent.bottom = Math.max(extent.bottom, node.y);
+  }
+  return extent;
+}
+
+/**
+ * Pins the isolates into their block, in place, and reports whether any moved.
+ *
+ * In place because force-graph owns these node objects once they are drawn,
+ * and lays out any new ones from scratch — which is what every resize did while
+ * the canvas width was an input to the projection. Before the layout has run
+ * the block goes where the graph is expected to end; after, directly under
+ * where it did.
+ */
+export function pinIsolates(
+  projection: Pick<ServiceMapProjection, "nodes" | "links">,
+  viewport?: ServiceMapViewport,
+): boolean {
+  const linked = linkedIds(projection.links);
+  const isolates = projection.nodes.filter((node) => !linked.has(node.id));
   const placements = isolateBlock({
     count: isolates.length,
-    nodeCount: retained.length,
-    linkDistance: serviceMapForces(retained.length).linkDistance,
+    nodeCount: projection.nodes.length,
+    linkDistance: serviceMapForces(projection.nodes.length).linkDistance,
     canvasWidthPx: viewport?.canvasWidthPx ?? ASSUMED_CANVAS_PX,
     labelBudgetPx: MAX_SERVICE_LABEL_PX,
+    graph: graphExtent(projection.nodes.filter((node) => linked.has(node.id))) ?? undefined,
+    framing: viewport?.canvasHeightPx == null ? undefined : {
+      canvasHeightPx: viewport.canvasHeightPx,
+      paddingPx: SERVICE_MAP_FRAMING.padding,
+      minZoom: SERVICE_MAP_FRAMING.minZoom ?? 0,
+      maxZoom: MAX_FIT_ZOOM,
+    },
   });
-  const nodes = retained.map((node) => {
-    const index = isolateIndex.get(node.id);
-    if (index == null) return { ...node };
-    return { ...node, ...placements[index] };
+  let moved = false;
+  isolates.forEach((node, index) => {
+    const { fx, fy } = placements[index];
+    if (node.fx === fx && node.fy === fy) return;
+    // x and y as well, so the move shows on the next frame rather than the
+    // next simulation tick, which a settled layout may never run.
+    Object.assign(node, { fx, fy, x: fx, y: fy });
+    moved = true;
   });
-
-  return { nodes, links, dangling, isolated: isolates.length };
+  return moved;
 }
 
 /**

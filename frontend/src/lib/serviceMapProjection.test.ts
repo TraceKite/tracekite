@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { projectServiceMap, serviceMapEmptyState } from "./serviceMapProjection.ts";
+import { pinIsolates, projectServiceMap, serviceMapEmptyState } from "./serviceMapProjection.ts";
 import type { ServiceMapResponse } from "./types.ts";
 
 const EDGE_TYPES = ["CALLS_SERVICE", "ROUTES_TO"];
@@ -125,6 +125,56 @@ test("the isolate row widens with the map it is pinned beside", () => {
   assert.equal(pinned.length, 60);
   const gap = (pinned[1].fx ?? 0) - (pinned[0].fx ?? 0);
   assert.ok(gap > 150, `a 60-node map should space its isolates past 150, got ${gap}`);
+});
+
+/** Four linked services and six isolates, laid out as force-graph would leave
+ * them: links holding node objects, linked nodes carrying positions. */
+function laidOut() {
+  const nodes = Array.from({ length: 10 }, (_, i) => ({
+    id: `svc:${i}`, name: `s${i}`, kind: "service", repo_ids: ["repo-one"],
+  }));
+  const edges = [0, 1, 2].map((i) => ({
+    source: `svc:${i}`, target: `svc:${i + 1}`, type: "CALLS_SERVICE", confidence: 0.9,
+    min_confidence: 0.9, max_confidence: 0.9, via: [], weight: 1, evidence: [],
+    source_repo_id: "repo-one",
+  }));
+  const projected = projectServiceMap(response({ nodes, edges }), EDGE_TYPES, [],
+                                      { canvasWidthPx: 1200 });
+  const byId = new Map(projected.nodes.map((n) => [n.id, n]));
+  projected.nodes.slice(0, 4).forEach((n, i) => Object.assign(n, { x: 100 + i * 50, y: 900 + i }));
+  for (const link of projected.links as any[]) {
+    link.source = byId.get(link.source);
+    link.target = byId.get(link.target);
+  }
+  return projected;
+}
+
+test("once laid out, the isolates are re-pinned below the graph, in place", () => {
+  const projected = laidOut();
+  const isolates = projected.nodes.slice(4);
+
+  assert.equal(pinIsolates(projected, { canvasWidthPx: 1200 }), true);
+  assert.deepEqual(projected.nodes.slice(4), isolates, "the same node objects, moved");
+  assert.ok(isolates.every((n) => (n.fy ?? 0) > 903), "below the lowest linked node");
+  assert.ok(isolates.every((n) => n.x === n.fx && n.y === n.fy),
+            "drawn where pinned without waiting for a simulation tick");
+});
+
+test("re-pinning what is already in place reports that nothing moved", () => {
+  const projected = laidOut();
+  pinIsolates(projected, { canvasWidthPx: 1200 });
+
+  assert.equal(pinIsolates(projected, { canvasWidthPx: 1200 }), false);
+});
+
+test("a narrower canvas re-wraps the same isolates onto more rows", () => {
+  const projected = laidOut();
+  pinIsolates(projected, { canvasWidthPx: 1200 });
+  const rows = () => new Set(projected.nodes.slice(4).map((n) => n.fy)).size;
+  const wide = rows();
+
+  assert.equal(pinIsolates(projected, { canvasWidthPx: 400 }), true);
+  assert.ok(rows() > wide, `${rows()} rows at 400px against ${wide} at 1200px`);
 });
 
 test("a scope with no resolved services explains that the services are elsewhere", () => {
