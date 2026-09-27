@@ -7,27 +7,27 @@ export function nodeRadius(node: any): number {
   return node?.is_gateway ? 13 : node?.dead_end ? 6 : 9;
 }
 
+/** Opacity of a node, and its label, outside the focused neighbourhood. */
+const DIMMED_NODE_ALPHA = 0.12;
+
 export interface ServiceNodePaint {
   dimmed: boolean;
-  /** Already disambiguated; this function only has to make it fit. */
-  label: string;
-  labelBudgetPx: number;
-  /** False when the placer gave this node's box to a label that outranked it. */
-  showLabel: boolean;
 }
 
+/** The disc and its scope badge. The name is painted separately, by
+ * paintServiceLabel, and only for the nodes the placer gave room to. */
 export function paintServiceNode(
   node: any,
   ctx: CanvasRenderingContext2D,
   globalScale: number,
-  { dimmed, label, labelBudgetPx, showLabel }: ServiceNodePaint,
+  { dimmed }: ServiceNodePaint,
 ): void {
   const isGateway = node.is_gateway;
   const isDeadEnd = node.dead_end;
   const radius = nodeRadius(node) / globalScale;
 
   ctx.save();
-  if (dimmed) ctx.globalAlpha = 0.12;
+  if (dimmed) ctx.globalAlpha = DIMMED_NODE_ALPHA;
   ctx.beginPath();
 
   if (isGateway) {
@@ -78,24 +78,30 @@ export function paintServiceNode(
     ctx.textBaseline = "middle";
     ctx.fillText(scopeText, node.x, node.y - radius - scopeSize);
   }
-
-  if (!showLabel) {
-    ctx.restore();
-    return;
-  }
-
-  paintLabelPill(ctx, globalScale,
-                 serviceLabelBox(node, ctx, globalScale, label, labelBudgetPx),
-                 isDeadEnd ? "#dc2626" : "#1a1d23");
   ctx.restore();
 }
 
-/** The box a node's label will occupy.
- *
- * The placer needs this before anything is painted and the painter needs it
- * again to draw, and the two must agree exactly or a label is placed against
- * one rectangle and drawn as another. So there is one function and both call
- * it, rather than the box being derived twice from the same constants. */
+export interface ServiceLabelPaint {
+  /** As placed: the same box the placer tested, so what fits is what is drawn. */
+  pill: LabelPill;
+  dimmed: boolean;
+}
+
+export function paintServiceLabel(
+  node: any,
+  ctx: CanvasRenderingContext2D,
+  globalScale: number,
+  { pill, dimmed }: ServiceLabelPaint,
+): void {
+  ctx.save();
+  if (dimmed) ctx.globalAlpha = DIMMED_NODE_ALPHA;
+  paintLabelPill(ctx, globalScale, pill, node.dead_end ? "#dc2626" : "#1a1d23");
+  ctx.restore();
+}
+
+/** The box a node's label will occupy, measured once per frame by the placer
+ * and handed to paintServiceLabel as it stands, so the label is drawn in
+ * exactly the rectangle that was tested for room. */
 export function serviceLabelBox(
   node: any,
   ctx: CanvasRenderingContext2D,

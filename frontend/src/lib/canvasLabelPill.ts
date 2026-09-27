@@ -30,6 +30,9 @@ export interface LabelPill {
   text: string;
   /** Baseline for the text, already centred in the box. */
   textY: number;
+  /** The font it was measured in. A pill measured during placement is painted
+   * after other nodes have set their own fonts, so it has to bring its own. */
+  font: string;
 }
 
 export interface LabelPillRequest {
@@ -47,7 +50,8 @@ export function labelPillFor(
   { centerX, anchorY, text, budgetPx }: LabelPillRequest,
 ): LabelPill {
   const fontSize = LABEL_FONT_PX / globalScale;
-  ctx.font = `600 ${fontSize}px ui-sans-serif, system-ui, sans-serif`;
+  const font = `600 ${fontSize}px ui-sans-serif, system-ui, sans-serif`;
+  ctx.font = font;
   // measureText returns graph units at this font while the budget is in screen
   // pixels, so the scale has to come back out before they can be compared.
   const shown = budgetPx == null
@@ -66,6 +70,7 @@ export function labelPillFor(
     },
     text: shown,
     textY: top + fontSize * 0.7,
+    font,
   };
 }
 
@@ -83,6 +88,7 @@ export function paintLabelPill(
   ctx.fill();
 
   ctx.fillStyle = textColor;
+  ctx.font = pill.font;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(pill.text, (rect.left + rect.right) / 2, pill.textY);

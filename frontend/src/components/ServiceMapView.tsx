@@ -11,8 +11,10 @@ import WorkspaceWarning from "@/components/WorkspaceWarning";
 import ServiceMapNavigator from "@/components/ServiceMapNavigator";
 import ServiceMapSidebar from "@/components/ServiceMapSidebar";
 import { projectServiceMap, serviceMapEmptyState } from "@/lib/serviceMapProjection";
-import { MAX_SERVICE_LABEL_PX, serviceDisplayNames } from "@/lib/serviceMapLabel";
-import { nodeRadius, paintServiceLink, paintServiceNode } from "@/lib/serviceMapPainter";
+import { serviceDisplayNames } from "@/lib/serviceMapLabel";
+import {
+  nodeRadius, paintServiceLabel, paintServiceLink, paintServiceNode,
+} from "@/lib/serviceMapPainter";
 import { useServiceMapLabels } from "@/hooks/useServiceMapLabels";
 import { serviceMapForces } from "@/lib/serviceMapLayout";
 import { fitTarget } from "@/lib/graphCameraFit";
@@ -84,8 +86,6 @@ function ServiceMapCanvasComponent() {
   // from the projected set rather than baked into the node on the way in.
   const displayNames = useMemo(
     () => serviceDisplayNames(graphData.nodes), [graphData.nodes]);
-  const labels = useServiceMapLabels(
-    graphData as any, displayNames, focusNode?.id, hoverNode?.id);
   useEffect(() => {
     if (focusNode && !graphData.nodes.some((node: any) => node.id === focusNode.id)) {
       setFocusNode(null);
@@ -148,15 +148,15 @@ function ServiceMapCanvasComponent() {
 
   const isDimmed = useCallback((node: any) =>
     !!focus && !focus.neighbors.has(node.id), [focus]);
+  const { beginFrame, placedLabel } = useServiceMapLabels(graphData, displayNames,
+    { focusId: focusNode?.id, hoverId: hoverNode?.id, lit: focus?.neighbors ?? null });
 
   const drawNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    paintServiceNode(node, ctx, globalScale, {
-      dimmed: isDimmed(node),
-      label: displayNames.get(node.id) ?? node.name,
-      labelBudgetPx: MAX_SERVICE_LABEL_PX,
-      showLabel: labels.shown.current.has(node.id),
-    });
-  }, [isDimmed, displayNames, labels]);
+    const dimmed = isDimmed(node);
+    paintServiceNode(node, ctx, globalScale, { dimmed });
+    const pill = placedLabel(node, ctx, globalScale);
+    if (pill) paintServiceLabel(node, ctx, globalScale, { pill, dimmed });
+  }, [isDimmed, placedLabel]);
 
   const drawLink = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const confStyle = getConfidenceStyle(link.confidence);
@@ -194,7 +194,7 @@ function ServiceMapCanvasComponent() {
         width={dimensions.width}
         height={dimensions.height}
         backgroundColor="transparent"
-        onRenderFramePre={labels.place}
+        onRenderFramePre={beginFrame}
         nodeCanvasObject={drawNode}
         nodeCanvasObjectMode={nodeReplaceMode}
         linkCanvasObject={drawLink}
