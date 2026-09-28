@@ -145,8 +145,8 @@ TraceKite is available as a **standalone CLI tool** (`tracekite`), an **embeddab
 
 | Interface | Installation & Execution | Primary Use Case |
 |---|---|---|
-| **Standalone CLI Tool** | `uv tool install tracekite-core` after release → `tracekite link ...` | Terminal graph queries, PR impact checks, and MCP stdio |
-| **Embeddable Library** | `pip install tracekite-core` after release | Embed the public `TraceKite` facade into Python without a server |
+| **Standalone CLI Tool** | `uv tool install tracekite-core` → `tracekite link ...` | Terminal graph queries, PR impact checks, and MCP stdio |
+| **Embeddable Library** | `pip install tracekite-core` | Embed the public `TraceKite` facade into Python without a server |
 | **Full Web Application** | `docker compose up -d` | Grouped 2D/3D code exploration, Service Map and Trace UI |
 
 ### 1. One-Line Setup
@@ -167,7 +167,7 @@ Pass `--yes` to skip the prompt (CI), or target a single client:
 ./scripts/install.sh --codex     # OpenAI Codex only
 ```
 
-After `v0.1.1` is published, install the core CLI without cloning:
+Install the core CLI from PyPI without cloning:
 
 ```bash
 uv tool install tracekite-core
@@ -562,6 +562,8 @@ before the current name should follow the
 | [Security and privacy](docs/security-and-privacy.md) | local processing, network, telemetry and output boundaries |
 | [Rename migration](docs/rename-migration.md) | CLI, skill, environment and Docker-volume migration |
 | [Release process](docs/releasing.md) | candidate checks, trusted publishing and registry verification |
+| [Dependency updates](docs/dependency-updates.md) | reviewing Dependabot pull requests: what CI does not cover, and how to check it |
+| [Release record, 0.1.x](docs/future/release-0.1.1-record-2026-09-28.md) | how 0.1.0 failed its release build and 0.1.1 shipped — a dated record; *Release process* is current |
 
 
 ## Contributing
