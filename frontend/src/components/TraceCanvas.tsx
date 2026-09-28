@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EDGE_COLORS, getConfidenceStyle } from "@/lib/graphStyle";
 import { useGraphStore } from "@/store/graphStore";
+import { labelPillFor, paintLabelPill } from "@/lib/canvasLabelPill";
+import { trimLinkToNodes } from "@/lib/canvasLinkGeometry";
+import { frameGraph } from "@/lib/graphCameraFit";
+
+/* Framed through the shared fit rather than zoomToFit, which has no upper
+ * bound: a one-hop trace is two nodes 240 units apart, and zoomToFit scaled
+ * them until the discs filled the screen. No floor — a trace is framed whole. */
+const FRAMING = { padding: 90, durationMs: 400 };
 
 export default function TraceCanvas() {
   const { traceData, setSelectedEdge, selectedEdge } = useGraphStore();
@@ -8,6 +16,10 @@ export default function TraceCanvas() {
   const [ForceGraphComponent, setForceGraphComponent] = useState<any>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const fgRef = useRef<any>(null);
+  const dimensionsRef = useRef(dimensions);
+  dimensionsRef.current = dimensions;
+  const frame = useCallback(
+    () => frameGraph(fgRef.current, dimensionsRef.current, FRAMING), []);
 
   useEffect(() => {
     let mounted = true;
@@ -97,11 +109,11 @@ export default function TraceCanvas() {
       charge.strength(0);
       graph.d3Force("link")?.strength(0);
       graph.d3Force("center", null);
-      setTimeout(() => !cancelled && fgRef.current?.zoomToFit(400, 110), 300);
+      setTimeout(() => !cancelled && frame(), 300);
     };
     apply();
     return () => { cancelled = true; };
-  }, [graphData, ForceGraphComponent]);
+  }, [graphData, ForceGraphComponent, frame]);
 
   const drawNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     // Screen-constant so fitting the path does not inflate the nodes.
@@ -114,22 +126,9 @@ export default function TraceCanvas() {
     ctx.lineWidth = 1.5 / globalScale;
     ctx.stroke();
 
-    // Constant on-screen size; 6px in graph units was illegible at any
-    // realistic zoom and changed size as you zoomed.
-    const labelSize = 12 / globalScale;
-    ctx.font = `600 ${labelSize}px ui-sans-serif, system-ui, sans-serif`;
-    const label = node.name;
-    const tm = ctx.measureText(label);
-    ctx.fillStyle = "rgba(255, 254, 250, 0.96)";
-    ctx.beginPath();
-    ctx.roundRect(node.x - tm.width / 2 - 3 / globalScale, node.y + radius + 2 / globalScale,
-                  tm.width + 6 / globalScale, labelSize * 1.35, 3 / globalScale);
-    ctx.fill();
-
-    ctx.fillStyle = "#1a1d23";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(label, node.x, node.y + radius + 2 / globalScale + labelSize * 0.7);
+    paintLabelPill(ctx, globalScale, labelPillFor(ctx, globalScale, {
+      centerX: node.x, anchorY: node.y + radius, text: node.name,
+    }), "#1a1d23");
   }, []);
 
   const drawLink = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
@@ -141,16 +140,16 @@ export default function TraceCanvas() {
     const confStyle = getConfidenceStyle(link.confidence);
     const isSelected = selectedEdge?.id === link.id;
 
-    // Screen-space, matching the nodes — see the note on `radius` above.
-    const dx = end.x - start.x;
-    const dy = end.y - start.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const gap = 13 / globalScale;
-    if (len <= gap * 2) return;
-    const sx = start.x + (dx / len) * gap;
-    const sy = start.y + (dy / len) * gap;
-    const ex = end.x - (dx / len) * gap;
-    const ey = end.y - (dy / len) * gap;
+    // Screen-space, matching the nodes — see the note on `radius` above. The
+    // clearances are clamped rather than obeyed, because in graph units they
+    // grow as the view zooms out and a hop shorter than its own two clearances
+    // is a crowded hop, not one to leave undrawn.
+    const line = trimLinkToNodes(start, end, {
+      startClearancePx: 13, endClearancePx: 13,
+      arrowPx: isSelected ? 12 : 8, globalScale,
+    });
+    if (!line) return;
+    const { sx, sy, ex, ey, arrowLength: arrLen } = line;
 
     ctx.save();
     ctx.globalAlpha = isSelected ? 1 : confStyle.opacity;
@@ -175,8 +174,7 @@ export default function TraceCanvas() {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    const angle = Math.atan2(dy, dx);
-    const arrLen = (isSelected ? 12 : 8) / globalScale;
+    const angle = Math.atan2(ey - sy, ex - sx);
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(ex, ey);
@@ -229,7 +227,7 @@ export default function TraceCanvas() {
         cooldownTicks={0}
         // Frame the path once it settles; this was never called, so a trace
         // rendered tiny and off-centre.
-        onEngineStop={() => fgRef.current?.zoomToFit(400, 90)}
+        onEngineStop={frame}
         onLinkClick={(link: any) => {
           setSelectedEdge(link);
         }}

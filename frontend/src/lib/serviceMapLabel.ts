@@ -18,23 +18,84 @@ export function bareServiceName(name: string): string {
   return slash === -1 ? name : name.slice(slash + 1);
 }
 
+function repoQualifier(name: string): string {
+  const slash = name.lastIndexOf("/");
+  return slash === -1 ? "" : name.slice(0, slash);
+}
+
+/** The longest run of characters every one of these begins with. */
+function sharedPrefix(values: readonly string[]): string {
+  if (values.length === 0) return "";
+  let prefix = values[0];
+  for (const value of values.slice(1)) {
+    let length = 0;
+    while (length < prefix.length && length < value.length
+           && prefix[length] === value[length]) length++;
+    prefix = prefix.slice(0, length);
+  }
+  return prefix;
+}
+
+/**
+ * Qualifiers reduced to the part that actually tells them apart.
+ *
+ * Keeping the whole qualifier is not enough on its own. Two repositories in
+ * one organisation share almost all of their ids —
+ * `spring-petclinic_spring-petclinic-cloud` against
+ * `…-microservices` — so the only distinguishing characters sit in the middle,
+ * which is exactly where `fitServiceLabel` cuts. The map drew three pairs of
+ * identical names over six different services: the disambiguation was being
+ * performed and then truncated away.
+ *
+ * Dropping what they all share leaves `cloud` and `microservices`, which fit
+ * whole. The cut backs off to a separator so a token is never halved: two ids
+ * sharing `abc` with no boundary in it keep their full qualifiers rather than
+ * being served as `def` and `xyz`. Likewise if trimming would leave any of
+ * them empty — a long label beats a blank one — or make two of them equal,
+ * which dropping leading separators can: `org-x` and `org--x` both leave `x`.
+ */
+function distinguishingQualifiers(qualifiers: readonly string[]): Map<string, string> {
+  const distinct = [...new Set(qualifiers)];
+  const shared = sharedPrefix(distinct);
+  const boundary = Math.max(
+    shared.lastIndexOf("-"), shared.lastIndexOf("_"),
+    shared.lastIndexOf("/"), shared.lastIndexOf("."),
+  ) + 1;
+  const trimmed = new Map<string, string>();
+  for (const qualifier of distinct) {
+    trimmed.set(qualifier, qualifier.slice(boundary).replace(/^[-_/.]+/, ""));
+  }
+  const values = [...trimmed.values()];
+  if (values.some((value) => value.length === 0) || new Set(values).size < values.length) {
+    return new Map(distinct.map((qualifier) => [qualifier, qualifier]));
+  }
+  return trimmed;
+}
+
 /**
  * Display name per node id. Ambiguity is never resolved by guessing: a bare
- * name shared by two drawn nodes keeps its qualifier on both, because two
+ * name shared by two drawn nodes keeps a qualifier on both, because two
  * identical labels on two different services is worse than a long one.
  */
 export function serviceDisplayNames(
   nodes: readonly { id: string; name: string }[],
 ): Map<string, string> {
-  const seen = new Map<string, number>();
+  const byBareName = new Map<string, string[]>();
   for (const node of nodes) {
     const bare = bareServiceName(node.name);
-    seen.set(bare, (seen.get(bare) ?? 0) + 1);
+    byBareName.set(bare, [...(byBareName.get(bare) ?? []), repoQualifier(node.name)]);
   }
   const names = new Map<string, string>();
   for (const node of nodes) {
     const bare = bareServiceName(node.name);
-    names.set(node.id, seen.get(bare) === 1 ? bare : node.name);
+    const sharing = byBareName.get(bare) ?? [];
+    if (sharing.length === 1) {
+      names.set(node.id, bare);
+      continue;
+    }
+    const qualifier = repoQualifier(node.name);
+    const shown = distinguishingQualifiers(sharing).get(qualifier) ?? qualifier;
+    names.set(node.id, shown ? `${shown}/${bare}` : bare);
   }
   return names;
 }

@@ -24,10 +24,22 @@ export interface FitTarget {
  */
 export const MAX_FIT_ZOOM = 2.5;
 
+/** How a caller wants its scene framed. */
+export interface FitFraming {
+  /** Screen pixels kept clear on every side. */
+  padding: number;
+  /**
+   * The least the fit may zoom out to. Omitted, the fit shrinks as far as the
+   * scene needs; a view whose labels stop reading below some zoom sets its own
+   * floor, because that zoom is a fact about its labels, not about framing.
+   */
+  minZoom?: number;
+}
+
 export function fitTarget(
   bbox: GraphBbox | null | undefined,
   viewport: Viewport,
-  padding: number,
+  { padding, minZoom = 0 }: FitFraming,
 ): FitTarget | null {
   if (!bbox) return null;
   const usableWidth = viewport.width - padding * 2;
@@ -40,6 +52,34 @@ export function fitTarget(
   return {
     x: (bbox.x[0] + bbox.x[1]) / 2,
     y: (bbox.y[0] + bbox.y[1]) / 2,
-    zoom: Math.min(MAX_FIT_ZOOM, usableWidth / spanX, usableHeight / spanY),
+    zoom: Math.max(
+      minZoom,
+      Math.min(MAX_FIT_ZOOM, usableWidth / spanX, usableHeight / spanY),
+    ),
   };
+}
+
+/** The camera calls a force-graph instance offers for framing. */
+export interface FramableGraph {
+  getGraphBbox?: () => GraphBbox | null | undefined;
+  centerAt: (x: number, y: number, ms?: number) => unknown;
+  zoom: (k: number, ms?: number) => unknown;
+}
+
+export interface CameraFraming extends FitFraming {
+  durationMs: number;
+}
+
+/** Moves the camera onto the fit, and reports whether there was one. */
+export function frameGraph(
+  graph: FramableGraph | null | undefined,
+  viewport: Viewport,
+  framing: CameraFraming,
+): boolean {
+  if (!graph) return false;
+  const target = fitTarget(graph.getGraphBbox?.(), viewport, framing);
+  if (!target) return false;
+  graph.centerAt(target.x, target.y, framing.durationMs);
+  graph.zoom(target.zoom, framing.durationMs);
+  return true;
 }

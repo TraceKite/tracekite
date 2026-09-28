@@ -1,4 +1,6 @@
 import type { GraphLink, GraphNode } from "@/lib/types";
+import { LabelSpace } from "@/lib/canvasLabelSpace";
+import { trimLinkToNodes } from "@/lib/canvasLinkGeometry";
 import {
   getConfidenceStyle,
   getEdgeColor,
@@ -27,7 +29,9 @@ export interface NodePaintOptions {
   labels: GraphLabelBudget;
   showLabels: boolean;
   moduleOrder: string[];
-  labelOccupancy: Array<{ left: number; right: number; top: number; bottom: number }>;
+  /** Shared with paintModuleRegions, so a hull caption and a node pill on the
+   * same frame cannot both take the same spot. Reset once per frame. */
+  labelSpace: LabelSpace;
 }
 
 export interface LinkPaintOptions {
@@ -42,7 +46,7 @@ export function paintModuleRegions(
   nodes: PositionedNode[],
   globalScale: number,
   moduleOrder: string[],
-  labelOccupancy: Array<{ left: number; right: number; top: number; bottom: number }>,
+  labelSpace: LabelSpace,
 ) {
   if (moduleOrder.length < 2) return;
   const groups = new Map<string, PositionedNode[]>();
@@ -101,13 +105,7 @@ export function paintModuleRegions(
         top: labelY - 12 / globalScale,
         bottom: labelY + 3 / globalScale,
       };
-      const overlaps = labelOccupancy.some((item) =>
-        rect.left < item.right && rect.right > item.left &&
-        rect.top < item.bottom && rect.bottom > item.top);
-      if (!overlaps) {
-        labelOccupancy.push(rect);
-        ctx.fillText(label, labelX, labelY);
-      }
+      if (labelSpace.claim(rect)) ctx.fillText(label, labelX, labelY);
     }
     ctx.restore();
   }
@@ -186,11 +184,10 @@ export function paintNode(
     top: pillY - 2 * pxScale,
     bottom: pillY + pillH + 2 * pxScale,
   };
-  const overlaps = options.labelOccupancy.some((item) =>
-    labelRect.left < item.right && labelRect.right > item.left &&
-    labelRect.top < item.bottom && labelRect.bottom > item.top);
-  if (overlaps && !selected) return;
-  options.labelOccupancy.push(labelRect);
+  // A selected node keeps its name whatever it lands on, and still reserves
+  // the space so the labels that yield to it do not print through it.
+  if (selected) options.labelSpace.reserve(labelRect);
+  else if (!options.labelSpace.claim(labelRect)) return;
   ctx.fillStyle = "rgba(255, 254, 250, 0.96)";
   ctx.strokeStyle = groupColor ?? color;
   ctx.lineWidth = 1 * pxScale;
@@ -244,13 +241,17 @@ export function paintLink(
   const width = aggregateWidth * (emphasized ? 1.8 : 1);
   const dx = end.x - start.x;
   const dy = end.y - start.y;
-  const len = Math.hypot(dx, dy) || 1;
-  const sourceRadius = getNodeSize(start.type, Math.min(start.size || 5, 10)) * 0.55;
-  const targetRadius = getNodeSize(end.type, Math.min(end.size || 5, 10)) * 0.55;
-  const sx = start.x + (dx / len) * Math.min(len * 0.45, sourceRadius + 2);
-  const sy = start.y + (dy / len) * Math.min(len * 0.45, sourceRadius + 2);
-  const ex = end.x - (dx / len) * Math.min(len * 0.45, targetRadius + 2);
-  const ey = end.y - (dy / len) * Math.min(len * 0.45, targetRadius + 2);
+  // The radii are graph units and the arrow is divided into them here, so the
+  // trim is asked for at a scale of 1. Asking for the arrow too is what keeps
+  // it no longer than half the line a short link has left.
+  const line = trimLinkToNodes(start as Required<PositionedNode>, end as Required<PositionedNode>, {
+    startClearancePx: getNodeSize(start.type, Math.min(start.size || 5, 10)) * 0.55 + 2,
+    endClearancePx: getNodeSize(end.type, Math.min(end.size || 5, 10)) * 0.55 + 2,
+    arrowPx: (6 + width) / globalScale,
+    globalScale: 1,
+  });
+  if (!line) return;
+  const { sx, sy, ex, ey, arrowLength: arrow } = line;
   const confidence = getConfidenceStyle(link.confidence);
   ctx.save();
   ctx.globalAlpha = alpha * confidence.opacity;
@@ -267,7 +268,6 @@ export function paintLink(
   const showDirection = incident && (link.aggregate || focusActive || emphasized || globalScale > 1.35);
   if (showDirection) {
     const angle = Math.atan2(dy, dx);
-    const arrow = (6 + width) / globalScale;
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(ex, ey);

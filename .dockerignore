@@ -1,0 +1,34 @@
+# Build context for backend/Dockerfile and frontend/Dockerfile, which both
+# build from the repo root.
+#
+# node_modules is the entry that matters. With no ignore file, the frontend's
+# `COPY frontend ./frontend` laid the host's pnpm symlink farm over the one the
+# image had just installed. Those links name the exact versions the host last
+# resolved, so the moment the lockfile moved ahead of the host's last install
+# the image lost the build tool outright — reported as a missing module, which
+# points at the package rather than at the stale directory that shadowed it.
+**/node_modules
+**/.venv
+
+.git
+.github
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+
+# Rebuilt inside the image; a stale host copy would be served instead.
+frontend/dist
+**/*.tsbuildinfo
+
+# Agent scratch space and local editor state, never part of an image.
+.agents
+.claude
+**/.DS_Store
+
+# Local secrets. No COPY reaches them today, but the build context is still
+# sent to the builder and its cache, and one broad COPY would bake them in.
+**/.env
+**/.env.*
+!**/.env.example

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 
 import type { GraphNode } from "@/lib/types";
-import { fitTarget } from "@/lib/graphCameraFit";
+import { frameGraph } from "@/lib/graphCameraFit";
 import type { ForceGraph2DMethods } from "@/hooks/useGraphControls";
 
 interface Options {
@@ -24,8 +24,8 @@ export interface Graph2DCameraFrame {
   onUserZoom: () => void;
 }
 
-const FIT_MS = 600;
-const FIT_PADDING = 70;
+// No zoom floor: a large repo graph is framed whole, however small that makes it.
+const FRAMING = { padding: 70, durationMs: 600 };
 // Long enough for the layout to spread, short enough that a new scene does not
 // sit unframed. The engine's own settle lands later and matters only when the
 // canvas was still remounting at this point, which is what the retry covers.
@@ -67,13 +67,9 @@ export function useGraph2DCameraFrame({
     if (!graph || !measuredRef.current) return false;
     // Framed here rather than through zoomToFit, which has no upper bound and
     // scales a one-node module until it fills the screen.
-    const target = fitTarget(
-      graph.getGraphBbox?.(), dimensionsRef.current, FIT_PADDING);
-    if (!target) return false;
+    if (!frameGraph(graph, dimensionsRef.current, FRAMING)) return false;
     pendingRef.current = null;
     framedRef.current = scene;
-    graph.centerAt(target.x, target.y, FIT_MS);
-    graph.zoom(target.zoom, FIT_MS);
     return true;
   }, [graphRef]);
 

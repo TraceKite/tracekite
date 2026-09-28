@@ -28,15 +28,54 @@ test("an unambiguous service drops its repo qualifier", () => {
   assert.equal(names.get("b"), "grafana-server");
 });
 
-test("two repos contributing the same service name both keep their qualifier", () => {
+test("two repos contributing the same service name stay told apart", () => {
   const names = serviceDisplayNames([
     { id: "a", name: "repo-one/config-server" },
     { id: "b", name: "repo-two/config-server" },
   ]);
-  // Shortening here would draw two different services with one identical
-  // label, which is worse than a long one.
-  assert.equal(names.get("a"), "repo-one/config-server");
-  assert.equal(names.get("b"), "repo-two/config-server");
+  // Collapsing these to one label would draw two different services under one
+  // name, which is worse than a long one. What they share carries no
+  // information by construction, so only what differs is kept.
+  assert.equal(names.get("a"), "one/config-server");
+  assert.equal(names.get("b"), "two/config-server");
+  assert.notEqual(names.get("a"), names.get("b"));
+});
+
+test("a qualifier is trimmed to what differs, not to what fits", () => {
+  // Two repos in one organisation share nearly all of their id, and the few
+  // characters that differ sit in the middle — exactly where fitServiceLabel
+  // cuts. The map drew three pairs of identical names over six services.
+  const names = serviceDisplayNames([
+    { id: "a", name: "spring-petclinic_spring-petclinic-cloud/grafana-server" },
+    { id: "b", name: "spring-petclinic_spring-petclinic-microservices/grafana-server" },
+  ]);
+
+  assert.equal(names.get("a"), "cloud/grafana-server");
+  assert.equal(names.get("b"), "microservices/grafana-server");
+});
+
+test("a shared run with no separator in it is left whole", () => {
+  // Trimming here would serve `def` and `xyz`, which are not names.
+  const names = serviceDisplayNames([
+    { id: "a", name: "abcdef/config-server" },
+    { id: "b", name: "abcxyz/config-server" },
+  ]);
+
+  assert.equal(names.get("a"), "abcdef/config-server");
+  assert.equal(names.get("b"), "abcxyz/config-server");
+});
+
+test("trimming never makes two different qualifiers read the same", () => {
+  // The shared run is `org-`; dropping it and the leading separator it leaves
+  // behind turns both into `x`, which would draw two services under one name.
+  const names = serviceDisplayNames([
+    { id: "a", name: "org-x/api" },
+    { id: "b", name: "org--x/api" },
+  ]);
+
+  assert.notEqual(names.get("a"), names.get("b"));
+  assert.equal(names.get("a"), "org-x/api");
+  assert.equal(names.get("b"), "org--x/api");
 });
 
 test("an unqualified name colliding with a qualified one is not shortened away", () => {

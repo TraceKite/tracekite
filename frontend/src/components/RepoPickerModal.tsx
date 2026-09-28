@@ -5,6 +5,7 @@ import { Search, X, AlertTriangle } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
 import type { RepoSummary } from "@/lib/types";
 import { toggleDraftRepoScope } from "@/lib/graphNavigation";
+import { projectServiceMap } from "@/lib/serviceMapProjection";
 
 interface Props {
   mode: "repo" | "multi";
@@ -14,7 +15,7 @@ interface Props {
 export default function RepoPickerModal({ mode, onClose }: Props) {
   const {
     repos, scopeRepoIds, setScopeRepos, selectedRepo, setSelectedRepo,
-    serviceMapData, clientConfig,
+    serviceMapData, clientConfig, mapEdgeTypes,
   } = useGraphStore();
   const [query, setQuery] = useState("");
   const [draftIds, setDraftIds] = useState(scopeRepoIds);
@@ -40,22 +41,21 @@ export default function RepoPickerModal({ mode, onClose }: Props) {
    *
    * The repo cap is a proxy — render cost is nodes and edges, and repo size
    * varies enormously. Showing the real numbers means the cheap rule prevents
-   * accidents while the true cost stays visible. */
+   * accidents while the true cost stays visible.
+   *
+   * Which means it has to be the canvas's own answer, not a second reading of
+   * the scope rule. A reimplementation here counted BUILT_FROM bookkeeping the
+   * map never draws and charged repo-less edges to every scope: it promised
+   * grpc-gateway 31 links on a map that drew none, and the whole estate 92 on
+   * a map that drew 64. */
   const cost = useMemo(() => {
     if (!serviceMapData) return null;
-    const ids = draftIds;
-    const inScope = (n: any) =>
-      ids.length === 0 || (n.repo_ids ?? []).some((id: string) => ids.includes(id));
-    const services = serviceMapData.nodes.filter(
-      (n: any) => n.kind === "service" && inScope(n)).length;
-    const links = ids.length === 0
-      ? serviceMapData.totals.edges
-      : serviceMapData.edges.filter((e: any) => {
-          const src: string = e.source_repo_id || "";
-          return src ? ids.includes(src) : true;
-        }).length;
-    return { services, links };
-  }, [draftIds, serviceMapData]);
+    const drawn = projectServiceMap(serviceMapData, mapEdgeTypes, draftIds);
+    return {
+      services: drawn.nodes.filter((node) => node.kind === "service").length,
+      links: drawn.links.length,
+    };
+  }, [draftIds, serviceMapData, mapEdgeTypes]);
 
   const atCap = draftIds.length >= maxRepos;
   const canSelectAll = repos.length <= maxRepos;

@@ -9,9 +9,13 @@ import GraphCanvasMessage from "@/components/GraphCanvasMessage";
 import WorkspaceWarning from "@/components/WorkspaceWarning";
 import ServiceMapNavigator from "@/components/ServiceMapNavigator";
 import ServiceMapSidebar from "@/components/ServiceMapSidebar";
-import { projectServiceMap, serviceMapEmptyState } from "@/lib/serviceMapProjection";
-import { MAX_SERVICE_LABEL_PX, serviceDisplayNames } from "@/lib/serviceMapLabel";
-import { nodeRadius, paintServiceNode } from "@/lib/serviceMapPainter";
+import { serviceMapEmptyState } from "@/lib/serviceMapProjection";
+import { serviceDisplayNames } from "@/lib/serviceMapLabel";
+import {
+  nodeRadius, paintServiceLabel, paintServiceLink, paintServiceNode,
+} from "@/lib/serviceMapPainter";
+import { useServiceMapLabels } from "@/hooks/useServiceMapLabels";
+import { useServiceMapLayout } from "@/hooks/useServiceMapLayout";
 
 /* Stable identities: react-kapsule re-applies a prop whenever its reference
  * changes, so inline arrows here re-set the accessor on every React render. */
@@ -27,7 +31,6 @@ function ServiceMapCanvasComponent() {
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [hoverNode, setHoverNode] = useState<any>(null);
   const [focusNode, setFocusNode] = useState<any>(null);
-  const [layoutReady, setLayoutReady] = useState(false);
   const fgRef = useRef<any>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
@@ -47,10 +50,10 @@ function ServiceMapCanvasComponent() {
     return () => ro.disconnect();
   }, [containerEl]);
 
-  const graphData = useMemo(
-    () => projectServiceMap(serviceMapData, mapEdgeTypes, scopeRepoIds),
-    [serviceMapData, mapEdgeTypes, scopeRepoIds],
-  );
+  const { graphData, layoutReady, onEngineStop } = useServiceMapLayout({
+    graphRef: fgRef, graphLoaded: !!ForceGraphComponent, data: serviceMapData,
+    mapEdgeTypes, scopeRepoIds, dimensions,
+  });
   const emptyState = useMemo(
     () => serviceMapEmptyState(serviceMapData, graphData, scopeRepoIds),
     [serviceMapData, graphData, scopeRepoIds],
@@ -59,44 +62,11 @@ function ServiceMapCanvasComponent() {
   // from the projected set rather than baked into the node on the way in.
   const displayNames = useMemo(
     () => serviceDisplayNames(graphData.nodes), [graphData.nodes]);
-
   useEffect(() => {
     if (focusNode && !graphData.nodes.some((node: any) => node.id === focusNode.id)) {
       setFocusNode(null);
     }
   }, [focusNode, graphData.nodes]);
-
-  // Retry until react-force-graph has created its d3 forces.
-  useEffect(() => {
-    setLayoutReady(false);
-    let cancelled = false;
-    let tries = 0;
-    const apply = () => {
-      if (cancelled) return;
-      const graph = fgRef.current;
-      const charge = graph?.d3Force?.("charge");
-      if (!charge) {
-        if (tries++ < 25) setTimeout(apply, 80);
-        return;
-      }
-      // Repulsion scales with node count: a charge that spreads 200 nodes
-      // leaves 9 in a heap, and vice versa.
-      const n = Math.max(graphData.nodes.length, 1);
-      charge.strength(n < 40 ? -1800 : -600).distanceMax(1200);
-      graph.d3Force("link")?.distance(n < 40 ? 220 : 130);
-      graph.d3Force("center")?.strength(0.05);
-      graph.d3ReheatSimulation?.();
-      // Fit after the layout has had time to settle, in case onEngineStop
-      // does not fire (it does not when the sim is already cool).
-      setTimeout(() => {
-        if (cancelled) return;
-        fgRef.current?.zoomToFit(400, 90);
-        setLayoutReady(true);
-      }, 1400);
-    };
-    apply();
-    return () => { cancelled = true; };
-  }, [graphData, ForceGraphComponent]);
 
   /** Edges touching the focused service, split by direction. */
   const focus = useMemo(() => {
@@ -116,82 +86,31 @@ function ServiceMapCanvasComponent() {
 
   const isDimmed = useCallback((node: any) =>
     !!focus && !focus.neighbors.has(node.id), [focus]);
+  const { beginFrame, placedLabel } = useServiceMapLabels(graphData, displayNames,
+    { focusId: focusNode?.id, hoverId: hoverNode?.id, lit: focus?.neighbors ?? null });
 
   const drawNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    paintServiceNode(node, ctx, globalScale, {
-      dimmed: isDimmed(node),
-      label: displayNames.get(node.id) ?? node.name,
-      labelBudgetPx: MAX_SERVICE_LABEL_PX,
-    });
-  }, [isDimmed, displayNames]);
+    const dimmed = isDimmed(node);
+    paintServiceNode(node, ctx, globalScale, { dimmed });
+    const pill = placedLabel(node, ctx, globalScale);
+    if (pill) paintServiceLabel(node, ctx, globalScale, { pill, dimmed });
+  }, [isDimmed, placedLabel]);
 
   const drawLink = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    const start = link.source;
-    const end = link.target;
-    if (!start || !end || start.x == null || end.x == null) return;
-
-    const color = EDGE_COLORS[link.type] || "#6b6f65";
     const confStyle = getConfidenceStyle(link.confidence);
-    const isSelected = selectedEdge?.id === link.id;
-    // An edge survives focus only if it actually touches the focused service.
-    // Matching on neighbour membership alone would keep edges *between* two
-    // neighbours, which are not this service's dependencies.
-    const dimLink = !!focus && !(
-      focus.inbound.includes(link) || focus.outbound.includes(link));
-    // Highlight is independent of node focus: focus narrows by adjacency,
-    // highlight narrows by relationship kind. Both dim rather than remove.
-    const litType = highlightedEdgeTypes.length === 0
-      || highlightedEdgeTypes.includes(link.type);
-
-    // Every length here is screen-space, matching the nodes. A fixed graph-unit
-    // gap of 12 was tuned for one zoom level: fitting a small map opened a
-    // canyon between the arrowhead and the node, and zooming out buried the
-    // arrowhead inside it.
-    const dx = end.x - start.x;
-    const dy = end.y - start.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const gapStart = (nodeRadius(start) + 3) / globalScale;
-    const gapEnd = (nodeRadius(end) + 5) / globalScale;
-    if (len <= gapStart + gapEnd) return;
-    const sx = start.x + (dx / len) * gapStart;
-    const sy = start.y + (dy / len) * gapStart;
-    const ex = end.x - (dx / len) * gapEnd;
-    const ey = end.y - (dy / len) * gapEnd;
-
-    ctx.save();
-    ctx.globalAlpha = (dimLink ? 0.06 : isSelected ? 1 : confStyle.opacity)
-      * (litType ? 1 : 0.07);
-
-    if (isSelected) {
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = color;
-      ctx.lineWidth = 4 / globalScale;
-      ctx.strokeStyle = "rgba(37,40,33,0.18)";
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(ex, ey);
-      ctx.stroke();
-    }
-
-    ctx.strokeStyle = color;
-    ctx.lineWidth = (isSelected ? 2.5 : 1.5) / globalScale;
-    ctx.setLineDash(confStyle.dash.map((d: number) => d / globalScale));
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(ex, ey);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    const angle = Math.atan2(dy, dx);
-    const arrLen = (isSelected ? 10 : 7) / globalScale;
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(ex, ey);
-    ctx.lineTo(ex - arrLen * Math.cos(angle - Math.PI / 6), ey - arrLen * Math.sin(angle - Math.PI / 6));
-    ctx.lineTo(ex - arrLen * Math.cos(angle + Math.PI / 6), ey - arrLen * Math.sin(angle + Math.PI / 6));
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
+    paintServiceLink(link, ctx, globalScale, {
+      color: EDGE_COLORS[link.type] || "#6b6f65",
+      opacity: confStyle.opacity,
+      dash: confStyle.dash,
+      // An edge survives focus only if it actually touches the focused service.
+      // Matching on neighbour membership alone would keep edges *between* two
+      // neighbours, which are not this service's dependencies.
+      dimmed: !!focus && !(focus.inbound.includes(link) || focus.outbound.includes(link)),
+      selected: selectedEdge?.id === link.id,
+      // Highlight is independent of node focus: focus narrows by adjacency,
+      // highlight narrows by relationship kind. Both dim rather than remove.
+      lit: highlightedEdgeTypes.length === 0 || highlightedEdgeTypes.includes(link.type),
+    });
   }, [selectedEdge, focus, highlightedEdgeTypes]);
 
   if (!ForceGraphComponent) return null;
@@ -213,6 +132,7 @@ function ServiceMapCanvasComponent() {
         width={dimensions.width}
         height={dimensions.height}
         backgroundColor="transparent"
+        onRenderFramePre={beginFrame}
         nodeCanvasObject={drawNode}
         nodeCanvasObjectMode={nodeReplaceMode}
         linkCanvasObject={drawLink}
@@ -237,10 +157,7 @@ function ServiceMapCanvasComponent() {
         d3VelocityDecay={0.3}
         // Bound d3 work instead of using its 15-second default.
         cooldownTicks={220}
-        onEngineStop={() => {
-          fgRef.current?.zoomToFit(400, 80);
-          setLayoutReady(true);
-        }}
+        onEngineStop={onEngineStop}
         onLinkClick={(link: any) => {
           setSelectedEdge(link);
         }}
