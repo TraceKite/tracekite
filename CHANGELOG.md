@@ -8,7 +8,20 @@ for the published `tracekite-core` distribution.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-28
+
+### Fixed
+
+- Parallel and sharded scans no longer drop files where worker processes are
+  started with `fork()`, the default on Linux before Python 3.14. A worker
+  forked after its parent had parsed anything inherited a parse pool with no
+  threads behind it, so every parse in the worker timed out and was skipped,
+  and the parallel artifact differed from the serial one.
+
 ## [0.1.0] - 2026-09-19
+
+Tagged but not published to PyPI: its release build failed on the defect
+fixed in 0.1.1.
 
 ### Added
 
@@ -21,5 +34,6 @@ for the published `tracekite-core` distribution.
   templates.
 - Release checks for clean wheel and source-distribution installs.
 
-[Unreleased]: https://github.com/TraceKite/tracekite/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/TraceKite/tracekite/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/TraceKite/tracekite/releases/tag/v0.1.1
 [0.1.0]: https://github.com/TraceKite/tracekite/releases/tag/v0.1.0

@@ -13,11 +13,9 @@ implementation drifting away from this one.
 
 import logging
 import os
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import TimeoutError as FuturesTimeout
 
 from tracekite.engine_config import get_config
-from tracekite.parsers.parser_registry import get_parser_for_file, parse_file
+from tracekite.parsers.parser_registry import get_parser_for_file
 from tracekite.parsers.tree_sitter.adapter import TreeSitterSourceParser
 from tracekite.services.absence import absence_report
 from tracekite.services.call_graph_resolver import build_call_graph
@@ -37,6 +35,7 @@ from tracekite.services.ingest_claims import (
     emit_mcp_manifest_claims, emit_source_claims,
 )
 from tracekite.services.ingest_source import IngestSink, process_source_file
+from tracekite.services.parse_budget import ParseTimeout, parse_within_budget
 
 logger = logging.getLogger(__name__)
 
@@ -201,30 +200,6 @@ def parse_files(repo_id: str, files: list, file_ids: dict[str, str],
         _parse_one_file(repo_id, file_info, file_ids[file_info.path], sink)
 
 
-class _ParseTimeout(RuntimeError):
-    """A single file exceeded its parse budget."""
-
-
-# One shared executor: ingest workers already bound concurrency, and a
-# per-file thread would cost more than the parse for the common case.
-_parse_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="parse")
-
-
-def _parse_with_timeout(path: str, content: str):
-    """Bound a single file's parse (design §3 guardrails, GitNexus).
-
-    A pathological file can wedge tree-sitter indefinitely; without a cap one
-    file stalls an entire repo's ingest. The worker thread is abandoned rather
-    than killed — Python cannot interrupt it — but the ingest moves on.
-    """
-    future = _parse_pool.submit(parse_file, path, content)
-    try:
-        return future.result(timeout=get_config().parse_timeout_s)
-    except FuturesTimeout as exc:
-        future.cancel()
-        raise _ParseTimeout(path) from exc
-
-
 def _parse_one_file(repo_id: str, file_info, file_node_id: str,
                     sink: IngestSink) -> None:
     counters = sink.lang(file_info.language)
@@ -244,8 +219,8 @@ def _parse_one_file(repo_id: str, file_info, file_node_id: str,
         return
 
     try:
-        result = _parse_with_timeout(file_info.path, content)
-    except _ParseTimeout:
+        result = parse_within_budget(file_info.path, content)
+    except ParseTimeout:
         counters["parse_errors"] += 1
         counters["parse_timeouts"] = counters.get("parse_timeouts", 0) + 1
         logger.warning("Parse timed out after %ds for %s",

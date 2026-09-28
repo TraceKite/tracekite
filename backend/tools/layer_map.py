@@ -78,6 +78,7 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("services.ingest_config_defs", "parsers"),
     ("services.ingest_source", "parsers"),
     ("services.scan", "parsers"),
+    ("services.parse_budget", "parsers"),
     ("services.sink_merge", "parsers"),
     ("services.absence", "parsers"),
     ("services.agents_extractor", "parsers"),

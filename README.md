@@ -167,7 +167,7 @@ Pass `--yes` to skip the prompt (CI), or target a single client:
 ./scripts/install.sh --codex     # OpenAI Codex only
 ```
 
-After `v0.1.0` is published, install the core CLI without cloning:
+After `v0.1.1` is published, install the core CLI without cloning:
 
 ```bash
 uv tool install tracekite-core

@@ -1,6 +1,6 @@
 {
   "name": "tracekite",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Evidence-backed dependency tracing across source repositories.",
   "author": {
     "name": "TraceKite"
