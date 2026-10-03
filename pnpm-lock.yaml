@@ -34,8 +34,8 @@ catalogs:
       specifier: ^0.45.2
       version: 0.45.2
     framer-motion:
-      specifier: ^13.4.3
-      version: 13.4.3
+      specifier: ^13.4.6
+      version: 13.4.6
     lucide-react:
       specifier: ^0.545.0
       version: 0.545.0
@@ -269,7 +269,7 @@ importers:
         version: 8.6.0(react@19.3.0)
       framer-motion:
         specifier: 'catalog:'
-        version: 13.4.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        version: 13.4.6(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -2545,8 +2545,8 @@ packages:
     resolution: {integrity: sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==}
     engines: {node: '>= 0.6'}
 
-  framer-motion@13.4.3:
-    resolution: {integrity: sha512-mPQe1GtRHWS30zRGaQAfmlIg0baA0jRhkpbFPT1d+s9bZPjMW6pJSjWM6ArmUEjzMgEm089ZL1wd8aPv1/5DJQ==}
+  framer-motion@13.4.6:
+    resolution: {integrity: sha512-TwKWt2CC8rjhARzwV00TZIh04ipumSAqyKM/JZmS+urdncSHg6wTF/mfj/Fd6Oi2W01TZSWsiA3uxXDrXZtKyw==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
@@ -2934,8 +2934,8 @@ packages:
   mitt@3.0.1:
     resolution: {integrity: sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw==}
 
-  motion-dom@13.4.2:
-    resolution: {integrity: sha512-mY293Iyj4rOQo5sDxUwPYLOKiveLQrJoK1tKfG8V1H3MMGMfan3s2i7NBW18WnD39DD79ogyiL/1fmy22GLG5w==}
+  motion-dom@13.4.5:
+    resolution: {integrity: sha512-p63p2Doq+US/O5wADauIPUVx0/eONHMLPzsudBM9XMWRuBQLXogdxH0vwIA8WYQZw864pyzoV723xoDqakwWTg==}
 
   motion-utils@13.3.0:
     resolution: {integrity: sha512-sgSschQp7EseHInIlR7hBbMuvet3RA0bs28KPZAXJcGKGdxHGvh1ogpYDilY3bOMtl73EqPNmp75sAKHYPU5sg==}
@@ -5739,9 +5739,9 @@ snapshots:
 
   forwarded@0.2.0: {}
 
-  framer-motion@13.4.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+  framer-motion@13.4.6(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:
-      motion-dom: 13.4.2
+      motion-dom: 13.4.5
       motion-utils: 13.3.0
       tslib: 2.8.1
     optionalDependencies:
@@ -6036,7 +6036,7 @@ snapshots:
 
   mitt@3.0.1: {}
 
-  motion-dom@13.4.2:
+  motion-dom@13.4.5:
     dependencies:
       motion-utils: 13.3.0
 
