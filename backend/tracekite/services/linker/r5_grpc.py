@@ -18,6 +18,9 @@ from tracekite.services.linker.base import (
     ClaimIndex, ClaimRecord, LinkContext, RendezvousSpec, ResolverOutput,
     linker_edge,
 )
+from tracekite.services.linker.grpc_names import (
+    operation_service_names, stub_service_name,
+)
 from tracekite.utils import rendezvous_ids as rid
 
 logger = logging.getLogger(__name__)
@@ -90,18 +93,15 @@ def _match_stubs(index: ClaimIndex, ctx: LinkContext, out: ResolverOutput,
     """
     by_service: dict[str, list[str]] = defaultdict(list)
     for key in operations:
-        service_full = key.rpartition("/")[0]
-        by_service[service_full.lower()].append(key)
-        # Unqualified name too: a stub says `OrdersService`, the proto says
-        # `petclinic.orders.OrdersService`.
-        by_service[service_full.rpartition(".")[2].lower()].append(key)
+        for name in operation_service_names(key):
+            by_service[name].append(key)
 
     for direction, edge_type, tier in (("provides", "EXPOSES", "server"),
                                        ("consumes", "INVOKES", "client")):
         claims = (index.provides("grpcstub") if direction == "provides"
                   else index.consumes("grpcstub"))
         for claim in claims:
-            service = str(claim.attrs.get("service") or claim.key).lower()
+            service = stub_service_name(claim)
             keys = sorted(set(by_service.get(service, [])))
             if not keys:
                 ctx.count(f"r5.unmatched_{tier}")
