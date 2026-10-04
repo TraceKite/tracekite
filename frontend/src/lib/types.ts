@@ -124,19 +124,6 @@ export interface IngestRepoRequest {
 
 export type ViewMode = "overview" | "architecture" | "code" | "api" | "dependencies" | "impact";
 
-export const NODE_TYPES = [
-  "Repo", "Folder", "File", "Package", "Class", "Interface",
-  "Method", "ApiEndpoint", "Dependency", "Config", "ExternalSystem",
-  "ExternalApi", "Test", "DockerResource", "KubernetesResource",
-] as const;
-
-export const EDGE_TYPES = [
-  "CONTAINS", "DECLARES", "IMPORTS", "CALLS", "IMPLEMENTS",
-  "EXTENDS", "EXPOSES_API", "CALLS_API", "USES_CONFIG", "CONFIGURED_BY",
-  "DEPENDS_ON", "READS_FROM", "WRITES_TO", "PUBLISHES_TO",
-  "CONSUMES_FROM", "TESTED_BY", "RELATED_TO",
-] as const;
-
 export const VIEW_MODES: ViewMode[] = [
   "overview", "architecture", "code", "api", "dependencies", "impact",
 ];

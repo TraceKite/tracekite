@@ -1,14 +1,12 @@
-import { useState, useCallback, useMemo } from "react";
-import {
-  LayoutGrid, Boxes, Code, Globe, Package, Zap,
-  Filter, ChevronDown, ChevronRight, Eye, EyeOff,
-} from "lucide-react";
+import { useCallback, useMemo } from "react";
+import { LayoutGrid, Boxes, Code, Globe, Package, Zap } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
-import { graphGroupOf, EDGE_COLORS } from "@/lib/graphStyle";
+import { graphGroupOf } from "@/lib/graphStyle";
 import { isLockfileDependencyNode, isNodeVisible } from "@/lib/graphVisibility";
-import { NODE_TYPES, EDGE_TYPES, VIEW_MODES, type ViewMode } from "@/lib/types";
+import { VIEW_MODES, type ViewMode } from "@/lib/types";
 import { useGraphNavigationStore } from "@/store/graphNavigationStore";
 import GraphReadingGuide from "@/components/GraphReadingGuide";
+import { NodeTypeFilter, EdgeTypeFilter } from "@/components/GraphTypeFilters";
 import { effectiveRepoIds } from "@/lib/graphNavigation";
 
 const VIEW_ICONS: Record<ViewMode, React.ReactNode> = {
@@ -22,14 +20,11 @@ const VIEW_ICONS: Record<ViewMode, React.ReactNode> = {
 
 export default function GraphFilters() {
   const {
-    viewMode, setViewMode,
-    filteredNodeTypes, setFilteredNodeTypes,
-    filteredEdgeTypes, setFilteredEdgeTypes,
+    viewMode, setViewMode, filteredNodeTypes,
     scopeRepoIds, connectionsOnly, setConnectionsOnly, bridgeCount,
     bridgeStatus, hideLockfileDeps, toggleHideLockfileDeps,
-    focusNodeId, setFocusNode, nodes, links, repos, selectedNode, selectedRepo,
+    focusNodeId, setFocusNode, nodes, repos, selectedNode, selectedRepo,
     setSelectedNode, setSelectedEdge, setSearchQuery,
-    highlightedEdgeTypes, toggleHighlightEdgeType, clearHighlightedEdgeTypes,
   } = useGraphStore();
   const clearExpandedGroup = useGraphNavigationStore(
     (state) => state.clearExpandedGroup);
@@ -44,22 +39,11 @@ export default function GraphFilters() {
     }
     return [...seen].sort();
   }, [nodes, filteredNodeTypes, hideLockfileDeps]);
-  const nodeTypes = useMemo(
-    () => [...new Set([...NODE_TYPES, ...nodes.map((node) => node.type)])],
-    [nodes],
-  );
-  const edgeTypes = useMemo(
-    () => [...new Set([...EDGE_TYPES, ...links.map((link) => link.type)])],
-    [links],
-  );
   const lockfileLeafCount = useMemo(
     () => nodes.filter(isLockfileDependencyNode).length,
     [nodes],
   );
   const scopeCount = effectiveRepoIds(repos, scopeRepoIds, selectedRepo).length;
-
-  const [showNodeTypes, setShowNodeTypes] = useState(false);
-  const [showEdgeTypes, setShowEdgeTypes] = useState(false);
 
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     if (mode === "impact") {
@@ -89,21 +73,6 @@ export default function GraphFilters() {
     setViewMode("overview");
   }, [clearExpandedGroup, setFocusNode, setSearchQuery, setSelectedEdge,
       setSelectedNode, setViewMode]);
-
-  const toggleNodeType = useCallback((type: string) => {
-    setFilteredNodeTypes((prev: string[]) => {
-      const next = prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type];
-      return next;
-    });
-  }, [setFilteredNodeTypes]);
-
-  const toggleEdgeType = useCallback((type: string) => {
-    setFilteredEdgeTypes((prev: string[]) => {
-      const hiding = !prev.includes(type);
-      if (hiding && highlightedEdgeTypes.includes(type)) toggleHighlightEdgeType(type);
-      return hiding ? [...prev, type] : prev.filter((t) => t !== type);
-    });
-  }, [setFilteredEdgeTypes, highlightedEdgeTypes, toggleHighlightEdgeType]);
 
   return (
     <div className="space-y-3">
@@ -209,92 +178,8 @@ export default function GraphFilters() {
         </div>
       )}
 
-      <div>
-        <button
-          onClick={() => setShowNodeTypes(!showNodeTypes)}
-          className="flex items-center gap-1.5 text-2xs font-semibold text-slate-400 uppercase tracking-wider mb-2 hover:text-slate-700 transition-colors w-full"
-        >
-          <Filter className="w-3 h-3" />
-          <span>Node Types{filteredNodeTypes.length > 0 && ` · ${filteredNodeTypes.length} hidden`}</span>
-          {showNodeTypes ? <ChevronDown className="w-3 h-3 ml-auto" /> : <ChevronRight className="w-3 h-3 ml-auto" />}
-        </button>
-
-        {showNodeTypes && (
-          <div className="space-y-1">
-            {nodeTypes.map((type) => (
-              <label key={type} className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-slate-100 cursor-pointer text-xs transition-colors">
-                <input
-                  type="checkbox"
-                  checked={!filteredNodeTypes.includes(type)}
-                  onChange={() => toggleNodeType(type)}
-                  className="rounded border-slate-300 text-[#315b47] focus:ring-[#315b47]"
-                  style={{ accentColor: "#315b47" }}
-                />
-                <span className="text-slate-800">{type}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div>
-        <button
-          onClick={() => setShowEdgeTypes(!showEdgeTypes)}
-          className="flex items-center gap-1.5 text-2xs font-semibold text-slate-400 uppercase tracking-wider mb-2 hover:text-slate-700 transition-colors w-full"
-        >
-          <Filter className="w-3 h-3" />
-          <span>Edge Types{filteredEdgeTypes.length > 0 && ` · ${filteredEdgeTypes.length} hidden`}</span>
-          {showEdgeTypes ? <ChevronDown className="w-3 h-3 ml-auto" /> : <ChevronRight className="w-3 h-3 ml-auto" />}
-        </button>
-
-        {showEdgeTypes && (
-          <div className="space-y-1">
-            {highlightedEdgeTypes.length > 0 && (
-              <button
-                onClick={clearHighlightedEdgeTypes}
-                className="w-full text-2xs px-2 py-1 rounded-md bg-slate-100
-                           text-slate-600 hover:text-slate-900 transition-colors font-medium"
-              >
-                Clear highlight ({highlightedEdgeTypes.length})
-              </button>
-            )}
-            {edgeTypes.map((type) => {
-              const hidden = filteredEdgeTypes.includes(type);
-              const lit = highlightedEdgeTypes.includes(type);
-              const count = (links as any[]).filter((l) => l.type === type).length;
-              return (
-                <div key={type} className="flex items-center gap-1">
-                  <button
-                    onClick={() => toggleHighlightEdgeType(type)}
-                    disabled={hidden}
-                    aria-pressed={lit}
-                    title={hidden ? "Hidden — show it to highlight"
-                                  : lit ? "Stop highlighting" : "Highlight these edges"}
-                    className={`flex-1 flex items-center gap-2 px-2 py-1 rounded-md text-xs
-                                text-left transition-colors disabled:cursor-not-allowed ${
-                      lit ? "bg-slate-200 text-slate-900 font-semibold" : "hover:bg-slate-100 text-slate-700"}`}
-                    style={{ opacity: hidden ? 0.35 : 1 }}
-                  >
-                    <span className="w-3.5 h-0.5 rounded-full flex-shrink-0"
-                          style={{ background: EDGE_COLORS[type] ?? "#94a3b8" }} />
-                    <span className="truncate">{type}</span>
-                    <span className="ml-auto text-2xs text-slate-400 font-mono">{count}</span>
-                  </button>
-                  <button
-                    onClick={() => toggleEdgeType(type)}
-                    aria-label={hidden ? `Show ${type}` : `Hide ${type}`}
-                    title={hidden ? "Show" : "Hide"}
-                    className="p-1 rounded text-slate-400 hover:text-slate-700
-                               hover:bg-slate-100 transition-colors flex-shrink-0"
-                  >
-                    {hidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <NodeTypeFilter />
+      <EdgeTypeFilter />
     </div>
   );
 }
