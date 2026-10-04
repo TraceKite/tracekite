@@ -90,7 +90,9 @@ class GraphTools:
         known_ids = self._known_node_ids()
         named = set()
         for s in self._result.services:
-            if query != s.service_id and query.lower() != s.name.lower():
+            # A generic name is repo-scoped (`acme/frontend`); its bare name finds it.
+            if query != s.service_id and query.lower() not in {
+                    s.name.lower(), s.name.lower().rpartition("/")[2]}:
                 continue
             named.update(candidate for candidate in (
                 s.service_id, rid.service_id(s.name)) if candidate in known_ids)

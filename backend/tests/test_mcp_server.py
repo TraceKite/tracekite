@@ -113,6 +113,31 @@ class TestProtocol:
         assert traced["found"] is False
         assert traced["candidates"]["from"] == ["service:a", "service:b"]
 
+    def test_a_repo_scoped_generic_name_answers_to_its_own_name(self):
+        # opentelemetry-demo's `frontend` is generic, so its service is
+        # `<repo>/frontend`; asking for `frontend` read "not in graph".
+        scoped = SimpleNamespace(service_id="global:Service:demo/frontend",
+                                 name="demo/frontend", repo_ids=["demo"])
+        other = SimpleNamespace(service_id="global:Service:shop/frontend",
+                                name="shop/frontend", repo_ids=["shop"])
+        checkout = SimpleNamespace(service_id="global:Service:checkout",
+                                   name="checkout", repo_ids=["demo"])
+        edge = SimpleNamespace(source_id=scoped.service_id,
+                               target_id=checkout.service_id, status="active",
+                               type="CALLS_SERVICE", confidence=0.96,
+                               evidence=["compose.yaml:300"])
+
+        def tools(*services):
+            return GraphTools(SimpleNamespace(services=list(services),
+                                              edges=[edge], rendezvous=[]))
+
+        assert tools(scoped, checkout).trace("frontend", "checkout")["found"]
+        # Two repos each with a `frontend`: declined, never joined.
+        declined = tools(scoped, other, checkout).trace("frontend", "checkout")
+        assert declined["reason"] == "ambiguous service name"
+        assert declined["candidates"]["from"] == [
+            "global:Service:demo/frontend", "global:Service:shop/frontend"]
+
     def test_services_exclude_unbacked_virtual_names(self):
         result = SimpleNamespace(
             services=[
