@@ -1,26 +1,7 @@
-"""Stable framework integration facade.
+"""Stable framework facade over source directories or portable artifacts.
 
-A host embeds TraceKite through this module — no FastAPI, no Neo4j, no
-network.  The facade accepts source directories or ``.tracekite`` artifacts,
-scans and links them once on first query, and returns every answer wrapped
-in the versioned ``AnswerEnvelope`` contract.
-
-Usage::
-
-    import os
-    from tracekite.facade import TraceKite
-
-    tk = TraceKite(
-        ["/path/to/repo-a", "/path/to/repo-b"],
-        graph_hmac_key=os.environ["GRAPH_HMAC_KEY"],
-    )
-    answer = tk.consumers_of("global:Service:my-service")
-    print(answer.status, answer.completeness.complete)
-
-The four methods (``services``, ``consumers_of``, ``trace``,
-``deprecations``) mirror the existing MCP tools.  Each returns an
-``AnswerEnvelope`` carrying snapshot identity, query scope, completeness
-and freshness alongside the tool-specific result.
+It scans and links once without FastAPI or Neo4j, then mirrors every MCP tool
+through a versioned ``AnswerEnvelope`` with scope and completeness.
 """
 
 from __future__ import annotations
@@ -46,7 +27,16 @@ from tracekite.scan_meta import (
     repo_scan_meta_from_sink,
 )
 from tracekite.source_meta import collect_input_meta
-from tracekite.status_classify import classify_consumers, classify_trace
+from tracekite.status_classify import (
+    classify_consumers,
+    classify_impact,
+    classify_neighbors,
+    classify_node,
+    classify_search,
+    classify_subgraph,
+    classify_trace,
+    query_truncation,
+)
 
 def collect_claims(path: str, claims: list, commits: dict,
                    sinks: dict | None = None) -> None:
@@ -101,7 +91,8 @@ def load_graph(paths: list[str], *,
     Returns ``(GraphTools, SnapshotIdentity, ScanMeta)``.
     """
     from tracekite import engine_config
-    from tracekite.mcp_server import GraphTools
+    from tracekite.db.artifact_node_lookup import node_lookup_for_inputs
+    from tracekite.mcp_tools import GraphTools
     from tracekite.services.linker.engine import link
 
     if graph_hmac_key:
@@ -125,7 +116,8 @@ def load_graph(paths: list[str], *,
 
     result = link(claims, run_id="linkrun_facade",
                   now="2026-01-01T00:00:00+00:00")
-    tools = GraphTools(result, commits=commits)
+    tools = GraphTools(result, commits=commits,
+                       node_lookup=node_lookup_for_inputs(paths, sinks))
 
     cfg = engine_config.get_config()
     snapshot = SnapshotIdentity(
@@ -206,19 +198,28 @@ class TraceKite:
             comp,
         )
 
-    def consumers_of(self, node_id: str) -> AnswerEnvelope:
-        self._ensure_loaded()
-        raw = self._tools.consumers_of(node_id)
-        status, candidates, reason = classify_consumers(raw)
-        comp = self._completeness(self._repo_ids())
-        scope = _scope("consumers_of", node_id=node_id)
-        scope = scope.model_copy(update={
-            "expected_repos": self._repo_ids(),
-            "analyzed_repos": self._repo_ids(),
-            "truncation": self._truncation(),
+    def _graph_answer(self, name: str, raw: dict, status: AnswerStatus,
+                      params: dict, candidates: list[str] | None = None,
+                      reason: str = "") -> AnswerEnvelope:
+        repos = self._repo_ids()
+        scope = _scope(name, **params).model_copy(update={
+            "expected_repos": repos,
+            "analyzed_repos": repos,
+            "truncation": query_truncation(
+                name, raw, params, self._truncation()),
         })
-        return _envelope(status, raw, self._snapshot, scope, comp,
-                         candidates=candidates, reason=reason)
+        return _envelope(status, raw, self._snapshot, scope,
+                         self._completeness(repos), candidates, reason)
+
+    def _classified_query(self, name: str, params: dict, classifier) -> AnswerEnvelope:
+        self._ensure_loaded()
+        raw = getattr(self._tools, name)(**params)
+        status, candidates, reason = classifier(raw)
+        return self._graph_answer(name, raw, status, params, candidates, reason)
+
+    def consumers_of(self, node_id: str) -> AnswerEnvelope:
+        return self._classified_query(
+            "consumers_of", {"node_id": node_id}, classify_consumers)
 
     def trace(self, from_id: str, to_id: str,
               max_hops: int = 6) -> AnswerEnvelope:
@@ -226,28 +227,44 @@ class TraceKite:
         raw = self._tools.trace(from_id, to_id, max_hops=max_hops)
         known = self._tools._known_node_ids() if self._tools else set()
         status, candidates, reason = classify_trace(raw, known)
-        comp = self._completeness(self._repo_ids())
-        scope = _scope("trace", from_id=from_id, to_id=to_id, max_hops=max_hops)
-        scope = scope.model_copy(update={
-            "expected_repos": self._repo_ids(),
-            "analyzed_repos": self._repo_ids(),
-            "truncation": self._truncation(),
-        })
-        return _envelope(status, raw, self._snapshot, scope, comp,
-                         candidates=candidates, reason=reason)
+        params = {"from_id": from_id, "to_id": to_id, "max_hops": max_hops}
+        return self._graph_answer(
+            "trace", raw, status, params, candidates, reason)
+
+    def node(self, node_id: str) -> AnswerEnvelope:
+        return self._classified_query("node", {"node_id": node_id}, classify_node)
+
+    def search(self, query: str, limit: int = 20) -> AnswerEnvelope:
+        return self._classified_query(
+            "search", {"query": query, "limit": limit}, classify_search)
+
+    def neighbors(self, node_id: str, direction: str = "both", depth: int = 1,
+                  edge_types: list[str] | None = None,
+                  limit: int = 100) -> AnswerEnvelope:
+        params = {"node_id": node_id, "direction": direction, "depth": depth,
+                  "edge_types": edge_types, "limit": limit}
+        return self._classified_query("neighbors", params, classify_neighbors)
+
+    def subgraph(self, node_id: str, depth: int = 2, direction: str = "both",
+                 edge_types: list[str] | None = None, node_limit: int = 100,
+                 edge_limit: int = 250) -> AnswerEnvelope:
+        params = {"node_id": node_id, "depth": depth, "direction": direction,
+                  "edge_types": edge_types, "node_limit": node_limit,
+                  "edge_limit": edge_limit}
+        return self._classified_query("subgraph", params, classify_subgraph)
+
+    def impact(self, node_id: str, depth: int = 6, limit: int = 100,
+               min_confidence: float = 0.0,
+               edge_types: list[str] | None = None) -> AnswerEnvelope:
+        params = {"node_id": node_id, "depth": depth, "limit": limit,
+                  "min_confidence": min_confidence, "edge_types": edge_types}
+        return self._classified_query("impact", params, classify_impact)
 
     def deprecations(self) -> AnswerEnvelope:
         self._ensure_loaded()
         raw = self._tools.deprecations()
-        comp = self._completeness(self._repo_ids())
-        scope = _scope("deprecations")
-        scope = scope.model_copy(update={
-            "expected_repos": self._repo_ids(),
-            "analyzed_repos": self._repo_ids(),
-            "truncation": self._truncation(),
-        })
-        return _envelope(AnswerStatus.PRESENT, raw, self._snapshot,
-                         scope, comp)
+        return self._graph_answer(
+            "deprecations", raw, AnswerStatus.PRESENT, {})
 
     def _completeness(self, analyzed_repos: list[str]) -> CompletenessAssessment:
         scan_meta = getattr(self, "_scan_meta", None)

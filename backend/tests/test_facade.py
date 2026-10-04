@@ -122,6 +122,32 @@ class TestFacadeTrace:
         assert answer.result["paths"]
 
 
+class TestFacadeGraphQueries:
+    def test_identity_and_bounded_graph_tools_share_the_loaded_snapshot(self):
+        tk = TraceKite([
+            os.path.join(CORPUS, "orders-service"),
+            os.path.join(CORPUS, "billing-service"),
+        ])
+
+        search = tk.search("billing_client.py")
+        node_id = search.result["matches"][0]["id"]
+        described = tk.node(node_id)
+        neighbors = tk.neighbors(
+            "global:Service:billing-service", direction="in")
+        impact = tk.impact("global:Service:billing-service")
+        subgraph = tk.subgraph(
+            "global:Service:billing-service", depth=2)
+
+        assert search.status == AnswerStatus.PRESENT
+        assert described.result["node"]["path"].endswith("billing_client.py")
+        assert neighbors.status == AnswerStatus.PRESENT
+        assert neighbors.result["edges"]
+        assert impact.result["impacted"]
+        assert subgraph.result["nodes"]
+        assert len({answer.snapshot.config_digest for answer in (
+            search, described, neighbors, impact, subgraph)}) == 1
+
+
 class TestFacadeDeprecations:
     def test_deprecations_returns_present(self):
         tk = TraceKite([

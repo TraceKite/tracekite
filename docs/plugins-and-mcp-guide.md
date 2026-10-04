@@ -141,8 +141,13 @@ Add the same `mcpServers.tracekite` command and arguments to
 | Tool | Answer |
 |---|---|
 | `services()` | repository-backed services and artifact commit metadata |
+| `node(node_id)` | one node's type, name, repository, path, and available properties |
+| `search(query, limit)` | ranked node IDs by name, label, path, or exact ID |
 | `consumers_of(node_id)` | active incoming edges with file-and-line evidence |
 | `trace(from_id, to_id, max_hops)` | bounded active paths between exact node IDs |
+| `neighbors(node_id, direction, depth, edge_types, limit)` | bounded adjacency in asserted edge direction |
+| `impact(node_id, depth, limit, min_confidence, edge_types)` | transitive dependents with evidence paths and compounded confidence |
+| `subgraph(node_id, depth, direction, edge_types, node_limit, edge_limit)` | a bounded ego graph with induced edges |
 | `deprecations()` | deprecated contracts with active consumers |
 
 Friendly service names resolve only when they identify one known node. An

@@ -21,7 +21,16 @@ from tracekite.answer import (
 )
 from tracekite.completeness import evaluate_completeness
 from tracekite.scan_meta import ScanMeta
-from tracekite.status_classify import classify_consumers, classify_trace
+from tracekite.status_classify import (
+    classify_consumers,
+    classify_impact,
+    classify_neighbors,
+    classify_node,
+    classify_search,
+    classify_subgraph,
+    classify_trace,
+    query_truncation,
+)
 
 
 def _classify_for_envelope(tool_name: str, answer: dict,
@@ -32,6 +41,16 @@ def _classify_for_envelope(tool_name: str, answer: dict,
         return classify_consumers(answer)
     if tool_name == "trace":
         return classify_trace(answer, known_ids)
+    if tool_name == "node":
+        return classify_node(answer)
+    if tool_name == "search":
+        return classify_search(answer)
+    if tool_name == "neighbors":
+        return classify_neighbors(answer)
+    if tool_name == "impact":
+        return classify_impact(answer)
+    if tool_name == "subgraph":
+        return classify_subgraph(answer)
     if answer.get("found") is True:
         has_results = bool(
             answer.get("consumers") or answer.get("paths")
@@ -87,12 +106,13 @@ def wrap_answer(answer: dict, tool_name: str, args: dict,
     truncation = None
     if scan_meta is not None:
         truncation = scan_meta.truncation_info()
+    truncation = query_truncation(tool_name, answer, args, truncation)
     scope = QueryScope(
         query_kind=tool_name,
         parameters=dict(args),
         expected_repos=expected,
         analyzed_repos=analyzed,
-        truncation=truncation or TruncationInfo(),
+        truncation=truncation,
     )
     envelope = AnswerEnvelope(
         answer_version=ANSWER_VERSION,

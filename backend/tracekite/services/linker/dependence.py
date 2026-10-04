@@ -1,15 +1,19 @@
 """Which edges mean their source depends on their target.
 
-"Who depends on X" is asked through MCP `consumers_of` and `history
---consumers-of`. Two kinds of in-edge are not dependence: a claim's
-RESOLVED_TO, bookkeeping that duplicates the file- or service-level edge
-beside it, and DECLARES_CONTRACT / DECLARES_TOPIC, which are the target's
-own definition. Counting them, one gRPC operation in opentelemetry-demo
-reported sixteen dependents where four files call it and four implement it.
+"Who depends on X" is asked through MCP ``consumers_of`` and
+``history --consumers-of``. Provider and bookkeeping edges are not dependence. Counting
+them, one gRPC operation in opentelemetry-demo reported sixteen dependents
+where four files call it and four implement it.
+Unknown edge types decline by default. A blacklist silently starts calling a
+new provider or bookkeeping edge a consumer before anyone reviews its meaning.
 """
 
-NOT_DEPENDENCE = frozenset({"RESOLVED_TO", "DECLARES_CONTRACT", "DECLARES_TOPIC"})
+DEPENDENCE_TYPES = frozenset({
+    "BUILT_FROM", "CALLS_SERVICE", "CONSUMES_FROM", "DEPENDS_ON",
+    "DEPENDS_ON_REPO", "EXPOSES", "INVOKES", "PUBLISHES_TO", "READS_FROM",
+    "REGISTERS_WEBHOOK", "ROUTES_TO", "UI_CALLS", "WRITES_TO",
+})
 
 
 def is_dependence(edge) -> bool:
-    return edge.type not in NOT_DEPENDENCE
+    return edge.type in DEPENDENCE_TYPES

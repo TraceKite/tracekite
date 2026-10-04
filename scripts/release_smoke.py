@@ -73,11 +73,19 @@ def _check_link(executable: str, root: Path, env: dict[str, str]) -> None:
 def _check_mcp(executable: str, root: Path, env: dict[str, str]) -> None:
     frames = [
         {"jsonrpc": "2.0", "id": 1, "method": "initialize"},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
         {
             "jsonrpc": "2.0",
-            "id": 2,
+            "id": 3,
             "method": "tools/call",
             "params": {"name": "services", "arguments": {}},
+        },
+        {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {"name": "neighbors", "arguments": {
+                "node_id": "global:Service:orders-service", "depth": 1}},
         },
     ]
     result = _run(
@@ -88,9 +96,18 @@ def _check_mcp(executable: str, root: Path, env: dict[str, str]) -> None:
     )
     _require_success(result, "tracekite mcp")
     replies = [json.loads(line) for line in result.stdout.splitlines()]
-    services = json.loads(replies[1]["result"]["content"][0]["text"])
+    by_id = {reply["id"]: reply for reply in replies}
+    names = {tool["name"] for tool in by_id[2]["result"]["tools"]}
+    expected = {"services", "node", "search", "consumers_of", "trace",
+                "neighbors", "impact", "subgraph", "deprecations"}
+    if names != expected:
+        raise SystemExit(f"MCP smoke tool surface drifted: {sorted(names)}")
+    services = json.loads(by_id[3]["result"]["content"][0]["text"])
     if not services.get("services"):
         raise SystemExit("MCP smoke returned no services")
+    neighbors = json.loads(by_id[4]["result"]["content"][0]["text"])
+    if not neighbors.get("found") or neighbors.get("status") == "unknown_target":
+        raise SystemExit("MCP smoke could not resolve a known service neighborhood")
 
 
 def _check_skill_install(executable: str, root: Path,

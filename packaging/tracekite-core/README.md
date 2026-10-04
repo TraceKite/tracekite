@@ -12,9 +12,10 @@ pip install tracekite-core
 tracekite link /path/to/service-a /path/to/service-b
 ```
 
-Use `tracekite mcp` to expose `services`, `consumers_of`, `trace`, and
-`deprecations` over MCP stdio. With no path arguments, it scans the current
-repository on the first graph query.
+Use `tracekite mcp` to expose service discovery, node identity and search,
+consumer and path tracing, bounded neighbors and subgraphs, and deprecations
+over MCP stdio. With no path arguments, it scans the current repository on the
+first graph query.
 
 `tracekite ingest` talks to a running TraceKite server and needs the server
 extra:

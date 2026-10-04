@@ -11,7 +11,7 @@ Pure: takes a result dict, returns ``(AnswerStatus, list[str], str)``.
 
 from __future__ import annotations
 
-from tracekite.answer import AnswerStatus
+from tracekite.answer import AnswerStatus, TruncationInfo
 
 
 def classify_consumers(raw: dict) -> tuple[AnswerStatus, list[str], str]:
@@ -54,6 +54,8 @@ def classify_trace(raw: dict, known_ids: set[str] | None = None) -> (
     to_cands = candidates.get("to", []) if isinstance(candidates, dict) else []
     if from_cands or to_cands:
         return AnswerStatus.AMBIGUOUS, from_cands + to_cands, "ambiguous service name"
+    if raw.get("from_known") is False or raw.get("to_known") is False:
+        return AnswerStatus.UNKNOWN_TARGET, [], "endpoint not in graph"
     if known_ids is not None:
         from_id = raw.get("resolved_from",
                           raw.get("from_id", raw.get("from", "")))
@@ -62,3 +64,74 @@ def classify_trace(raw: dict, known_ids: set[str] | None = None) -> (
         if from_id not in known_ids or to_id not in known_ids:
             return AnswerStatus.UNKNOWN_TARGET, [], "endpoint not in graph"
     return AnswerStatus.KNOWN_EMPTY, [], "no path between known nodes"
+
+
+def classify_node(raw: dict) -> tuple[AnswerStatus, list[str], str]:
+    """A described node is present; a declined identity stays explicit."""
+    if raw.get("found") is True:
+        return AnswerStatus.PRESENT, [], ""
+    candidates = raw.get("candidates", [])
+    reason = raw.get("reason", "")
+    if reason == "ambiguous service name":
+        return AnswerStatus.AMBIGUOUS, candidates, reason
+    return AnswerStatus.UNKNOWN_TARGET, candidates, reason or "node not in graph"
+
+
+def classify_search(raw: dict) -> tuple[AnswerStatus, list[str], str]:
+    if raw.get("matches"):
+        return AnswerStatus.PRESENT, [], ""
+    return AnswerStatus.KNOWN_EMPTY, [], "no matching nodes"
+
+
+def classify_neighbors(raw: dict) -> tuple[AnswerStatus, list[str], str]:
+    status, candidates, reason = classify_node(raw)
+    if status != AnswerStatus.PRESENT:
+        return status, candidates, reason
+    if raw.get("neighbors"):
+        return AnswerStatus.PRESENT, [], ""
+    return AnswerStatus.KNOWN_EMPTY, [], "known node has no matching neighbors"
+
+
+def classify_impact(raw: dict) -> tuple[AnswerStatus, list[str], str]:
+    status, candidates, reason = classify_node(raw)
+    if status != AnswerStatus.PRESENT:
+        return status, candidates, reason
+    if raw.get("impacted"):
+        return AnswerStatus.PRESENT, [], ""
+    return AnswerStatus.KNOWN_EMPTY, [], "known node has no transitive dependents"
+
+
+def classify_subgraph(raw: dict) -> tuple[AnswerStatus, list[str], str]:
+    status, candidates, reason = classify_node(raw)
+    if status != AnswerStatus.PRESENT:
+        return status, candidates, reason
+    if len(raw.get("nodes", [])) > 1 or raw.get("edges"):
+        return AnswerStatus.PRESENT, [], ""
+    return AnswerStatus.KNOWN_EMPTY, [], "known node has no matching neighborhood"
+
+
+def query_truncation(tool_name: str, raw: dict, args: dict,
+                     base: TruncationInfo | None = None) -> TruncationInfo:
+    """Reflect a tool's own result budget in the shared answer envelope."""
+    base = base or TruncationInfo()
+    if not raw.get("truncated"):
+        return base
+    omitted, budget = 1, None
+    if tool_name in {"neighbors", "impact"}:
+        collection = "neighbors" if tool_name == "neighbors" else "impacted"
+        total = "total_neighbors" if tool_name == "neighbors" else "total_impacted"
+        omitted = max(1, int(raw.get(total, 0)) - len(raw.get(collection, [])))
+        budget = args.get("limit", 100)
+    elif tool_name == "subgraph":
+        omitted = max(1, int(raw.get("total_nodes", 0))
+                      - int(raw.get("returned_nodes", len(raw.get("nodes", []))))
+                      + int(raw.get("total_edges", 0))
+                      - int(raw.get("returned_edges", len(raw.get("edges", [])))))
+    elif tool_name == "search":
+        budget = args.get("limit", 20)
+    reason = "query result budget"
+    if base.truncated:
+        reason = "; ".join(value for value in (base.reason, reason) if value)
+        omitted += base.omitted_count
+    return TruncationInfo(truncated=True, reason=reason,
+                          omitted_count=omitted, budget=budget)
