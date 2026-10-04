@@ -13,7 +13,9 @@ from tracekite.services.claim_sink import add_claim
 from tracekite.services.claims import CONSUMES, PROVIDES, ContractClaim, lib_key
 from tracekite.services.claims import is_internal_lib
 from tracekite.services.ingest_source import IngestSink
-from tracekite.services.manifest_lines import declaration_line_any
+from tracekite.services.manifest_lines import (
+    declaration_line_any, identity_line,
+)
 
 _TYPE_ECOSYSTEMS = {"npm": "npm", "pypi": "pypi", "pip": "pypi",
                     "maven": "maven", "gradle": "maven", "gradle-catalog-ref": "",
@@ -37,8 +39,16 @@ def _lib_key_of(dep) -> str:
                  or _TYPE_ECOSYSTEMS.get((dep.type or "").lower(), ""))
     if not ecosystem or not dep.name:
         return ""
-    namespace = getattr(dep, "namespace", "") or ""
-    name = dep.name
+    return _coordinate_key(ecosystem, dep.name, getattr(dep, "namespace", "") or "")
+
+
+def _coordinate_key(ecosystem: str, name: str, namespace: str) -> str:
+    """The purl both sides of the library join must agree on.
+
+    Publish identity keeps the full name (`@acme/ui`, `github.com/acme/lib`)
+    alongside its namespace, so building its key separately doubled the
+    scope — `pkg:npm/@acme/@acme/ui` — and no consumer ever matched it.
+    """
     if ecosystem == "maven" and ":" in name:
         namespace, _, name = name.partition(":")
     elif ecosystem == "npm" and name.startswith("@") and "/" in name:
@@ -100,8 +110,9 @@ def emit_publish_claims(repo_id: str, file_info, identity, file_node_id: str,
     """What this repo publishes — the strong half of the library join."""
     if identity is None or not identity.name:
         return
-    key = lib_key(identity.ecosystem, identity.name, identity.namespace or "")
-    line = declaration_line_any(content, identity.name) if content else 0
+    key = _coordinate_key(identity.ecosystem, identity.name,
+                          identity.namespace or "")
+    line = identity_line(content, identity.name) if content else 0
     add_claim(repo_id, ContractClaim(
         repo_id=repo_id, kind="lib", direction=PROVIDES, key=key,
         hint_source="none", evidence=[f"{file_info.path}:{line or 1}"],

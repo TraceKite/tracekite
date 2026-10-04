@@ -140,3 +140,22 @@ def declaration_line_any(content: str, *names: str) -> int:
         if found:
             return found
     return 0
+
+
+def identity_line(content: str, name: str) -> int:
+    """1-based line where a manifest names the package it *is*, or 0.
+
+    Not `declaration_line`, which finds a name in the positions a dependency
+    takes — as a key. A package.json names itself as the value of `"name"`,
+    and its own keys can collide with that value: a package called `types`
+    was cited at `"types": "./lib/index.d.ts"`. Grammars that name the
+    package as element text (`<artifactId>`) still go through the locator.
+    """
+    if not content or not name:
+        return 0
+    assignment = re.compile(r"""(?:^|[\s.{,])["']?name["']?\s*[:=]\s*["']"""
+                            + re.escape(name) + "[\"']")
+    for number, line in enumerate(content.split("\n"), start=1):
+        if assignment.search(line):
+            return number
+    return declaration_line_any(content, name)

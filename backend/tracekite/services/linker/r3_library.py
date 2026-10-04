@@ -7,6 +7,7 @@ an explicit internal boundary: a coordinate links only when an ingested repo
 publishes it (the strong join) or the control-plane file claims its namespace
 (the declared boundary). Everything else is external and counted, because a
 graph where every repo depends on `lodash` answers no blast-radius question.
+A manifest that declares itself unpublishable publishes nothing.
 
 Go modules get one extra join: a module path IS a repo URL, so an unpublished
 `github.com/acme/lib` consumed by another repo still binds to the ingested
@@ -37,6 +38,13 @@ def resolve(index: ClaimIndex, ctx: LinkContext) -> ResolverOutput:
 
     published: dict[str, list[ClaimRecord]] = defaultdict(list)
     for claim in index.provides("lib"):
+        if claim.attrs.get("private"):
+            # Declared unpublishable (npm `"private": true`, cargo
+            # `publish = false`, IsPackable=false). Monorepo tooling packages
+            # are named `ui`, `types`, `utils`: as publishers they claimed
+            # every consumer of the public package with the same name.
+            ctx.count("r3.private_skipped")
+            continue
         published[claim.key].append(claim)
 
     consumed: dict[str, list[ClaimRecord]] = defaultdict(list)
