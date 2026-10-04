@@ -22,7 +22,7 @@ export default function RepoPickerModal({ mode, onClose }: Props) {
   const [query, setQuery] = useState("");
   const [draftIds, setDraftIds] = useState(scopeRepoIds);
   const searchRef = useRef<HTMLInputElement>(null);
-  const maxRepos = clientConfig?.max_scope_repos ?? 10;
+  const maxRepos = clientConfig?.max_scope_repos ?? 20;
   const edgeLimit = clientConfig?.service_map_edge_limit ?? 500;
 
   // The header lists repositories once, at load; one ingested since — by

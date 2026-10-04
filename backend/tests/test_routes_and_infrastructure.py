@@ -139,6 +139,14 @@ class TestHealthRoute:
                         "anonymous_reads": False,
                         "auth_required_for_writes": True}
 
+    def test_the_ui_scope_cap_defaults_to_twenty_and_is_served(self):
+        from tracekite.config import Settings
+        assert Settings.model_fields["max_scope_repos"].default == 20
+        # Served live, so a deployment changes it without a rebuild.
+        with patch.object(settings, "max_scope_repos", 7), \
+                patch.object(settings, "auth_enabled", False):
+            assert client.get("/api/config").json()["max_scope_repos"] == 7
+
     def test_health_degraded(self):
         with patch("tracekite.routes.health.check_neo4j_health", return_value=False):
             body = client.get("/health").json()

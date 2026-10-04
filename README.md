@@ -529,7 +529,7 @@ worth knowing:
 |---|---|---|
 | `BIND_ADDR` | `127.0.0.1` | interface the ports bind to |
 | `AUTH_ENABLED` | `false` | token required on every route when true |
-| `MAX_SCOPE_REPOS` | `10` | repositories selectable at once in the UI |
+| `MAX_SCOPE_REPOS` | `20` | repositories selectable at once in the UI |
 | `GRAPH_DETAIL_NODE_LIMIT` | `80` | exact nodes shown in bounded Module, Focus and Impact canvases |
 | `GITHUB_TOKEN` | *(empty)* | needed only for private repositories |
 
