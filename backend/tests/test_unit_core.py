@@ -213,9 +213,9 @@ class TestReaderHelpers:
     def test_node_from_props_folds_temporal_values_json_safe(self):
         from neo4j.time import DateTime
 
-        from tracekite.services.graph_reader import _node_from_props
+        from tracekite.services.graph_records import node_from_props
 
-        node = _node_from_props({
+        node = node_from_props({
             "id": "x", "type": "Repo", "name": "r",
             "custom_ts": DateTime(2026, 7, 26, 1, 2, 3),
             "tags": ["a", "b"],

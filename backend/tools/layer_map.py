@@ -16,6 +16,7 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("db", "store"),
     ("services.graph_reader", "store"),
     ("services.node_search", "store"),
+    ("services.view_graph", "store"),
     ("services.graph_writer", "store"),
     ("services.link_writer", "store"),
     ("services.linker_store", "store"),
@@ -129,5 +130,6 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("services.redaction", "core"),
     ("services.graph_factories", "core"),
     ("services.graph_properties", "core"),
+    ("services.graph_records", "core"),
     ("services.repo_summary", "core"),
 )
