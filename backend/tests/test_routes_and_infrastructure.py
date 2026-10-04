@@ -184,6 +184,18 @@ class TestReposRoutes:
             )
         assert queue.submit.call_args[0][0] == "refresh"
 
+    def test_reingesting_a_recorded_repo_replaces_its_graph(self, auth_headers):
+        # Without this a re-ingest wrote on top of the old graph: endpoints
+        # and claims from deleted code survived, and the linker used them.
+        with patch("tracekite.routes.repos.get_repo", return_value=_summary()), \
+             patch("tracekite.routes.repos.job_queue") as queue:
+            queue.submit.return_value = "job-125"
+            client.post("/api/repos/ingest",
+                        json={"github_url": "https://github.com/foo/bar"},
+                        headers=auth_headers)
+        args, kwargs = queue.submit.call_args
+        assert args[0] == "refresh" and kwargs["payload"]["refresh"] is True
+
     def test_ingest_rejects_bad_url(self, auth_headers):
         response = client.post("/api/repos/ingest",
                                json={"github_url": "not-a-url"},
