@@ -52,25 +52,6 @@ def extract_route_calls(method_calls: list[ParsedMethodCall], language: Language
                     )
                 )
         elif language == LanguageType.PYTHON:
-            # Flask: @app.route('/path', methods=['GET'])
-            m = own_match(
-                r"@(\w+)\.route\s*\(\s*['\"]([^'\"]+)['\"](?:\s*,\s*methods\s*=\s*\[(.*?)\])?",
-                context, call.callee_name,
-            )
-            if m:
-                methods = m.group(3) or "GET"
-                method = re.search(r"['\"](\w+)['\"]", methods)
-                method_str = method.group(1).upper() if method else "GET"
-                endpoints.append(
-                    ParsedApiEndpoint(
-                        method=method_str,
-                        path=m.group(2),
-                        handler_name=call.caller_name or "",
-                        line=call.line,
-                        framework=framework,
-                    )
-                )
-                continue
             m = own_match(
                 r"(\w+)\.websocket\s*\(\s*['\"](/[^'\"]*)['\"]", context,
                 call.callee_name)

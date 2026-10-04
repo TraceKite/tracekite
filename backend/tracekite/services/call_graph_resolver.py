@@ -37,14 +37,15 @@ def build_call_graph(
     node_ids = {n.id for n in nodes}
     edge_keys = {(e.source_id, e.target_id, e.type) for e in edges}
 
-    symbol_records: list[dict] = []
+    by_file_symbols: dict[str, list[dict]] = {}
     by_file_qualified: dict[tuple[str, str], list[dict]] = {}
     by_file_name: dict[tuple[str, str], list[dict]] = {}
     by_class_method: dict[tuple[str, str], list[dict]] = {}
 
     for file_path, ctx in parse_context.items():
         for rec in ctx.get("entities", []):
-            symbol_records.append(rec)
+            if rec["type"] in ("method", "function"):
+                by_file_symbols.setdefault(file_path, []).append(rec)
             key = (file_path, rec["qualified_name"])
             by_file_qualified.setdefault(key, []).append(rec)
             by_file_name.setdefault((file_path, rec["name"]), []).append(rec)
@@ -54,7 +55,7 @@ def build_call_graph(
     for file_path, ctx in parse_context.items():
         file_node_id = ctx["file_node_id"]
         for call in ctx.get("method_calls", []):
-            caller = _resolve_caller(file_path, call.line, symbol_records)
+            caller = _resolve_caller(call.line, by_file_symbols.get(file_path, []))
             if caller is None:
                 continue
 
@@ -93,14 +94,12 @@ def build_call_graph(
             )
 
 
-def _resolve_caller(file_path: str, line: int, symbol_records: list[dict]) -> Optional[dict]:
+def _resolve_caller(line: int, file_symbols: list[dict]) -> Optional[dict]:
     """Find the symbol whose body contains the call site."""
     candidates = [
         rec
-        for rec in symbol_records
-        if rec["file_path"] == file_path
-        and rec["type"] in ("method", "function")
-        and rec["start_line"] <= line <= rec["end_line"]
+        for rec in file_symbols
+        if rec["start_line"] <= line <= rec["end_line"]
     ]
     if not candidates:
         return None

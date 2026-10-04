@@ -70,14 +70,17 @@ def resolve(index: ClaimIndex, ctx: LinkContext) -> ResolverOutput:
         node_id = _rendezvous(ctx, out, seen, key, internal=True)
         publisher_repos = sorted({c.repo_id for c in published.get(key, [])})
         versions: set[str] = set()
+        repo_confidence: dict[str, float] = {}
+        repo_evidence: dict[str, list[str]] = defaultdict(list)
         for claim in consumers:
             tier = ("lockfile_resolved" if claim.attrs.get("resolved")
                     else "manifest_declared")
             match_type = ("published" if is_published else
                           "go_module_path" if repo_binding else
                           "internal_namespace")
+            confidence = ctx.conf("r3", tier)
             _edge(ctx, out, claim, "DEPENDS_ON", node_id, key,
-                  ctx.conf("r3", tier), match_type,
+                  confidence, match_type,
                   target_repo=(publisher_repos[0]
                                if len(publisher_repos) == 1 else
                                repo_binding or ""),
@@ -85,6 +88,9 @@ def resolve(index: ClaimIndex, ctx: LinkContext) -> ResolverOutput:
                          "scope": str(claim.attrs.get("scope") or ""),
                          "resolved": bool(claim.attrs.get("resolved"))})
             ctx.count("r3.depends")
+            repo_confidence[claim.repo_id] = max(
+                confidence, repo_confidence.get(claim.repo_id, 0.0))
+            repo_evidence[claim.repo_id].extend(claim.evidence)
             if version := str(claim.attrs.get("version") or ""):
                 versions.add(version)
 
@@ -99,8 +105,10 @@ def resolve(index: ClaimIndex, ctx: LinkContext) -> ResolverOutput:
                 out.edges.append(linker_edge(
                     ctx, RESOLVER_ID, "DEPENDS_ON_REPO", repo, target_repo,
                     source_label="Repo", target_label="Repo",
-                    confidence=ctx.conf("r3", "publishes"),
-                    match_type="library", evidence=[], claim_key=key,
+                    confidence=repo_confidence[repo],
+                    match_type="library",
+                    evidence=list(dict.fromkeys(repo_evidence[repo]))[:5],
+                    claim_key=key,
                     source_repo=repo, target_repo=target_repo,
                     extra={"via": ["library"]},
                 ))

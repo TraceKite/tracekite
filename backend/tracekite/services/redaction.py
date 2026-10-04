@@ -89,7 +89,13 @@ def looks_high_entropy(value: str) -> bool:
 def _classify_url(value: str) -> Optional[RedactedValue]:
     if "://" not in value:
         return None
-    parts = urlsplit(value.strip())
+    try:
+        parts = urlsplit(value.strip())
+    except ValueError:
+        # Bracketed deployment placeholders look like malformed IPv6 hosts to
+        # urllib. Their final host is unknown, so retain equality only.
+        return RedactedValue(value_class="opaque", value_hmac=_hmac16(value),
+                             value_len=len(value))
     if not parts.scheme or not (parts.hostname or parts.path):
         return None
     try:

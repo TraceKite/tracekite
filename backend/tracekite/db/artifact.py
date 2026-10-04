@@ -119,30 +119,37 @@ def write_artifact(sink, repo_id: str, out_dir: str, *,
     inserts happened to produce.
     """
     os.makedirs(out_dir, exist_ok=True)
-    workdir = tempfile.mkdtemp(prefix="tracekite-artifact-")
-    building = os.path.join(workdir, "building.db")
-    packed = os.path.join(workdir, "packed.db")
-
-    store = SQLiteGraphStore(building)
-    store.upsert_nodes(sink.nodes)
-    store.upsert_edges(sink.edges)
-    with store._lock:                                    # noqa: SLF001
-        store._conn.executescript(_META_SCHEMA)          # noqa: SLF001
-        store._conn.executemany(                         # noqa: SLF001
-            "INSERT INTO artifact_meta (key, value) VALUES (?, ?) "
-            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-            _meta_rows(sink, repo_id, head_sha, source_digest))
-        store._conn.commit()                             # noqa: SLF001
-        store._conn.execute("VACUUM INTO ?", (packed,))  # noqa: SLF001
-    store.close()
-
-    digest = hashlib.sha256(_read(packed)).hexdigest()
-    name = f"{repo_id}-{digest[:DIGEST_CHARS]}{ARTIFACT_SUFFIX}"
-    final = os.path.join(out_dir, name)
-    os.replace(packed, final)
-
+    with tempfile.TemporaryDirectory(
+            prefix=".tracekite-artifact-", dir=out_dir) as workdir:
+        packed = _pack_artifact(
+            sink, repo_id, workdir, head_sha, source_digest)
+        digest = hashlib.sha256(_read(packed)).hexdigest()
+        name = f"{repo_id}-{digest[:DIGEST_CHARS]}{ARTIFACT_SUFFIX}"
+        final = os.path.join(out_dir, name)
+        os.replace(packed, final)
     return ArtifactRef(path=final, digest=digest, repo_id=repo_id,
                        nodes=len(sink.nodes), edges=len(sink.edges))
+
+
+def _pack_artifact(sink, repo_id: str, workdir: str, head_sha: str,
+                   source_digest: str) -> str:
+    building = os.path.join(workdir, "building.db")
+    packed = os.path.join(workdir, "packed.db")
+    store = SQLiteGraphStore(building)
+    try:
+        store.upsert_nodes(sink.nodes)
+        store.upsert_edges(sink.edges)
+        with store._lock:                                # noqa: SLF001
+            store._conn.executescript(_META_SCHEMA)      # noqa: SLF001
+            store._conn.executemany(                     # noqa: SLF001
+                "INSERT INTO artifact_meta (key, value) VALUES (?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                _meta_rows(sink, repo_id, head_sha, source_digest))
+            store._conn.commit()                         # noqa: SLF001
+            store._conn.execute("VACUUM INTO ?", (packed,))  # noqa: SLF001
+    finally:
+        store.close()
+    return packed
 
 
 @dataclass(frozen=True)

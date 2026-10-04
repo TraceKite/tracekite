@@ -96,6 +96,14 @@ class TestRedaction:
         assert props["value_port"] == 8443
         assert "things" not in json.dumps(props).replace("/v1", "")
 
+    def test_url_with_bracketed_host_placeholder_is_opaque(self):
+        result = redact(
+            "service.url", "https://hasura-[project-id].nhost.app/v1/graphql")
+
+        assert result.value_class == "opaque"
+        assert result.value_host is None
+        assert len(result.value_hmac) == 16
+
     def test_scalar_classes(self):
         assert redact("flag", "true").value_class == "bool"
         assert redact("server.port", "8080").value_class == "port"

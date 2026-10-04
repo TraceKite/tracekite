@@ -216,6 +216,7 @@ _OBSERVABILITY_HINT = re.compile(
 
 
 def parse_file(file_path: str, content: str) -> dict:
+    content = content.removeprefix("\ufeff")
     file_name = os.path.basename(file_path)
     ext = os.path.splitext(file_path)[1].lower()
     
@@ -245,7 +246,6 @@ def parse_file(file_path: str, content: str) -> dict:
         "iac_units": None,
         "openapi": None,
     }
-    
     if get_parser_for_file(file_path):
         try:
             result["source_result"] = parse_source(file_path, content)

@@ -294,6 +294,23 @@ class TestJobsRoute:
         assert body["status"] == "running"
         assert body["progress"] == 50
 
+    def test_job_status_normalizes_neo4j_timestamps(self, auth_headers):
+        from neo4j.time import DateTime
+        timestamp = DateTime(2026, 10, 4, 7, 0, 0)
+        record = {"job_id": "j1", "repo_id": "r1", "status": "failed",
+                  "progress": 0, "message": "orphaned", "error": "restart",
+                  "created_at": timestamp, "updated_at": timestamp}
+        session = MagicMock()
+        session.run.return_value.single.return_value = record
+        ctx = MagicMock()
+        ctx.__enter__.return_value = session
+
+        with patch("tracekite.routes.jobs.get_session", return_value=ctx):
+            response = client.get("/api/jobs/j1", headers=auth_headers)
+
+        assert response.status_code == 200
+        assert response.json()["updated_at"].startswith("2026-10-04T07:00:00")
+
     def test_job_status_missing(self, auth_headers):
         session = MagicMock()
         session.run.return_value.single.return_value = None

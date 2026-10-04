@@ -2,6 +2,7 @@ import pytest
 from tracekite.models.graph_models import GraphNode
 from tracekite.parsers.base import ParsedMethodCall
 from tracekite.services.call_graph_resolver import build_call_graph
+from tracekite.services import call_graph_resolver
 
 
 def _make_method_node(repo_id: str, node_id: str, name: str, path: str, start: int, end: int):
@@ -140,3 +141,45 @@ class TestCallGraphResolver:
         assert edges[0].source_id == "r:Method:a"
         assert edges[0].target_id == "r:Method:b"
         assert edges[0].confidence == 0.7
+
+    def test_caller_resolution_receives_only_symbols_from_its_file(self,
+                                                                   monkeypatch):
+        local = [
+            {"id": "caller", "file_path": "small.ts", "name": "caller",
+             "qualified_name": "caller", "parent_class": None,
+             "type": "function", "start_line": 1, "end_line": 5},
+            {"id": "callee", "file_path": "small.ts", "name": "callee",
+             "qualified_name": "callee", "parent_class": None,
+             "type": "function", "start_line": 7, "end_line": 9},
+        ]
+        unrelated = [
+            {"id": f"other-{index}", "file_path": "huge.ts",
+             "name": f"other{index}", "qualified_name": f"other{index}",
+             "parent_class": None, "type": "function",
+             "start_line": index + 1, "end_line": index + 1}
+            for index in range(500)]
+        context = {
+            "small.ts": {"file_node_id": "small", "entities": local,
+                         "method_calls": [ParsedMethodCall(
+                             caller_name="", callee_name="callee",
+                             file_path="small.ts", line=3)]},
+            "huge.ts": {"file_node_id": "huge", "entities": unrelated,
+                        "method_calls": []},
+        }
+        observed = []
+        original = call_graph_resolver._resolve_caller
+
+        def resolve(line, symbols):
+            observed.append(symbols)
+            return original(line, symbols)
+
+        monkeypatch.setattr(call_graph_resolver, "_resolve_caller", resolve)
+        nodes = [
+            _make_method_node("r", "caller", "caller", "small.ts", 1, 5),
+            _make_method_node("r", "callee", "callee", "small.ts", 7, 9),
+        ]
+
+        build_call_graph("r", context, nodes, [])
+
+        assert len(observed) == 1
+        assert observed[0] == local

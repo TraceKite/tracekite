@@ -29,3 +29,19 @@ def test_a_clean_file_still_scans(tmp_path):
     sink = scan(str(tmp_path), "clean_repo")
 
     assert any(node.name == "hello" for node in sink.nodes)
+
+
+def test_utf8_bom_does_not_hide_package_dependencies_or_identity(tmp_path):
+    (tmp_path / "package.json").write_text(
+        '\ufeff{"name":"bom-package","version":"1.0.0",'
+        '"dependencies":{"react":"^19.0.0"}}')
+
+    sink = scan(str(tmp_path), "bom_repo")
+    dependencies = [node for node in sink.nodes if node.type == "Dependency"]
+    published = [node for node in sink.nodes
+                 if node.type == "ContractClaim"
+                 and node.extra_props.get("kind") == "lib"
+                 and node.extra_props.get("direction") == "provides"]
+
+    assert [node.name for node in dependencies] == ["react"]
+    assert published and published[0].extra_props["key"] == "pkg:npm/bom-package"

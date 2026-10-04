@@ -501,19 +501,6 @@ class TestEndpointExtraction:
         assert endpoints[0].method == "GET"
         assert endpoints[0].path == "/users"
 
-    def test_flask_route_default_get(self):
-        calls = [_method_call("@app.route('/items')")]
-        endpoints = _extract_api_endpoints([], calls, LanguageType.PYTHON)
-        assert len(endpoints) == 1
-        assert endpoints[0].method == "GET"
-        assert endpoints[0].path == "/items"
-
-    def test_flask_route_post(self):
-        calls = [_method_call("@app.route('/items', methods=['POST'])")]
-        endpoints = _extract_api_endpoints([], calls, LanguageType.PYTHON)
-        assert len(endpoints) == 1
-        assert endpoints[0].method == "POST"
-
     def test_express_route_call(self):
         calls = [_method_call("app.get('/users/:id', handler)", callee="get")]
         endpoints = _extract_api_endpoints([], calls, LanguageType.JAVASCRIPT)

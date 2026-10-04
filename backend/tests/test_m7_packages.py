@@ -152,6 +152,11 @@ class TestR3Join:
         repo_edges = [e for e in out.edges if e.type == "DEPENDS_ON_REPO"]
         assert {(e.source_id, e.target_id) for e in repo_edges} \
             == {("repo_api", "repo_lib"), ("repo_worker", "repo_lib")}
+        assert all(edge.evidence == ["pom.xml:1"] for edge in repo_edges)
+        depends = {edge.source_id: edge for edge in out.edges
+                   if edge.type == "DEPENDS_ON"}
+        assert all(edge.confidence == depends[edge.source_id].confidence
+                   for edge in repo_edges)
 
     def test_internal_namespace_links_without_publisher(self):
         claims, _ = _consumer("repo_api", [_dep("org.acme:events", "1.0.0")])
