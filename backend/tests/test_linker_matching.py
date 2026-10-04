@@ -75,6 +75,26 @@ class TestR7:
         assert invokes2[0].confidence == pytest.approx(0.95)
         assert invokes2[0].match_type == "hint_exact"
 
+    def test_an_any_method_provider_answers_a_post_caller(self):
+        # A Next.js pages handler serves every verb; R7 matches it as a
+        # wildcard for a caller of any method.
+        provider = claim("http", "provides", "ANY:/owners/{}", repo="repo_prov",
+                         evidence=["customers-service/pages/api/owners/[id].ts:9"],
+                         enode="repo_prov:endpoint:ANY:/owners/{}",
+                         etype="ApiEndpoint")
+        caller = claim("http", "consumes", "httpcall:POST:/owners/{}",
+                       repo="repo_cons", hint="customers-service",
+                       hint_source="discovery",
+                       evidence=["repo_cons/src/main/java/Client.java:12"],
+                       enode="repo_cons:file:Client.java", etype="File")
+        _, out = self._run([
+            app_name("customers-service", "repo_prov", module="customers-service"),
+            provider, caller,
+        ])
+        invokes = [e for e in out.edges if e.type == "INVOKES"]
+        assert [(e.source_repo_id, e.target_repo_id) for e in invokes] \
+            == [("repo_cons", "repo_prov")]
+
     def test_unqualified_hints_are_excluded(self):
         c, out = self._run([
             app_name("customers-service", "repo_prov", module="customers-service"),

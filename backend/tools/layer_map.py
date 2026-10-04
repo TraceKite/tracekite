@@ -79,6 +79,7 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("services.claim_sink", "parsers"),
     ("services.ingest_config_defs", "parsers"),
     ("services.ingest_source", "parsers"),
+    ("services.route_merge", "parsers"),
     ("services.scan", "parsers"),
     ("services.file_parse", "parsers"),
     ("services.parse_budget", "parsers"),

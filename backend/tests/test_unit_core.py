@@ -143,6 +143,7 @@ class TestCanonical:
         assert normalize_http_method("get") == "GET"
         assert normalize_http_method(" post ") == "POST"
         assert normalize_http_method("bogus") == "GET"
+        assert normalize_http_method("any") == "ANY"
         assert normalize_http_method("") == "GET"
 
     def test_purls(self):
