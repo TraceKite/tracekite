@@ -66,9 +66,9 @@ def parse_source(file_path: str, content: str) -> Optional[ParseResult]:
     """Parse source, falling back when the primary parser finds no entities.
 
     A file with imports but no classes or functions is usually a parser gap,
-    not an empty file. Only entities are taken from the fallback: imports,
-    endpoints and everything else stay with the primary result, so this can
-    only add nodes, never contradict the primary parser.
+    not an empty file. The fallback's entities are taken, and its endpoints
+    only when the primary found none; imports and everything else stay with
+    the primary result, so this can only add nodes, never contradict it.
     """
     parser = _SOURCE_PARSERS.get(os.path.splitext(file_path)[1].lower())
     if parser is None:

@@ -397,6 +397,16 @@ export async function GET(request) {
                        for ep in result.api_endpoints)
         assert not any("..." in ep.path for ep in result.api_endpoints)
 
+    def test_middleware_is_not_a_route_and_all_is_any(self):
+        # Reached through the fallback when tree-sitter finds no entities:
+        # medusa's static mount and a strapi middleware hook were GET routes,
+        # and `router.all` a second, GET copy of an ANY route.
+        code = ("app.use('/static', express.static('public'));\n"
+                "router.use('/content-types/:uid?', (ctx, next) => next());\n"
+                "router.all('/_health', healthCheck);\n")
+        endpoints = JavaScriptParser().parse("server.ts", code).api_endpoints
+        assert [(e.method, e.path) for e in endpoints] == [("ANY", "/_health")]
+
     def test_parse_exception_path(self):
         parser = JavaScriptParser()
         parser._extract_imports = lambda content: (_ for _ in ()).throw(TypeError("boom"))
