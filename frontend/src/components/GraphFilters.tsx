@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { useGraphStore } from "@/store/graphStore";
 import { graphGroupOf, EDGE_COLORS } from "@/lib/graphStyle";
-import { isLockfileDependencyNode } from "@/lib/graphVisibility";
+import { isLockfileDependencyNode, isNodeVisible } from "@/lib/graphVisibility";
 import { NODE_TYPES, EDGE_TYPES, VIEW_MODES, type ViewMode } from "@/lib/types";
 import { useGraphNavigationStore } from "@/store/graphNavigationStore";
 import GraphReadingGuide from "@/components/GraphReadingGuide";
@@ -34,14 +34,16 @@ export default function GraphFilters() {
   const clearExpandedGroup = useGraphNavigationStore(
     (state) => state.clearExpandedGroup);
 
+  // Counted over what the canvas can draw: a group made only of hidden
+  // lockfile leaves was reported here ("11 groups") but never drawn ("10").
   const moduleOrder = useMemo(() => {
     const seen = new Set<string>();
     for (const n of nodes as any[]) {
-      const key = graphGroupOf(n);
+      const key = isNodeVisible(n, filteredNodeTypes, hideLockfileDeps) && graphGroupOf(n);
       if (key) seen.add(key);
     }
     return [...seen].sort();
-  }, [nodes]);
+  }, [nodes, filteredNodeTypes, hideLockfileDeps]);
   const nodeTypes = useMemo(
     () => [...new Set([...NODE_TYPES, ...nodes.map((node) => node.type)])],
     [nodes],

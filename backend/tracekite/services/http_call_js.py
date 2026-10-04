@@ -123,7 +123,11 @@ def extract_js(content: str, sites: list[HttpCallSite]) -> None:
             _add(sites, content, match.start(), "GET", match.group(1),
                  "rtk-query", method_inferred=True)
         for match in _RTK_ENDPOINT.finditer(content):
-            _add(sites, content, match.start(), "GET", match.group(1),
+            # Two alternatives, two groups: `query: () => '/x'` fills the
+            # first, `url: '/x'` the second. Reading only the first crashed
+            # the whole repository's ingest on any `url:` endpoint.
+            _add(sites, content, match.start(), "GET",
+                 match.group(1) or match.group(2),
                  "rtk-query", method_inferred=True)
 
     # Module federation remotes: `shop@https://host/remoteEntry.js`

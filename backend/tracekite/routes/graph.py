@@ -3,8 +3,9 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 
 from tracekite.models.api_models import GraphResponse, SearchResponse, NodeDetail
+from tracekite.services.node_search import search_nodes
 from tracekite.services.graph_reader import (
-    get_graph, search_nodes, get_node_details, get_neighbors,
+    get_graph, get_node_details, get_neighbors,
 )
 
 logger = logging.getLogger(__name__)

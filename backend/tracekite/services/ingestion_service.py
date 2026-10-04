@@ -169,11 +169,13 @@ def _mark_failed(job_id: str, repo_id: str, exc: Exception,
     """failed_partial once Neo4j was mutated, failed_clean before — the
     difference is whether the served graph can still be trusted."""
     state = "failed_partial" if cleared else "failed_clean"
-    message = f"Ingestion failed ({state}): {exc}"
-    logger.error("%s (job %s)", message, job_id)
-    _job(job_id, "failed", 0, message, error=str(exc)[:500], repo_id=repo_id)
+    # Notes carry where it happened ("while scanning <file>"), which str() drops.
+    detail = " ".join([str(exc), *getattr(exc, "__notes__", [])])
+    message = f"Ingestion failed ({state}): {detail}"
+    logger.error("%s (job %s)", message, job_id, exc_info=exc)
+    _job(job_id, "failed", 0, message, error=detail[:500], repo_id=repo_id)
     if repo_id:
-        _lifecycle(repo_id, state, error=str(exc)[:500])
+        _lifecycle(repo_id, state, error=detail[:500])
         _set_ingestion_status(repo_id, "failed")
 
 

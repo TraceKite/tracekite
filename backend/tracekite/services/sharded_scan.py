@@ -40,7 +40,7 @@ def _parse_chunk(job: tuple):
     repo_id, files, file_ids, hmac_key = job
     from tracekite import engine_config
     from tracekite.services.ingest_source import IngestSink
-    from tracekite.services.scan import parse_files
+    from tracekite.services.file_parse import parse_files
 
     # A process pool does not inherit the parent's module state; a worker on
     # defaults would hash config values under an empty HMAC key and produce

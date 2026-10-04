@@ -44,6 +44,36 @@ class TestMarking:
         assert sites and "ui" not in sites[0].attrs
 
 
+class TestRtkQuery:
+    """RTK Query endpoints are relative paths against a fetchBaseQuery base."""
+
+    API = """
+    export const api = createApi({
+      baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
+      endpoints: (build) => ({
+        owners: build.query({ query: () => '/owners' }),
+        pets: build.query({ query: (id) => ({ url: '/pets', params: { id } }) }),
+      }),
+    });
+    """
+
+    def _paths(self, content):
+        sites = extract_http_calls("src/services/api.ts", content, "typescript")
+        return {s.path_template for s in sites if s.client == "rtk-query"}
+
+    def test_a_url_object_endpoint_is_a_call_site(self):
+        """The `url:` form fills the second group of the endpoint pattern.
+        Reading only the first passed None on and crashed the ingest of the
+        whole repository — strapi failed on one test file written this way."""
+        assert "/pets" in self._paths(self.API)
+
+    def test_a_string_endpoint_is_a_call_site(self):
+        assert "/owners" in self._paths(self.API)
+
+    def test_the_base_url_is_a_call_site(self):
+        assert "/api" in self._paths(self.API)
+
+
 class TestEdgeType:
     def _run(self, consumer_attrs):
         claims = [

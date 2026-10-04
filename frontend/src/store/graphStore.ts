@@ -130,6 +130,10 @@ interface GraphState {
   setGraphControlCallbacks: (callbacks: GraphState["graphControlCallbacks"]) => void;
 }
 
+/* Impact is a view OF the focused node; clearing the focus while staying in it
+ * left a disabled mode highlighted over a node-less "impact" of the new scope. */
+const leaveImpact = (mode: ViewMode): ViewMode => (mode === "impact" ? "overview" : mode);
+
 export const useGraphStore = create<GraphState>((set) => ({
   appMode: "repo",
   setAppMode: (mode) => set((state) => state.appMode === mode ? state : ({
@@ -158,6 +162,7 @@ export const useGraphStore = create<GraphState>((set) => ({
         : [...state.scopeRepoIds, repoId],
       selectedNode: null, selectedEdge: null, focusNodeId: null,
       focusNodeRepo: null, activePath3d: null, traceData: null, searchQuery: "",
+      viewMode: leaveImpact(state.viewMode),
     })),
   setScopeRepos: (scopeRepoIds) => set((state) =>
     state.scopeRepoIds.join(",") === scopeRepoIds.join(",")
@@ -166,7 +171,7 @@ export const useGraphStore = create<GraphState>((set) => ({
           scopeRepoIds, selectedNode: null, selectedNodeDetails: null,
           selectedEdge: null, focusNodeId: null, focusNodeRepo: null,
           activePath3d: null, traceData: null, traceFrom: "", traceTo: "",
-          searchQuery: "",
+          searchQuery: "", viewMode: leaveImpact(state.viewMode),
         }),
 
   traceFrom: "",

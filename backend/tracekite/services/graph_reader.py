@@ -12,7 +12,7 @@ from tracekite.db.neo4j_client import get_session
 from tracekite.services.graph_properties import json_safe, parse_json
 from tracekite.models.api_models import (
     GraphLink, GraphNode, GraphResponse, GraphStats, NodeDetail,
-    RepoSummary, SearchResult,
+    RepoSummary,
 )
 from tracekite.models.graph_models import LITE_DEFAULTS
 from tracekite.services.repo_summary import repo_summary
@@ -297,22 +297,6 @@ def _get_search_graph(repo_id: str, search: str,
             links = [_link_from_record(record) for record in edge_result]
 
     return nodes, links
-
-
-def search_nodes(repo_id: str, query: str, limit: int = 20) -> list[SearchResult]:
-    with get_session() as session:
-        result = session.run(
-            "MATCH (n:GraphNode) WHERE n.repo_id = $repo_id "
-            "AND (toLower(n.name) CONTAINS toLower($q) "
-            "OR toLower(n.label) CONTAINS toLower($q) "
-            "OR toLower(n.path) CONTAINS toLower($q)) "
-            "RETURN n.id AS id, n.type AS type, n.name AS name, "
-            "n.label AS label, n.path AS path LIMIT $limit",
-            repo_id=repo_id, q=query, limit=limit,
-        )
-        return [SearchResult(id=r["id"], type=r["type"],
-                             label=r["label"] or r["name"], path=r["path"],
-                             score=1.0) for r in result]
 
 
 def get_node_details(repo_id: str, node_id: str) -> Optional[NodeDetail]:
