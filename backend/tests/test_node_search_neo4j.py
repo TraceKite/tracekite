@@ -32,6 +32,11 @@ def estate():
     wanted = [_node("Class", "Scene", "element/Scene.ts"),
               _node("File", "Scene.ts", "element/Scene.ts"),
               _node("Interface", "SceneStateCallback", "element/Scene.ts")]
+    # Exact in another case, as short, and with an id that sorts before the
+    # class's, so neither tiebreak can put the class first — only case.
+    wanted.append(GraphNode(id=f"{REPO}:0:scene", repo_id=REPO, type="Folder",
+                            name="scene", label="scene", path="a/scene",
+                            language=""))
     graph_writer.write_nodes_batch(noise + wanted)
     yield
     clear_repo_graph(REPO)
@@ -43,10 +48,14 @@ def test_the_exact_definition_comes_first():
     assert (results[0].type, results[0].label) == ("Class", "Scene")
 
 
+def test_the_exact_name_in_another_case_comes_next():
+    assert search_nodes(REPO, "Scene", limit=5)[1].label == "scene"
+
+
 def test_prefix_matches_follow_shortest_first():
     labels = [r.label for r in search_nodes(REPO, "Scene", limit=5)]
 
-    assert labels[1:3] == ["Scene.ts", "SceneStateCallback"]
+    assert labels[2:4] == ["Scene.ts", "SceneStateCallback"]
 
 
 def test_path_only_matches_come_last_and_score_lowest():
@@ -59,4 +68,4 @@ def test_path_only_matches_come_last_and_score_lowest():
 
 
 def test_matching_ignores_case():
-    assert search_nodes(REPO, "sCeNe", limit=1)[0].label == "Scene"
+    assert {r.label for r in search_nodes(REPO, "sCeNe", limit=2)} == {"Scene", "scene"}
