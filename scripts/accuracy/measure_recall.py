@@ -16,6 +16,7 @@ import re
 import yaml
 
 from _kg import cypher_set, find, ingested_at, read_file, target_repos
+from tracekite.services.file_classifier import is_test_path
 
 
 def _pairs(where: str) -> set[tuple[str, str]]:
@@ -72,6 +73,8 @@ def nextjs_recall(repo: str) -> tuple[int, int, list]:
     expected = set()
     for path in find(repo, '-path "*/app/api/*" \\( -name "route.ts" -o -name "route.js"'
                            ' -o -name "route.tsx" \\)'):
+        if is_test_path(path):
+            continue
         match = re.search(r"/app(/api/.*)/route\.[jt]sx?$", path)
         if not match:
             continue
