@@ -160,9 +160,13 @@ def cmd_pr(args) -> int:
 
     base = _link_artifacts(args.base, "linkrun_pr_base", args.now)
     head = _link_artifacts(args.head, "linkrun_pr_head", args.now)
-    result = impact(base.edges, head.edges,
-                    changed_repos=set(args.changed_repo)
-                    if args.changed_repo else None)
+    files: dict[str, set[str]] = {}
+    for entry in args.changed_file:
+        repo, _, path = entry.partition(":")
+        files.setdefault(repo, set()).add(path)
+    repos = set(args.changed_repo) | set(files)
+    result = impact(base.edges, head.edges, changed_repos=repos or None,
+                    changed_files=files)
 
     if args.comment:
         sys.stdout.write(as_comment(result) + "\n")
