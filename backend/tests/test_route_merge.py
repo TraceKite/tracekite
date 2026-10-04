@@ -99,6 +99,12 @@ class TestUnconstrainedRoutesStayAny:
                 if n.type == "ContractClaim" and n.extra_props["kind"] == "http"]
         assert keys == ["ANY:/api/checkout"]
 
+    def test_an_express_all_route_is_any(self, tmp_path):
+        source = ("const express = require('express');\nconst app = express();\n"
+                  "app.all('/health', health);\n")
+        endpoints, _ = _endpoints(tmp_path, {"app.js": source})
+        assert endpoints == [("ANY", "/health", "express")]
+
     def test_go_handlefunc_and_method_patterns(self, tmp_path):
         # Was also `GET /legacy`, and `GET /POST /orders` — the method
         # read as part of the path.

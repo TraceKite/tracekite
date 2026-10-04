@@ -34,16 +34,17 @@ def extract_route_calls(method_calls: list[ParsedMethodCall], language: Language
                     )
                 )
         if language in (LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT):
-            # app.get('/path', ...) or router.post('/path', ...)
+            # app.get('/path', ...) or router.post('/path', ...); `all` serves
+            # every method.
             m = own_match(
-                r"(?:app|router|server)\.(get|post|put|delete|patch)\s*\(\s*['\"]([^'\"]+)['\"]",
+                r"(?:app|router|server)\.(get|post|put|delete|patch|all)\s*\(\s*['\"]([^'\"]+)['\"]",
                 context, call.callee_name,
                 re.IGNORECASE,
             )
             if m:
                 endpoints.append(
                     ParsedApiEndpoint(
-                        method=m.group(1).upper(),
+                        method=m.group(1).upper().replace("ALL", "ANY"),
                         path=m.group(2),
                         handler_name=call.caller_name or "",
                         line=call.line,
