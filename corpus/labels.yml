@@ -20,7 +20,10 @@ repos:
 # The total active-edge count, so a change that silently stops producing a
 # whole class of edge is caught even though every labelled edge still passes.
 # Measured, not guessed. Raise it when recall genuinely improves.
-min_active_edges: 20
+# Lowered from 20 once: two of those were EXPOSES/RESOLVED_TO edges to a
+# phantom contract, `GET /GET /v1/invoices/{}` — the generic Go pattern read
+# the Go 1.22 method prefix in "GET /v1/invoices/{id}" as part of the path.
+min_active_edges: 18
 
 # Every edge here must be produced, at or above `min_confidence`, with the
 # evidence path named. Missing one is a recall regression; an active edge
