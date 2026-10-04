@@ -138,6 +138,19 @@ class TestProtocol:
         assert declined["candidates"]["from"] == [
             "global:Service:demo/frontend", "global:Service:shop/frontend"]
 
+    def test_consumers_are_dependents_not_bookkeeping(self):
+        op = "global:Op:grpc:oteldemo.CartService/EmptyCart"
+        edges = [SimpleNamespace(source_id=source, target_id=op, status="active",
+                                 type=kind, confidence=0.9, evidence=["x:1"])
+                 for source, kind in (("checkout.go", "INVOKES"),
+                                      ("claim:checkout", "RESOLVED_TO"),
+                                      ("demo.proto", "DECLARES_CONTRACT"))]
+        tools = GraphTools(SimpleNamespace(services=[], edges=edges, rendezvous=[]))
+
+        answer = tools.consumers_of(op)
+
+        assert [c["consumer"] for c in answer["consumers"]] == ["checkout.go"]
+
     def test_services_exclude_unbacked_virtual_names(self):
         result = SimpleNamespace(
             services=[

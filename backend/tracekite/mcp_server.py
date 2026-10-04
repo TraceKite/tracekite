@@ -19,10 +19,8 @@ import sys
 from tracekite.answer import CONFIG_VERSION, ENGINE_VERSION, SnapshotIdentity
 from tracekite.facade import collect_claims as _collect_claims
 from tracekite.mcp_envelope import wrap_answer
-from tracekite.scan_meta import (
-    ScanMeta,
-    repo_scan_meta_from_sink,
-)
+from tracekite.scan_meta import ScanMeta, repo_scan_meta_from_sink
+from tracekite.services.linker.dependence import is_dependence
 from tracekite.source_meta import collect_input_meta
 from tracekite.utils import rendezvous_ids as rid
 from tracekite.utils.evidence import as_spans
@@ -132,7 +130,7 @@ class GraphTools:
              "evidence": list(e.evidence or []),
              "spans": as_spans(e.evidence)}
             for e in self._result.edges
-            if e.target_id == target and e.status == "active"]
+            if e.target_id == target and e.status == "active" and is_dependence(e)]
         if not consumers:
             known = self._known_node_ids()
             if target not in known:

@@ -27,6 +27,8 @@ interval, and the transition is counted rather than smoothed over.
 
 from dataclasses import dataclass, field
 
+from tracekite.services.linker.dependence import is_dependence
+
 
 @dataclass(frozen=True)
 class Interval:
@@ -146,7 +148,7 @@ def consumers_over_time(series: list[tuple[str, list]],
             if getattr(edge, "status", "active") != "active":
                 continue
             seen_targets.add(edge.target_id)
-            if edge.target_id == target:
+            if edge.target_id == target and is_dependence(edge):
                 consumers.add(edge.source_id)
         per_commit.append({"commit": commit,
                            "consumers": sorted(consumers)})

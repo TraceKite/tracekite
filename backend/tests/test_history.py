@@ -190,3 +190,17 @@ class TestConsumersOverTime:
             [("sha1", [edge("a", "t", status="candidate")])], "t")
         assert report["found"] is False
         assert report["candidates"] == []
+
+    def test_bookkeeping_and_the_definition_are_not_dependents(self):
+        # One gRPC operation reported sixteen dependents: each caller twice
+        # (its claim's RESOLVED_TO beside its file's INVOKES) and the proto
+        # that declares the operation.
+        def typed(source, kind):
+            e = edge(source, "op")
+            e.type = kind
+            return e
+        report = consumers_over_time([("sha1", [
+            typed("checkout.go", "INVOKES"), typed("claim:checkout", "RESOLVED_TO"),
+            typed("cart.cs", "EXPOSES"), typed("demo.proto", "DECLARES_CONTRACT"),
+        ])], "op")
+        assert report["current_consumers"] == ["cart.cs", "checkout.go"]
