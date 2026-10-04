@@ -30,12 +30,22 @@ class TestVendored:
     @pytest.mark.parametrize("path", [
         "vendor/github.com/x/y/client.go", "node_modules/axios/index.js",
         "third_party/lib/api.py", "app/vendored/sdk.ts",
+        "packages/Newtonsoft.Json.12.0.3/lib/net45/Json.cs",
+        "src/packages/Grpc.Core.2.46.6-pre1/content/Client.cs",
     ])
     def test_vendored_paths(self, path):
         assert classify(path).is_vendored is True
 
-    def test_own_source_not_vendored(self):
-        assert classify("src/client/api.ts").is_vendored is False
+    @pytest.mark.parametrize("path", [
+        "src/client/api.ts",
+        # JS monorepo workspaces: the repository's own code.
+        "packages/core/js-sdk/src/client.ts",
+        "packages/twenty-server/src/engine/api/rest.controller.ts",
+        "enterprise/packages/api/src/index.ts",
+        "packages/v2.0/README.md",
+    ])
+    def test_own_source_not_vendored(self, path):
+        assert classify(path).is_vendored is False
 
 
 class TestGenerated:
