@@ -146,6 +146,15 @@ class TestImageRunsWhatTestsRan:
             "wheel for the declared requires-python and is what forced the "
             "container onto a different Python from the tests")
 
+    def test_core_distribution_uses_the_parser_versions_tests_run(self):
+        with open(REPO / "pyproject.toml", "rb") as handle:
+            application = tomllib.load(handle)
+        parser_deps = lambda spec: {
+            dep for dep in spec["project"]["dependencies"]
+            if dep.startswith("tree-sitter")}
+
+        assert parser_deps(_spec()) == parser_deps(application)
+
     def test_the_base_image_satisfies_requires_python(self):
         import re
         with open(REPO / "pyproject.toml", "rb") as handle:
