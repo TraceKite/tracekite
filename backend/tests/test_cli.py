@@ -88,6 +88,9 @@ class TestExplain:
                 "--edge", edge["source"], edge["target"]).stdout)
         assert payload["found"] is True
         assert payload["edges"][0]["evidence"]
+        # The answer names the edge it explains; it used to read "" -> "".
+        assert (payload["source"], payload["target"]) == (
+            edge["source"], edge["target"])
 
     def test_missing_edge_declines_rather_than_inventing(self):
         payload = json.loads(
