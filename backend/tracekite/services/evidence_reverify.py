@@ -30,7 +30,7 @@ def claim_token(kind: str, key: str) -> str | None:
     """
     if kind == "http":
         template = key.rpartition(":")[2]
-        return template if len(template) > 3 else None
+        return template if _static_segments(template) else None
     if kind in ("svcname", "topic", "cfgdef", "cfgread", "dataset", "db"):
         token = key.rpartition(":")[2]
         return token if len(token) > 2 else None
@@ -40,16 +40,47 @@ def claim_token(kind: str, key: str) -> str | None:
     return None
 
 
-def _verdict(span, token: str, text: str | None) -> str:
+# Next.js and Remix take a route's path from the file's location, so the
+# cited line (the handler export) never spells it.
+_FILE_ROUTED = frozenset({"nextjs-app", "nextjs-pages", "remix"})
+_IDENTIFIER_QUOTES = str.maketrans("", "", '"`[]')
+
+
+def _static_segments(template: str) -> list[str]:
+    return [s for s in template.lower().split("/") if s and "{" not in s]
+
+
+def _says(window: str, kind: str, token: str) -> bool:
+    """Whether source text still states the claim, in the form source uses.
+
+    Keys are normalised and source is not: a route reads `/:slug/comments`
+    where its key reads `/{}/comments`, a table is `"public"."order"` in
+    SQL and `public.order` in its key, and names are lowercased. Comparing
+    the normalised key verbatim aged half the citations of an unchanged tree.
+    """
+    text = window.lower()
+    if kind == "http":
+        return all(segment in text for segment in _static_segments(token))
+    if kind in ("db", "dataset"):
+        text = text.translate(_IDENTIFIER_QUOTES)
+    return token.lower() in text
+
+
+def _verdict(span, claim, token: str, text: str | None) -> str:
     if text is None:
         return "stale_file"
+    if claim.kind == "http" and claim.attrs.get("framework") in _FILE_ROUTED:
+        return "ok" if _says(span.file, "http", token) else "stale_line"
     lines = text.split("\n")
     if span.line_start > len(lines):
         return "stale_line"
+    if span.line_start == 1 and span.line_end in (None, 1):
+        # `file:1` is how emitters cite a file when they cannot name a line.
+        return "ok" if _says(text, claim.kind, token) else "stale_line"
     lo = max(0, span.line_start - 1 - _RADIUS)
     hi = min(len(lines), (span.line_end or span.line_start) + _RADIUS)
     window = "\n".join(lines[lo:hi])
-    return "ok" if token in window else "stale_line"
+    return "ok" if _says(window, claim.kind, token) else "stale_line"
 
 
 def reverify(claims: list, read_file) -> dict:
@@ -73,7 +104,7 @@ def reverify(claims: list, read_file) -> dict:
             if token is None or span.line_start is None:
                 counts["unverifiable"] += 1
                 continue
-            verdict = _verdict(span, token, read_file(span.file))
+            verdict = _verdict(span, claim, token, read_file(span.file))
             if verdict == "ok":
                 counts["ok"] += 1
             else:
