@@ -53,9 +53,14 @@ def squash_separators(name: str) -> str:
 
 
 def normalize_http_method(method: str) -> str:
+    """Uppercased verb. `ANY` survives: it is what an extractor reports for a
+    route that serves every method (a Next.js pages handler, `HandleFunc`,
+    `@RequestMapping` without a method), and R7 matches it as a wildcard.
+    Folding it into GET recorded a POST-only handler as `GET` and kept every
+    POST caller from reaching it."""
     method = (method or "GET").strip().upper()
     return method if method in {"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD",
-                                "OPTIONS"} else "GET"
+                                "OPTIONS", "ANY"} else "GET"
 
 
 def build_purl(dep_type: str, name: str, version: str = "") -> str:

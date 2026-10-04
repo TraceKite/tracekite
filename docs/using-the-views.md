@@ -30,7 +30,7 @@ action. The picker and the search are what you reach for every session.
 
 One picker serves all three views. Selection is staged: edit the checkboxes,
 then choose **Apply scope** to cause one navigation and one data load. Search
-filters the list; the cap is `MAX_SCOPE_REPOS` in `.env`, default 10. **All
+filters the list; the cap is `MAX_SCOPE_REPOS` in `.env`, default 20. **All
 repositories** is disabled when the estate is larger than that cap.
 
 The cap is a guardrail, not a measure of cost — repository size varies

@@ -96,6 +96,14 @@ class TestRedaction:
         assert props["value_port"] == 8443
         assert "things" not in json.dumps(props).replace("/v1", "")
 
+    def test_url_with_bracketed_host_placeholder_is_opaque(self):
+        result = redact(
+            "service.url", "https://hasura-[project-id].nhost.app/v1/graphql")
+
+        assert result.value_class == "opaque"
+        assert result.value_host is None
+        assert len(result.value_hmac) == 16
+
     def test_scalar_classes(self):
         assert redact("flag", "true").value_class == "bool"
         assert redact("server.port", "8080").value_class == "port"
@@ -143,6 +151,7 @@ class TestCanonical:
         assert normalize_http_method("get") == "GET"
         assert normalize_http_method(" post ") == "POST"
         assert normalize_http_method("bogus") == "GET"
+        assert normalize_http_method("any") == "ANY"
         assert normalize_http_method("") == "GET"
 
     def test_purls(self):
@@ -213,9 +222,9 @@ class TestReaderHelpers:
     def test_node_from_props_folds_temporal_values_json_safe(self):
         from neo4j.time import DateTime
 
-        from tracekite.services.graph_reader import _node_from_props
+        from tracekite.services.graph_records import node_from_props
 
-        node = _node_from_props({
+        node = node_from_props({
             "id": "x", "type": "Repo", "name": "r",
             "custom_ts": DateTime(2026, 7, 26, 1, 2, 3),
             "tags": ["a", "b"],

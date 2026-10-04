@@ -149,8 +149,10 @@ class JavaScriptParser(BaseParser):
     def _extract_api_endpoints(self, content: str, lines: list[str]) -> list[ParsedApiEndpoint]:
         endpoints = []
         
-        # Express/Next.js patterns: app.get('/path', ...), router.post('/path', ...)
-        http_methods = ["get", "post", "put", "delete", "patch", "head", "options", "all", "use"]
+        # Express/Next.js patterns: app.get('/path', ...), router.post('/path', ...).
+        # `use` is not here: it mounts middleware, and `app.use('/static',
+        # express.static(...))` became a GET contract for a route nobody wrote.
+        http_methods = ["get", "post", "put", "delete", "patch", "head", "options", "all"]
         
         for method in http_methods:
             pattern = rf'(?:app|router|server|api|handler)\.{re.escape(method)}\s*\(\s*[\'"]([^\'"]+)[\'"]'
@@ -163,7 +165,7 @@ class JavaScriptParser(BaseParser):
                     framework = "Next.js"
                 
                 endpoints.append(ParsedApiEndpoint(
-                    method=method.upper(),
+                    method="ANY" if method == "all" else method.upper(),
                     path=path,
                     line=line,
                     framework=framework,

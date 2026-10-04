@@ -86,7 +86,7 @@ Who depends on the billing service?
 Trace the active path from the gateway service to billing.
 ```
 
-The MCP surface exposes `services`, `consumers_of`, `trace`, and
-`deprecations`. See the
+The MCP surface exposes `services`, `node`, `search`, `consumers_of`, `trace`,
+`neighbors`, `impact`, `subgraph`, and `deprecations`. See the
 [agent integration guide](https://github.com/TraceKite/tracekite/blob/main/docs/plugins-and-mcp-guide.md)
 for argument and evidence semantics.

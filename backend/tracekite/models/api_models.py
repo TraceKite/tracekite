@@ -8,7 +8,7 @@ class IngestRepoRequest(BaseModel):
     github_url: str = Field(..., description="GitHub repository URL")
     branch: Optional[str] = Field(default=None, description="Branch to clone (default: repo default)")
     github_token: Optional[str] = Field(default=None, description="GitHub personal access token for private repos")
-    refresh: bool = Field(default=False, description="Force re-ingestion if repo already exists")
+    refresh: bool = Field(default=False, description="Replace the repository's graph; implied when the repository is already recorded")
 
 
 class IngestRepoResponse(BaseModel):

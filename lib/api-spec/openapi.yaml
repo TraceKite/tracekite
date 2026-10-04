@@ -225,7 +225,7 @@ components:
           type: string
         refresh:
           default: false
-          description: Force re-ingestion if repo already exists
+          description: Replace the repository's graph; implied when the repository is already recorded
           title: Refresh
           type: boolean
       required:

@@ -28,8 +28,13 @@ even when the dependency is real.
 ## Query these before searching the filesystem
 
 - `services()` — repository-backed services in the loaded graph.
+- `search(query)` — resolve a name, label, or path to exact node IDs.
+- `node(node_id)` — describe an exact node ID before traversing from it.
 - `consumers_of(node_id)` — active incoming edges with evidence spans.
 - `trace(from_id, to_id)` — active paths between exact node IDs.
+- `neighbors(node_id, ...)` — bounded adjacency in asserted edge direction.
+- `impact(node_id, ...)` — transitive dependents with evidence paths.
+- `subgraph(node_id, ...)` — a bounded ego graph with described nodes and edges.
 - `deprecations()` — deprecated contracts and their active consumers.
 
 Call them inline and directly. A caller, dependency or impact question these

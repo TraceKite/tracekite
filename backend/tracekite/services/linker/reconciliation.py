@@ -14,6 +14,9 @@ gRPC and topics reconcile through the same function because their claims
 already carry both sides (proto vs implementation, declared vs literal).
 """
 
+from tracekite.services.linker.grpc_names import (
+    operation_service_names, stub_service_name,
+)
 from tracekite.utils.canonical import canonicalize_path_template
 
 
@@ -56,24 +59,40 @@ def reconcile_http(claims: list) -> dict:
     }
 
 
+def reconcile_grpc(claims: list) -> dict:
+    """Proto operations vs the server implementations that serve them.
+
+    An implementation names only its service, so it keeps every operation
+    that service declares — the binding R5 makes. Compared key for key, the
+    two shapes never met and every operation of a fully served proto read as
+    a promise nobody keeps.
+    """
+    declared = {c.key for c in claims if c.matchable
+                and c.kind == "grpcop" and c.direction == "provides"}
+    served = {stub_service_name(c): c.key for c in claims if c.matchable
+              and c.kind == "grpcstub" and c.direction == "provides"}
+    matched = {key for key in declared
+               if served.keys() & set(operation_service_names(key))}
+    named = {name for key in declared for name in operation_service_names(key)}
+    return {
+        "declared_not_observed": sorted(declared - matched),
+        "observed_not_declared": sorted({key for name, key in served.items()
+                                         if name not in named}),
+        "matched": len(matched),
+    }
+
+
 def reconcile(claims: list) -> dict:
     """The full report. Sections exist even when empty — an absent section
-    is indistinguishable from one never computed."""
-    grpc_declared = {c.key for c in claims
-                     if c.kind == "grpcop" and c.direction == "provides"}
-    grpc_observed = {c.key for c in claims
-                     if c.kind == "grpcstub" and c.direction == "provides"}
+    is indistinguishable from one never computed. Only matchable claims
+    count: a dynamic topic has no name to reconcile, and printed as `""`."""
     topic_declared = {c.key for c in claims if c.kind == "topic"
-                      and c.attrs.get("declared")}
+                      and c.matchable and c.attrs.get("declared")}
     topic_observed = {c.key for c in claims if c.kind == "topic"
-                      and not c.attrs.get("declared")}
+                      and c.matchable and not c.attrs.get("declared")}
     return {
         "http": reconcile_http(claims),
-        "grpc": {
-            "declared_not_observed": sorted(grpc_declared - grpc_observed),
-            "observed_not_declared": sorted(grpc_observed - grpc_declared),
-            "matched": len(grpc_declared & grpc_observed),
-        },
+        "grpc": reconcile_grpc(claims),
         "topics": {
             "declared_not_observed": sorted(topic_declared - topic_observed),
             "observed_not_declared": sorted(topic_observed - topic_declared),

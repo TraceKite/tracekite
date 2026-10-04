@@ -49,7 +49,7 @@ def framework_routes(file_info, content: str) -> tuple[list, int]:
     """Routes a framework extractor can read, and the count it declined.
 
     Framework route extraction beyond the generic parsers: JS/TS frameworks,
-    Go routers, WebFlux/Ktor.
+    Flask, Go routers, WebFlux/Ktor.
     """
     language = (file_info.language or "").lower()
     path = file_info.path
@@ -57,6 +57,9 @@ def framework_routes(file_info, content: str) -> tuple[list, int]:
             (".ts", ".tsx", ".js", ".jsx", ".mjs")):
         from tracekite.services.js_route_extractor import extract_js_routes
         return extract_js_routes(path, content), 0
+    if language == "python" or path.endswith(".py"):
+        from tracekite.services.flask_route_extractor import extract_flask_routes
+        return extract_flask_routes(content)
     if path.endswith(".pb.gw.go"):
         # Generated gateway code: the path lives in a compiled pattern, so
         # the generic Go extractor's quoted-path search finds nothing.

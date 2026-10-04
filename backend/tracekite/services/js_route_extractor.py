@@ -653,8 +653,8 @@ def _next_app_path(file_path: str) -> str | None:
     segments = [s for s in file_path.split("/") if s]
     if not segments or segments[-1] not in _NEXT_ROUTE_FILES:
         return None
-    app_idx = max((i for i, s in enumerate(segments[:-1]) if s == "app"),
-                  default=-1)
+    api_roots = [i for i, s in enumerate(segments[:-2]) if s == "app" and segments[i + 1] == "api"]
+    app_idx = max(api_roots or [i for i, s in enumerate(segments[:-1]) if s == "app"], default=-1)
     if app_idx == -1:
         return None
     parts = []

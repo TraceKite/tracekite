@@ -9,6 +9,7 @@ import GraphSearch from "@/components/GraphSearch";
 import { api } from "@/lib/api";
 import { isPreviewMode } from "@/lib/previewFixtures";
 import { effectiveRepoIds } from "@/lib/graphNavigation";
+import { initialRepo, repoLabel } from "@/lib/repoChoice";
 import WorkspaceNavigation from "@/components/WorkspaceNavigation";
 
 export default function AppHeader() {
@@ -32,9 +33,10 @@ export default function AppHeader() {
       if (data && data.repos) {
         setRepos(data.repos);
         const currentRepo = useGraphStore.getState().selectedRepo;
-        if (!currentRepo && data.repos.length > 0) {
-          setSelectedRepo(data.repos[0]);
-          setScopeRepos([data.repos[0].id]);
+        const first = initialRepo(data.repos);
+        if (!currentRepo && first) {
+          setSelectedRepo(first);
+          setScopeRepos([first.id]);
         }
       }
     }).catch(() => {});
@@ -74,7 +76,7 @@ export default function AppHeader() {
     : scopeRepoIds.length === 0
       ? `All ${repos.length} repos`
       : scopedRepo
-        ? `${scopedRepo.owner}/${scopedRepo.repo}`
+        ? repoLabel(scopedRepo)
         : `${scopeRepoIds.length} repos`;
 
   const handleIngest = async () => {

@@ -10,7 +10,9 @@ from types import SimpleNamespace
 import pytest
 
 import tracekite.services.ingest_deps as ingest_deps
-from tracekite.parsers.dependency_parser import DependencyInfo
+from tracekite.parsers.dependency_parser import (
+    DependencyInfo, parse_publish_identity,
+)
 from tracekite.services.claims import is_internal_lib, lib_key
 from tracekite.services.ingest_deps import (
     emit_dependency_claims, emit_publish_claims,
@@ -150,6 +152,11 @@ class TestR3Join:
         repo_edges = [e for e in out.edges if e.type == "DEPENDS_ON_REPO"]
         assert {(e.source_id, e.target_id) for e in repo_edges} \
             == {("repo_api", "repo_lib"), ("repo_worker", "repo_lib")}
+        assert all(edge.evidence == ["pom.xml:1"] for edge in repo_edges)
+        depends = {edge.source_id: edge for edge in out.edges
+                   if edge.type == "DEPENDS_ON"}
+        assert all(edge.confidence == depends[edge.source_id].confidence
+                   for edge in repo_edges)
 
     def test_internal_namespace_links_without_publisher(self):
         claims, _ = _consumer("repo_api", [_dep("org.acme:events", "1.0.0")])
@@ -198,3 +205,59 @@ class TestPublishConfidence:
                    if e.type == "DEPENDS_ON"}
         publish = [e for e in out.edges if e.type == "PUBLISHES"][0]
         assert publish.confidence > by_repo["repo_a"] > by_repo["repo_b"]
+
+
+def _manifest_publisher(repo_id, path, content):
+    """Publish claims as ingest makes them: through the real parser, whose
+    identity keeps the full name — not the hand-split shape `_publisher` takes."""
+    sink = IngestSink()
+    emit_publish_claims(repo_id, _file(path), parse_publish_identity(path, content),
+                        f"file:{path}", sink, content=content)
+    return _claims(sink, repo_id)
+
+
+class TestPublishFromManifest:
+    def test_scoped_npm_package_joins_its_consumers(self):
+        # A scope outside the internal boundary: only the publish join links it.
+        publisher = _manifest_publisher(
+            "repo_medusa", "packages/core/js-sdk/package.json",
+            '{\n  "name": "@medusajs/js-sdk",\n  "version": "2.21.2"\n}\n')
+        consumer, _ = _consumer("repo_store", [_dep("@medusajs/js-sdk", "latest", "npm")],
+                                path="package.json")
+        _, out = run_r3(publisher + consumer)
+
+        assert [c.key for c in publisher] == ["pkg:npm/@medusajs/js-sdk"]
+        depends = [e for e in out.edges if e.type == "DEPENDS_ON"]
+        assert [(e.source_id, e.match_type, e.target_repo_id) for e in depends] \
+            == [("repo_store", "published", "repo_medusa")]
+
+    def test_go_module_publisher_joins_by_identity(self):
+        publisher = _manifest_publisher("repo_lib", "go.mod",
+                                        "module gitlab.com/shop/lib\n\ngo 1.22\n")
+        consumer, _ = _consumer("repo_api", [_dep("gitlab.com/shop/lib", "v1.0.0", "go")],
+                                path="go.mod")
+        _, out = run_r3(publisher + consumer)
+
+        assert [c.key for c in publisher] == ["pkg:golang/gitlab.com/shop/lib"]
+        assert [e.match_type for e in out.edges if e.type == "DEPENDS_ON"] == ["published"]
+
+    def test_a_private_package_publishes_nothing(self):
+        # A monorepo docs package named `ui` must not claim every consumer of
+        # the public `ui` package.
+        publisher = _manifest_publisher(
+            "repo_mono", "www/apps/ui/package.json",
+            '{\n  "name": "ui",\n  "private": true\n}\n')
+        consumer, _ = _consumer("repo_web", [_dep("ui", "^1.0.0", "npm")],
+                                path="package.json")
+        ctx, out = run_r3(publisher + consumer)
+
+        assert not [e for e in out.edges if e.type in ("PUBLISHES", "DEPENDS_ON")]
+        assert ctx.counters["r3.private_skipped"] == 1
+        assert ctx.counters["r3.external_skipped"] == 1
+
+    def test_publish_cites_the_name_line_not_a_colliding_key(self):
+        content = ('{\n  "name": "types",\n  "main": "./lib/index.js",\n'
+                   '  "types": "./lib/index.d.ts"\n}\n')
+        publisher = _manifest_publisher("repo_docs", "utils/types/package.json", content)
+
+        assert publisher[0].evidence == ["utils/types/package.json:2"]

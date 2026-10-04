@@ -13,7 +13,7 @@ from tracekite.services.graph_factories import (
     create_declares_edge, create_endpoint_node, create_exposes_api_edge,
 )
 from tracekite.utils.hashing import build_symbol_uid, generate_node_id, symbol_extra
-from tracekite.services.framework_routes import framework_routes
+from tracekite.services.route_merge import merge_framework_routes, resolve_handler
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +154,7 @@ def process_source_file(repo_id: str, file_info, source, file_node_id: str,
 
     endpoint_records = _process_endpoints(repo_id, file_info, source, file_node_id,
                                           sink, file_entities, counters)
-    endpoint_records = _merge_framework_routes(
+    endpoint_records = merge_framework_routes(
         repo_id, file_info, content, file_node_id, sink, file_entities,
         counters, endpoint_records)
 
@@ -168,71 +168,6 @@ def process_source_file(repo_id: str, file_info, source, file_node_id: str,
         "entities": file_entities,
         "method_calls": source.method_calls or [],
     }
-
-
-def _merge_framework_routes(repo_id: str, file_info, content: str,
-                            file_node_id: str, sink: IngestSink,
-                            file_entities: list[dict], counters: dict,
-                            records: list[dict]) -> list[dict]:
-    """Merge extractor routes with parser endpoints, preferring resolved paths.
-
-    The legacy JS parser emits `router.get('/pets')` as an unprefixed Express
-    row; when the extractor resolved the same route through its mount/controller
-    prefix (`/v1/pets`), the unprefixed row is the same statement half-parsed —
-    keeping both would double-count the endpoint and emit a phantom contract.
-    """
-    routes, declined = framework_routes(file_info, content)
-    if declined:
-        counters["endpoints_computed_path"] = (
-            counters.get("endpoints_computed_path", 0) + declined)
-    if not routes:
-        return records
-
-    from tracekite.services.graph_factories import create_endpoint_node
-
-    existing = {(r["http_method"], r["path_template"]) for r in records}
-    for route in routes:
-        superseded = [r for r in records
-                      if r["http_method"] in (route.method, "ANY")
-                      and r["path_template"] != route.path
-                      and r["path_template"] != "/"
-                      and route.path.endswith(r["path_template"])]
-        for old in superseded:
-            _remove_endpoint(sink, old, counters)
-            records.remove(old)
-            existing.discard((old["http_method"], old["path_template"]))
-
-        if (route.method, route.path) in existing:
-            continue
-        node = create_endpoint_node(
-            repo_id, file_info.path, file_info.language, route.method,
-            route.path, route.framework, route.handler_name, None, route.line,
-        )
-        if not sink.add_node(node):
-            continue
-        counters["endpoints"] += 1
-        existing.add((route.method, route.path))
-        records.append({
-            "node_id": node.id,
-            "http_method": node.extra_props.get("http_method", route.method),
-            "path_template": node.extra_props.get("path_template", route.path),
-            "framework": route.framework,
-            "line": route.line,
-        })
-        handler_id = _resolve_handler(file_entities, route)
-        sink.add_edge(create_exposes_api_edge(
-            repo_id, handler_id or file_node_id, node.id,
-            evidence=[f"{file_info.path}:{route.line or 1}"],
-        ))
-    return records
-
-
-def _remove_endpoint(sink: IngestSink, record: dict, counters: dict) -> None:
-    node_id = record["node_id"]
-    sink.nodes = [n for n in sink.nodes if n.id != node_id]
-    sink.node_ids.discard(node_id)
-    sink.edges = [e for e in sink.edges if e.target_id != node_id]
-    counters["endpoints"] = max(0, counters["endpoints"] - 1)
 
 
 def _process_endpoints(repo_id: str, file_info, source, file_node_id: str,
@@ -280,21 +215,9 @@ def _process_endpoints(repo_id: str, file_info, source, file_node_id: str,
                 "line": endpoint.line,
             })
 
-        handler_id = _resolve_handler(file_entities, endpoint)
+        handler_id = resolve_handler(file_entities, endpoint)
         sink.add_edge(create_exposes_api_edge(
             repo_id, handler_id or file_node_id, node.id,
             evidence=[f"{file_info.path}:{endpoint.line or 1}"],
         ))
     return records
-
-
-def _resolve_handler(file_entities: list[dict], endpoint) -> str | None:
-    candidates = [
-        record for record in file_entities
-        if record["name"] == endpoint.handler_name
-        and record["type"] in ("method", "function")
-    ]
-    if not candidates:
-        return None
-    best = min(candidates, key=lambda r: abs(r["start_line"] - (endpoint.line or 0)))
-    return best["id"]

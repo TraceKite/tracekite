@@ -131,11 +131,14 @@ def _dedupe_edges(edges: list[GraphEdge]) -> list[GraphEdge]:
     return list(seen.values())
 
 
-def _diagnose_missing(session, rows: list[dict]) -> list[dict]:
+def _diagnose_missing(session, rows: list[dict], source_label: str = "GraphNode",
+                      target_label: str = "GraphNode") -> list[dict]:
+    # Under the labels the write matched: checking GraphNode for a rendezvous
+    # target reported every one missing and buried the row that was.
     result = session.run(
         "UNWIND $rows AS row "
-        "OPTIONAL MATCH (a:GraphNode {id: row.source}) "
-        "OPTIONAL MATCH (b:GraphNode {id: row.target}) "
+        f"OPTIONAL MATCH (a:{source_label} {{id: row.source}}) "
+        f"OPTIONAL MATCH (b:{target_label} {{id: row.target}}) "
         "WITH row, a, b WHERE a IS NULL OR b IS NULL "
         "RETURN row.source AS source, row.target AS target, "
         "a IS NULL AS missing_source, b IS NULL AS missing_target LIMIT 10",
@@ -218,7 +221,7 @@ def write_linker_edges(edges: list[GraphEdge]) -> dict[str, int]:
                 count += result.single()["c"]
             expected = len(rows)
             if count != expected:
-                samples = _diagnose_missing(session, rows)
+                samples = _diagnose_missing(session, rows, src_label, dst_label)
                 raise WriteReconciliationError(edge_type, expected, count, samples)
             written[edge_type] = written.get(edge_type, 0) + count
     return written

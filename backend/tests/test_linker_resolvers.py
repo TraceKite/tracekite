@@ -192,6 +192,22 @@ class TestR4:
         assert routes[0].target_label == "ServiceName"
         assert c.counters["r4.dead_end_targets"] == 1
 
+    def test_a_service_target_without_a_discovery_name_resolves_to_the_service(self):
+        # twenty's k8s Ingress names `twentycrm-server`, a Service with no
+        # discovery name. Its RESOLVED_TO pointed at the Service id while
+        # labelled ServiceName, matched no node, and the fail-closed writer
+        # rejected the whole estate's link run.
+        c = ctx()
+        c.service_by_name["twentycrm-server"] = "global:Service:twentycrm-server"
+        index = ClaimIndex([claim(
+            "route", "consumes", "/→svcname:twentycrm-server", repo="repo_crm",
+            attrs={"target": "twentycrm-server", "path_prefix": "/",
+                   "gateway_kind": "k8s_ingress"})])
+        out = r4_gateway.resolve(index, c)
+        [resolved] = [e for e in out.edges if e.type == "RESOLVED_TO"]
+        assert (resolved.target_label, resolved.target_id) == (
+            "Service", "global:Service:twentycrm-server")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

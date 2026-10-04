@@ -238,8 +238,7 @@ def build_parser() -> argparse.ArgumentParser:
     rev_p.add_argument("--now", default="2026-01-01T00:00:00+00:00")
     rev_p.set_defaults(func=cmd_reverify)
 
-    # PR mode. --changed-repo is git's knowledge, not the graph's: given
-    # it, each loss says whether the provider or the consumer moved.
+    # PR mode: --changed-repo/--changed-file are git's knowledge, not the graph's.
     pr_p = sub.add_parser(
         "pr", help="which consumers this branch breaks, with a citation")
     pr_p.add_argument("--base", nargs="+", required=True,
@@ -248,6 +247,8 @@ def build_parser() -> argparse.ArgumentParser:
                       help="artifacts for the head commit")
     pr_p.add_argument("--changed-repo", action="append", default=[],
                       help="repo id this branch touched; repeatable")
+    pr_p.add_argument("--changed-file", action="append", default=[],
+                      help="repo_id:path this branch touched; repeatable")
     pr_p.add_argument("--comment", action="store_true",
                       help="render the pull-request comment instead of JSON")
     pr_p.add_argument("--now", default="2026-01-01T00:00:00+00:00")

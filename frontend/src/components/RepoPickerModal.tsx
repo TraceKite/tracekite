@@ -6,6 +6,8 @@ import { useGraphStore } from "@/store/graphStore";
 import type { RepoSummary } from "@/lib/types";
 import { toggleDraftRepoScope } from "@/lib/graphNavigation";
 import { projectServiceMap } from "@/lib/serviceMapProjection";
+import { repoFailed, repoTitle } from "@/lib/repoChoice";
+import { api } from "@/lib/api";
 
 interface Props {
   mode: "repo" | "multi";
@@ -14,14 +16,20 @@ interface Props {
 
 export default function RepoPickerModal({ mode, onClose }: Props) {
   const {
-    repos, scopeRepoIds, setScopeRepos, selectedRepo, setSelectedRepo,
+    repos, setRepos, scopeRepoIds, setScopeRepos, selectedRepo, setSelectedRepo,
     serviceMapData, clientConfig, mapEdgeTypes,
   } = useGraphStore();
   const [query, setQuery] = useState("");
   const [draftIds, setDraftIds] = useState(scopeRepoIds);
   const searchRef = useRef<HTMLInputElement>(null);
-  const maxRepos = clientConfig?.max_scope_repos ?? 10;
+  const maxRepos = clientConfig?.max_scope_repos ?? 20;
   const edgeLimit = clientConfig?.service_map_edge_limit ?? 500;
+
+  // The header lists repositories once, at load; one ingested since — by
+  // the CLI, the API or another tab — stayed invisible until a reload.
+  useEffect(() => {
+    api.listRepos().then((data) => data?.repos && setRepos(data.repos)).catch(() => {});
+  }, [setRepos]);
 
   useEffect(() => {
     searchRef.current?.focus();
@@ -156,8 +164,9 @@ export default function RepoPickerModal({ mode, onClose }: Props) {
                 <span className={`w-3.5 h-3.5 shrink-0 rounded-sm border ${
                   on ? "bg-[#315b47] border-[#315b47]" : "border-slate-300"}`} />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-xs text-[#1a1d23] truncate">{repo.repo}</span>
-                  <span className="block text-2xs text-[#8b929e] truncate">{repo.owner}</span>
+                  <span className="block text-xs text-[#1a1d23] truncate">{repoTitle(repo)}</span>
+                  <span className="block text-2xs text-[#8b929e] truncate">
+                    {repoFailed(repo) ? "ingest failed" : repo.owner}</span>
                 </span>
                 <span className="text-2xs text-[#8b929e] font-mono shrink-0">
                   {mode === "repo" ? repo.node_count : count}

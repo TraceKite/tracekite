@@ -88,3 +88,50 @@ class TestDowngrade:
         downgrade_stale([e], {"gone.py:1": "stale_file"}, self.CONF)
         assert e.status == "active" and e.confidence == 0.665
         assert e.extra_props["stale_evidence"] == ["gone.py:1"]
+
+
+class TestSourceSaysItItsOwnWay:
+    """An unchanged tree must verify. Comparing normalised keys verbatim
+    aged 14 of 27 checkable citations on gothinkster's realworld API and 98
+    on medusa, scanned and checked at the same commit."""
+
+    def _verdicts(self, kind, key, evidence, files, attrs=None):
+        claim = ContractClaim(repo_id="r", kind=kind, direction="provides",
+                              key=key, evidence=[evidence], attrs=attrs or {})
+        return reverify([claim], reader(files))
+
+    def test_a_parameterised_route_matches_its_own_spelling(self):
+        files = {"routes.ts": "router.delete('/articles/:slug/comments/:id', h);\n"}
+        report = self._verdicts("http", "DELETE:/articles/{}/comments/{}",
+                                "routes.ts:1", files)
+        assert report["counts"]["ok"] == 1
+
+    def test_a_lowercased_key_matches_mixed_case_source(self):
+        files = {"compose.yml": "services:\n  x:\n    y: 1\n  frontendTests:\n"}
+        report = self._verdicts("svcname", "demo:frontendtests",
+                                "compose.yml:4", files)
+        assert report["counts"]["ok"] == 1
+
+    def test_a_quoted_sql_identifier_matches_its_key(self):
+        files = {"q.sql": "\n\nselect 1\nfrom \"public\".\"order_line_item\"\n"}
+        report = self._verdicts("db", "table:public.order_line_item",
+                                "q.sql:4", files)
+        assert report["counts"]["ok"] == 1
+
+    def test_a_file_routed_path_is_checked_against_the_file_path(self):
+        files = {"pages/api/products/[id]/index.ts": "export default handler;\n"}
+        report = self._verdicts("http", "ANY:/api/products/{}",
+                                "pages/api/products/[id]/index.ts:1", files,
+                                attrs={"framework": "nextjs-pages"})
+        assert report["counts"]["ok"] == 1
+
+    def test_line_one_is_a_file_level_citation(self):
+        files = {"m.sql": "-- migration\n\n\n\n\nCREATE TABLE \"Comment\" (id int);\n"}
+        report = self._verdicts("db", "table:comment", "m.sql:1", files)
+        assert report["counts"]["ok"] == 1
+
+    def test_a_route_that_is_really_gone_is_still_stale(self):
+        files = {"routes.ts": "router.delete('/articles/:slug', h);\n"}
+        report = self._verdicts("http", "DELETE:/articles/{}/comments/{}",
+                                "routes.ts:1", files)
+        assert report["stale"] == {"routes.ts:1": "stale_line"}

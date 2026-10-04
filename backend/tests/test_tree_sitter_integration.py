@@ -79,7 +79,9 @@ class TestTreeSitterIntegration:
         assert "getUser" in names
         assert "fetchUser" in names
 
-        assert any(ep.method == "GET" and "/api/users/{id}" in ep.path for ep in source.api_endpoints)
+        # HandleFunc serves every method; its route (ANY) is the Go route
+        # extractor's, pinned in test_route_merge.py, not this parser's GET.
+        assert source.api_endpoints == []
 
         calls = [c for c in source.method_calls if c.callee_name == "fetchUser"]
         assert len(calls) >= 1

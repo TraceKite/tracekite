@@ -347,6 +347,11 @@ class TestNextJsAppRouter:
         assert _find(routes, "HEAD", "/api/docs/{parts}",
                      "nextjs-app") is not None
 
+    def test_app_url_segment_is_not_the_router_root(self):
+        routes = extract_js_routes(
+            "bench/basic-app/app/api/app/route.js", NEXT_APP)
+        assert _find(routes, "GET", "/api/app", "nextjs-app") is not None
+
     def test_non_route_filename_ignored(self):
         routes = extract_js_routes("src/app/api/owners/handlers.ts", NEXT_APP)
         assert not any(r.framework == "nextjs-app" for r in routes)

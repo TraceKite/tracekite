@@ -42,6 +42,19 @@ class TestBreaks:
         assert result.breaks[0].caused_by_this_change is False
         assert result.blocking == []
 
+    def test_in_a_monorepo_the_consumer_file_decides(self):
+        # opentelemetry-demo: dropping `rpc EmptyCart` from the proto loses
+        # checkout's call, and checkout lives in the same repository. At
+        # repository level that read as checkout breaking itself.
+        mono = edge("checkout", "op:EmptyCart", evidence=("src/checkout/main.go:230",),
+                    source_repo="demo", target_repo="demo")
+        proto_only = impact([mono], [], changed_repos={"demo"},
+                            changed_files={"demo": {"pb/demo.proto"}})
+        assert proto_only.blocking == proto_only.breaks
+        own_edit = impact([mono], [], changed_repos={"demo"},
+                          changed_files={"demo": {"src/checkout/main.go"}})
+        assert own_edit.blocking == []
+
     def test_an_edge_that_vanished_with_neither_side_changing_is_not_a_break(
             self):
         """That is a regression in TraceKite, not in the branch, and serving it

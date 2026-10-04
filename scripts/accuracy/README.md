@@ -14,8 +14,8 @@ Both take repo ids as arguments and default to every repo in the graph:
     python scripts/accuracy/measure_recall.py spring-petclinic_spring-petclinic-cloud
 
 Shared plumbing lives in `_kg.py`. Container names, the Neo4j credentials and
-the workspace root all come from the environment (`KG_NEO4J_CONTAINER`,
-`KG_BACKEND_CONTAINER`, `NEO4J_PASSWORD`, `KG_REPO_ROOT`), so nothing is
+the workspace root all come from the environment (`TRACEKITE_NEO4J_CONTAINER`,
+`TRACEKITE_BACKEND_CONTAINER`, `NEO4J_PASSWORD`, `TRACEKITE_REPO_ROOT`), so nothing is
 pinned to one machine or one estate.
 
 ## `verify_edges.py` — precision

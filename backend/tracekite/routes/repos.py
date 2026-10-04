@@ -49,14 +49,18 @@ async def ingest_repo(request: IngestRepoRequest):
             detail=f"repository id {repo_id} is already in use by a local "
             "upload; re-run `tracekite ingest .` to update it")
 
-    job_type = "refresh" if request.refresh else "ingest"
+    # Re-ingesting a recorded repository replaces its graph. Written on top,
+    # nodes and claims from code since deleted survived every re-ingest, and
+    # the linker kept asserting edges from them.
+    replace = request.refresh or existing_repo is not None
+    job_type = "refresh" if replace else "ingest"
     job_id = job_queue.submit(job_type, repo_id, payload={
         # The normalized URL is what gets cloned and recorded — never the raw
         # user string, or the two can disagree about which host was reached.
         "github_url": normalized_url,
         "branch": request.branch,
         "github_token": request.github_token,
-        "refresh": request.refresh,
+        "refresh": replace,
     })
     return IngestRepoResponse(
         job_id=job_id, repo_id=repo_id, status="queued",

@@ -139,6 +139,14 @@ class TestHealthRoute:
                         "anonymous_reads": False,
                         "auth_required_for_writes": True}
 
+    def test_the_ui_scope_cap_defaults_to_twenty_and_is_served(self):
+        from tracekite.config import Settings
+        assert Settings.model_fields["max_scope_repos"].default == 20
+        # Served live, so a deployment changes it without a rebuild.
+        with patch.object(settings, "max_scope_repos", 7), \
+                patch.object(settings, "auth_enabled", False):
+            assert client.get("/api/config").json()["max_scope_repos"] == 7
+
     def test_health_degraded(self):
         with patch("tracekite.routes.health.check_neo4j_health", return_value=False):
             body = client.get("/health").json()
@@ -175,6 +183,18 @@ class TestReposRoutes:
                 headers=auth_headers,
             )
         assert queue.submit.call_args[0][0] == "refresh"
+
+    def test_reingesting_a_recorded_repo_replaces_its_graph(self, auth_headers):
+        # Without this a re-ingest wrote on top of the old graph: endpoints
+        # and claims from deleted code survived, and the linker used them.
+        with patch("tracekite.routes.repos.get_repo", return_value=_summary()), \
+             patch("tracekite.routes.repos.job_queue") as queue:
+            queue.submit.return_value = "job-125"
+            client.post("/api/repos/ingest",
+                        json={"github_url": "https://github.com/foo/bar"},
+                        headers=auth_headers)
+        args, kwargs = queue.submit.call_args
+        assert args[0] == "refresh" and kwargs["payload"]["refresh"] is True
 
     def test_ingest_rejects_bad_url(self, auth_headers):
         response = client.post("/api/repos/ingest",
@@ -273,6 +293,23 @@ class TestJobsRoute:
             body = client.get("/api/jobs/j1", headers=auth_headers).json()
         assert body["status"] == "running"
         assert body["progress"] == 50
+
+    def test_job_status_normalizes_neo4j_timestamps(self, auth_headers):
+        from neo4j.time import DateTime
+        timestamp = DateTime(2026, 10, 4, 7, 0, 0)
+        record = {"job_id": "j1", "repo_id": "r1", "status": "failed",
+                  "progress": 0, "message": "orphaned", "error": "restart",
+                  "created_at": timestamp, "updated_at": timestamp}
+        session = MagicMock()
+        session.run.return_value.single.return_value = record
+        ctx = MagicMock()
+        ctx.__enter__.return_value = session
+
+        with patch("tracekite.routes.jobs.get_session", return_value=ctx):
+            response = client.get("/api/jobs/j1", headers=auth_headers)
+
+        assert response.status_code == 200
+        assert response.json()["updated_at"].startswith("2026-10-04T07:00:00")
 
     def test_job_status_missing(self, auth_headers):
         session = MagicMock()

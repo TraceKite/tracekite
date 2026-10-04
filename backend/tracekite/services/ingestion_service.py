@@ -60,7 +60,7 @@ class ClonedRepo:
 
 
 def run_ingestion(job_id: str, github_url: str, branch: Optional[str] = None,
-                  github_token: Optional[str] = None, refresh: bool = False) -> None:
+                  github_token: Optional[str] = None, refresh: bool = False) -> bool:
     """Clone a hosted repository and run the full ingestion pipeline."""
     repo_id = ""
     try:
@@ -82,12 +82,12 @@ def run_ingestion(job_id: str, github_url: str, branch: Optional[str] = None,
                           path=local_path, source="hosted")
     except Exception as exc:
         _mark_failed(job_id, repo_id, exc, cleared=False)
-        return
-    _scan_and_write(job_id, repo_id, repo, refresh)
+        return False
+    return _scan_and_write(job_id, repo_id, repo, refresh)
 
 
 def run_upload_ingestion(job_id: str, repo_id: str, name: str,
-                         bundle_path: str, branch: Optional[str] = None) -> None:
+                         bundle_path: str, branch: Optional[str] = None) -> bool:
     """Ingest a git bundle uploaded by `tracekite ingest .`.
 
     After the clone the pipeline is the hosted one unchanged — same scan,
@@ -105,12 +105,12 @@ def run_upload_ingestion(job_id: str, repo_id: str, name: str,
                           path=local_path, source="upload")
     except Exception as exc:
         _mark_failed(job_id, repo_id, exc, cleared=False)
-        return
-    _scan_and_write(job_id, repo_id, repo, refresh=True)
+        return False
+    return _scan_and_write(job_id, repo_id, repo, refresh=True)
 
 
 def _scan_and_write(job_id: str, repo_id: str, repo: ClonedRepo,
-                    refresh: bool) -> None:
+                    refresh: bool) -> bool:
     """Scan → parse → (clear) → write. Shared by hosted and upload ingests."""
     cleared = False
     try:
@@ -159,9 +159,11 @@ def _scan_and_write(job_id: str, repo_id: str, repo: ClonedRepo,
         logger.info("Ingestion complete for %s: %d nodes, %d edges (%s)",
                     repo_id, nodes_written, sum(edges_written.values()),
                     edges_written)
+        return True
 
     except Exception as exc:
         _mark_failed(job_id, repo_id, exc, cleared)
+        return False
 
 
 def _mark_failed(job_id: str, repo_id: str, exc: Exception,
@@ -169,11 +171,13 @@ def _mark_failed(job_id: str, repo_id: str, exc: Exception,
     """failed_partial once Neo4j was mutated, failed_clean before — the
     difference is whether the served graph can still be trusted."""
     state = "failed_partial" if cleared else "failed_clean"
-    message = f"Ingestion failed ({state}): {exc}"
-    logger.error("%s (job %s)", message, job_id)
-    _job(job_id, "failed", 0, message, error=str(exc)[:500], repo_id=repo_id)
+    # Notes carry where it happened ("while scanning <file>"), which str() drops.
+    detail = " ".join([str(exc), *getattr(exc, "__notes__", [])])
+    message = f"Ingestion failed ({state}): {detail}"
+    logger.error("%s (job %s)", message, job_id, exc_info=exc)
+    _job(job_id, "failed", 0, message, error=detail[:500], repo_id=repo_id)
     if repo_id:
-        _lifecycle(repo_id, state, error=str(exc)[:500])
+        _lifecycle(repo_id, state, error=detail[:500])
         _set_ingestion_status(repo_id, "failed")
 
 

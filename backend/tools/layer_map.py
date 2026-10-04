@@ -15,6 +15,8 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("db.store_config", "store"),
     ("db", "store"),
     ("services.graph_reader", "store"),
+    ("services.node_search", "store"),
+    ("services.view_graph", "store"),
     ("services.graph_writer", "store"),
     ("services.link_writer", "store"),
     ("services.linker_store", "store"),
@@ -31,6 +33,9 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("mcp_server", "server"),
     # MCP answer-envelope wrapper: composes classification + envelope.
     ("mcp_envelope", "server"),
+    # Pure in-memory graph questions and the injected identity lookup port.
+    ("mcp_tools", "core"),
+    ("node_lookup", "core"),
     # Shared status classification for consumers_of and trace: pure.
     ("status_classify", "core"),
     # Scan metadata distillation for completeness/truncation: pure.
@@ -77,7 +82,9 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("services.claim_sink", "parsers"),
     ("services.ingest_config_defs", "parsers"),
     ("services.ingest_source", "parsers"),
+    ("services.route_merge", "parsers"),
     ("services.scan", "parsers"),
+    ("services.file_parse", "parsers"),
     ("services.parse_budget", "parsers"),
     ("services.sink_merge", "parsers"),
     ("services.absence", "parsers"),
@@ -86,6 +93,7 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("services.data_extractor", "parsers"),
     ("services.env_extractor", "parsers"),
     ("services.file_classifier", "parsers"),
+    ("services.flask_route_extractor", "parsers"),
     ("services.file_scanner", "parsers"),
     ("services.go_route_extractor", "parsers"),
     ("services.grpc_gateway_routes", "parsers"),
@@ -127,5 +135,6 @@ LAYERS: tuple[tuple[str, str], ...] = (
     ("services.redaction", "core"),
     ("services.graph_factories", "core"),
     ("services.graph_properties", "core"),
+    ("services.graph_records", "core"),
     ("services.repo_summary", "core"),
 )

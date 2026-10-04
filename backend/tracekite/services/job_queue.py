@@ -191,12 +191,11 @@ class JobQueue:
             job = lane.get()
             if job is _SENTINEL:
                 return
-            with self._pending_lock:
-                self._pending.pop((job.type, job.repo_id), None)
             handler = self._handlers.get(job.type)
             if handler is None:
                 create_or_update_job(job.id, job.repo_id, "failed", 0,
                                      "No handler registered", f"unhandled type {job.type}")
+                self._finish_pending(job)
                 continue
             try:
                 if job.type in EXCLUSIVE_JOBS:
@@ -209,6 +208,14 @@ class JobQueue:
                 logger.exception("Job %s (%s) crashed", job.id, job.type)
                 create_or_update_job(job.id, job.repo_id, "failed", 0,
                                      f"{job.type} crashed", str(exc)[:500])
+            finally:
+                self._finish_pending(job)
+
+    def _finish_pending(self, job: Job) -> None:
+        with self._pending_lock:
+            key = (job.type, job.repo_id)
+            if self._pending.get(key) == job.id:
+                self._pending.pop(key)
 
 
 def reap_stale_jobs() -> int:

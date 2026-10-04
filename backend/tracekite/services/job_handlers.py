@@ -28,14 +28,15 @@ def _enqueue_relink(reason: str) -> None:
 
 def _ingest(job: Job, refresh: bool) -> None:
     payload = job.payload
-    run_ingestion(
+    completed = run_ingestion(
         job.id,
         payload["github_url"],
         branch=payload.get("branch"),
         github_token=payload.get("github_token"),
         refresh=refresh,
     )
-    _enqueue_relink(f"{job.type} of {job.repo_id}")
+    if completed:
+        _enqueue_relink(f"{job.type} of {job.repo_id}")
 
 
 def _handle_ingest(job: Job) -> None:
@@ -49,13 +50,14 @@ def _handle_refresh(job: Job) -> None:
 def _handle_ingest_upload(job: Job) -> None:
     payload = job.payload
     try:
-        run_upload_ingestion(
+        completed = run_upload_ingestion(
             job.id, job.repo_id, payload["name"], payload["bundle_path"],
             branch=payload.get("branch"))
     finally:
         # Transient by design: the clone has its own copy of the content.
         discard_bundle(payload["bundle_path"])
-    _enqueue_relink(f"upload ingest of {job.repo_id}")
+    if completed:
+        _enqueue_relink(f"upload ingest of {job.repo_id}")
 
 
 def _linker():

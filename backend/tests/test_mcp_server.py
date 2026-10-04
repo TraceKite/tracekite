@@ -113,6 +113,47 @@ class TestProtocol:
         assert traced["found"] is False
         assert traced["candidates"]["from"] == ["service:a", "service:b"]
 
+    def test_a_repo_scoped_generic_name_answers_to_its_own_name(self):
+        # opentelemetry-demo's `frontend` is generic, so its service is
+        # `<repo>/frontend`; asking for `frontend` read "not in graph".
+        scoped = SimpleNamespace(service_id="global:Service:demo/frontend",
+                                 name="demo/frontend", repo_ids=["demo"])
+        other = SimpleNamespace(service_id="global:Service:shop/frontend",
+                                name="shop/frontend", repo_ids=["shop"])
+        checkout = SimpleNamespace(service_id="global:Service:checkout",
+                                   name="checkout", repo_ids=["demo"])
+        edge = SimpleNamespace(source_id=scoped.service_id,
+                               target_id=checkout.service_id, status="active",
+                               type="CALLS_SERVICE", confidence=0.96,
+                               evidence=["compose.yaml:300"])
+
+        def tools(*services):
+            return GraphTools(SimpleNamespace(services=list(services),
+                                              edges=[edge], rendezvous=[]))
+
+        assert tools(scoped, checkout).trace("frontend", "checkout")["found"]
+        # Two repos each with a `frontend`: declined, never joined.
+        declined = tools(scoped, other, checkout).trace("frontend", "checkout")
+        assert declined["reason"] == "ambiguous service name"
+        assert declined["candidates"]["from"] == [
+            "global:Service:demo/frontend", "global:Service:shop/frontend"]
+
+    def test_consumers_are_dependents_not_bookkeeping(self):
+        op = "global:Op:grpc:oteldemo.CartService/EmptyCart"
+        edges = [SimpleNamespace(source_id=source, target_id=op, status="active",
+                                 type=kind, confidence=0.9, evidence=["x:1"])
+                 for source, kind in (("checkout.go", "INVOKES"),
+                                      ("claim:checkout", "RESOLVED_TO"),
+                                      ("demo.proto", "DECLARES_CONTRACT"),
+                                      ("provider", "EXPOSES"),
+                                      ("publisher", "PUBLISHES"))]
+        tools = GraphTools(SimpleNamespace(services=[], edges=edges, rendezvous=[]))
+
+        answer = tools.consumers_of(op)
+
+        assert [c["consumer"] for c in answer["consumers"]] == [
+            "checkout.go", "provider"]
+
     def test_services_exclude_unbacked_virtual_names(self):
         result = SimpleNamespace(
             services=[
@@ -168,7 +209,8 @@ class TestProtocol:
         assert tools.services()["commits"] == {"orders-service": "abc123"}
         result = linked()
         target = next(e.target_id for e in result.edges
-                      if e.status == "active" and e.evidence)
+                      if e.status == "active" and e.evidence
+                      and e.type == "CALLS_SERVICE")
         answer = tools.consumers_of(target)
         spans = [s for c in answer["consumers"] for s in c["spans"]]
         assert spans and all(s["file"] for s in spans)
@@ -258,8 +300,8 @@ class TestEndToEnd:
         by_id = {r["id"]: r for r in replies}
         assert by_id[1]["result"]["protocolVersion"] == "2024-11-05"
         names = {t["name"] for t in by_id[2]["result"]["tools"]}
-        assert {"services", "consumers_of", "trace",
-                "deprecations"} <= names
+        assert {"services", "node", "search", "consumers_of", "trace",
+                "neighbors", "impact", "subgraph", "deprecations"} <= names
         answer = json.loads(by_id[3]["result"]["content"][0]["text"])
         assert answer["found"] is True
         assert any("billing_client.py" in cite

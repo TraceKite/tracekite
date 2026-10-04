@@ -6,6 +6,8 @@ endpoint nobody documents (observed-not-declared — undocumented coupling).
 The precision pin matters most: a spec must never MINT a contract.
 """
 
+from types import SimpleNamespace
+
 from tracekite import engine_config
 from tracekite.db.memory_store import InMemoryLinkerStore, claims_from_scan
 from tracekite.services.linker.engine import link
@@ -94,3 +96,32 @@ class TestOtherProtocols:
         for section in ("http", "grpc", "topics"):
             assert "declared_not_observed" in report[section]
             assert "observed_not_declared" in report[section]
+
+    def test_a_served_proto_is_not_drift(self):
+        # opentelemetry-demo: the proto declares `oteldemo.CartService/AddItem`,
+        # the server names only `CartService`. Key for key they never met, so
+        # every operation of a fully served proto was reported unkept.
+        report = reconcile([
+            _claim("grpcop", "provides", "oteldemo.CartService/AddItem"),
+            _claim("grpcop", "provides", "oteldemo.CartService/GetCart"),
+            _claim("grpcop", "provides", "oteldemo.AdService/GetAds"),
+            _claim("grpcstub", "provides", "CartService"),
+            _claim("grpcstub", "provides", "LegacyService"),
+        ])["grpc"]
+
+        assert report["matched"] == 2
+        assert report["declared_not_observed"] == ["oteldemo.AdService/GetAds"]
+        assert report["observed_not_declared"] == ["LegacyService"]
+
+    def test_a_dynamic_topic_is_not_reported_as_a_topic_named_nothing(self):
+        report = reconcile([
+            _claim("topic", "provides", "", matchable=False),
+            _claim("topic", "provides", "orders.created"),
+        ])["topics"]
+
+        assert report["observed_not_declared"] == ["orders.created"]
+
+
+def _claim(kind, direction, key, matchable=True):
+    return SimpleNamespace(kind=kind, direction=direction, key=key, attrs={},
+                           matchable=matchable, evidence=[], repo_id="repo")

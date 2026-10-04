@@ -25,9 +25,14 @@ TEST_DIRS = frozenset({
 })
 VENDOR_DIRS = frozenset({
     "vendor", "vendored", "third_party", "thirdparty", "third-party",
-    "node_modules", "bower_components", "external", "deps", "packages",
+    "node_modules", "bower_components", "external", "deps",
     "site-packages", "eggs", ".venv", "venv",
 })
+# `packages/` is not a vendor directory by name: it is where a JS monorepo
+# keeps its own workspaces, and treating it as vendored withheld 99% of one
+# monorepo's claims. The vendored layout that shares the name is NuGet's
+# packages.config restore folder, whose children are `<Id>.<version>`.
+_NUGET_RESTORED = re.compile(r"^[a-z_][\w.-]*?\.\d+\.\d+(\.\d+){0,2}(-[\w.-]+)?$")
 GENERATED_DIRS = frozenset({
     "generated", "gen", "__generated__", "autogen", "auto-generated",
     "build", "target", "out", "dist", "obj", "bin",
@@ -93,7 +98,11 @@ def _segments(path: str) -> list[str]:
 
 
 def is_vendored_path(path: str) -> bool:
-    return any(segment in VENDOR_DIRS for segment in _segments(path)[:-1])
+    dirs = _segments(path)[:-1]
+    if any(segment in VENDOR_DIRS for segment in dirs):
+        return True
+    return any(segment == "packages" and _NUGET_RESTORED.match(child)
+               for segment, child in zip(dirs, dirs[1:]))
 
 
 def is_test_path(path: str) -> bool:

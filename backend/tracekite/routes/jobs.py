@@ -2,6 +2,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 from tracekite.models.api_models import JobStatusResponse
 from tracekite.db.neo4j_client import get_session
+from tracekite.services.graph_properties import to_native_dt
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -34,8 +35,8 @@ async def get_job_status(job_id: str):
                 progress=record["progress"] or 0,
                 message=record["message"] or "",
                 error=record["error"],
-                created_at=record["created_at"],
-                updated_at=record["updated_at"],
+                created_at=to_native_dt(record["created_at"]),
+                updated_at=to_native_dt(record["updated_at"]),
             )
     
     except HTTPException:

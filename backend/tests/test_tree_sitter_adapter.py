@@ -11,6 +11,8 @@ Covers:
 Tests that actually parse ASTs are skipped when Tree-sitter is not installed.
 """
 
+import re
+
 import pytest
 
 from tracekite.parsers.base import ParsedApiEndpoint, ParsedMethodCall
@@ -22,7 +24,6 @@ from tracekite.parsers.tree_sitter.adapter import (
     _extract_imports,
     _find_handler_below,
     _find_next_symbol,
-    _framework_for_language,
     _is_code_symbol,
     _join_paths,
     _parse_endpoint_annotation,
@@ -30,6 +31,7 @@ from tracekite.parsers.tree_sitter.adapter import (
 )
 from tracekite.parsers.tree_sitter.core.models import LanguageType, SymbolInfo
 from tracekite.parsers.tree_sitter.core.parser import TREE_SITTER_AVAILABLE
+from tracekite.parsers.tree_sitter.route_calls import framework_for_language
 
 
 # ---------------------------------------------------------------------------
@@ -221,10 +223,12 @@ func fetchUser() {}
         names = {e.name for e in result.entities}
         assert "getUser" in names
         assert "fetchUser" in names
-        assert any(
-            ep.method == "GET" and "/api/users/{id}" in ep.path
-            for ep in result.api_endpoints
-        )
+        # HandleFunc serves every method: the Go extractor reports it as ANY,
+        # and this parser no longer asserts a GET it cannot see.
+        assert result.api_endpoints == []
+        from tracekite.services.go_route_extractor import extract_go_routes
+        assert [(r.method, r.path) for r in extract_go_routes("main.go", code)] \
+            == [("ANY", "/api/users/{id}")]
         assert any(c.callee_name == "fetchUser" for c in result.method_calls)
 
     def test_parse_go_gin(self, parser):
@@ -491,27 +495,14 @@ class TestEndpointExtraction:
         assert endpoints[0].framework == "fastapi"
 
     def test_fastapi_route_call(self):
-        calls = [_method_call("app.get('/users', list_users)")]
+        calls = [_method_call("app.get('/users', list_users)", callee="get")]
         endpoints = _extract_api_endpoints([], calls, LanguageType.PYTHON)
         assert len(endpoints) == 1
         assert endpoints[0].method == "GET"
         assert endpoints[0].path == "/users"
 
-    def test_flask_route_default_get(self):
-        calls = [_method_call("@app.route('/items')")]
-        endpoints = _extract_api_endpoints([], calls, LanguageType.PYTHON)
-        assert len(endpoints) == 1
-        assert endpoints[0].method == "GET"
-        assert endpoints[0].path == "/items"
-
-    def test_flask_route_post(self):
-        calls = [_method_call("@app.route('/items', methods=['POST'])")]
-        endpoints = _extract_api_endpoints([], calls, LanguageType.PYTHON)
-        assert len(endpoints) == 1
-        assert endpoints[0].method == "POST"
-
     def test_express_route_call(self):
-        calls = [_method_call("app.get('/users/:id', handler)")]
+        calls = [_method_call("app.get('/users/:id', handler)", callee="get")]
         endpoints = _extract_api_endpoints([], calls, LanguageType.JAVASCRIPT)
         assert len(endpoints) == 1
         assert endpoints[0].method == "GET"
@@ -519,14 +510,14 @@ class TestEndpointExtraction:
         assert endpoints[0].framework == "express"
 
     def test_typescript_express_route_call(self):
-        calls = [_method_call("router.post('/orders', createOrder)")]
+        calls = [_method_call("router.post('/orders', createOrder)", callee="post")]
         endpoints = _extract_api_endpoints([], calls, LanguageType.TYPESCRIPT)
         assert len(endpoints) == 1
         assert endpoints[0].method == "POST"
         assert endpoints[0].path == "/orders"
 
     def test_gin_route_call(self):
-        calls = [_method_call("r.GET(\"/api/users\", getUser)")]
+        calls = [_method_call("r.GET(\"/api/users\", getUser)", callee="GET")]
         endpoints = _extract_api_endpoints([], calls, LanguageType.GO)
         assert len(endpoints) == 1
         assert endpoints[0].method == "GET"
@@ -534,17 +525,15 @@ class TestEndpointExtraction:
         assert endpoints[0].framework == "gin"
 
     def test_gin_post_route_call(self):
-        calls = [_method_call("r.POST(\"/orders\", createOrder)")]
+        calls = [_method_call("r.POST(\"/orders\", createOrder)", callee="POST")]
         endpoints = _extract_api_endpoints([], calls, LanguageType.GO)
         assert len(endpoints) == 1
         assert endpoints[0].method == "POST"
 
-    def test_go_stdlib_handlefunc(self):
-        calls = [_method_call("http.HandleFunc(\"/api/users\", getUser)")]
-        endpoints = _extract_api_endpoints([], calls, LanguageType.GO)
-        assert len(endpoints) == 1
-        assert endpoints[0].method == "GET"
-        assert endpoints[0].path == "/api/users"
+    def test_go_stdlib_handlefunc_is_left_to_the_go_extractor(self):
+        # It serves every method; this pattern asserted GET.
+        calls = [_method_call("http.HandleFunc(\"/api/users\", getUser)", callee="HandleFunc")]
+        assert _extract_api_endpoints([], calls, LanguageType.GO) == []
 
     def test_rust_actix_annotation(self):
         symbols = [
@@ -686,13 +675,13 @@ class TestHelperFunctions:
         assert nxt.name == "Controller"
 
     def test_framework_for_language(self):
-        assert _framework_for_language(LanguageType.JAVA) == "spring"
-        assert _framework_for_language(LanguageType.KOTLIN) == "spring"
-        assert _framework_for_language(LanguageType.PYTHON) == "fastapi"
-        assert _framework_for_language(LanguageType.JAVASCRIPT) == "express"
-        assert _framework_for_language(LanguageType.TYPESCRIPT) == "express"
-        assert _framework_for_language(LanguageType.GO) == "gin"
-        assert _framework_for_language(LanguageType.RUST) == "actix"
+        assert framework_for_language(LanguageType.JAVA) == "spring"
+        assert framework_for_language(LanguageType.KOTLIN) == "spring"
+        assert framework_for_language(LanguageType.PYTHON) == "fastapi"
+        assert framework_for_language(LanguageType.JAVASCRIPT) == "express"
+        assert framework_for_language(LanguageType.TYPESCRIPT) == "express"
+        assert framework_for_language(LanguageType.GO) == "gin"
+        assert framework_for_language(LanguageType.RUST) == "actix"
 
 
 class TestGoRouteCallGates:
@@ -704,10 +693,12 @@ class TestGoRouteCallGates:
 
     def _endpoints(self, context):
         from tracekite.parsers.base import ParsedMethodCall
-        from tracekite.parsers.tree_sitter.adapter import _extract_route_calls
-        call = ParsedMethodCall(caller_name="f", callee_name="Get",
+        from tracekite.parsers.tree_sitter.route_calls import extract_route_calls
+        # A real call carries its own method name: `GET` for r.GET(...).
+        callee = re.search(r"(\w+)\s*\(", context).group(1)
+        call = ParsedMethodCall(caller_name="f", callee_name=callee,
                                 line=7, context=context)
-        return _extract_route_calls([call], LanguageType.GO)
+        return extract_route_calls([call], LanguageType.GO)
 
     def test_a_real_route_registration_is_extracted(self):
         [e] = self._endpoints('r.GET("/owners/:id", getOwner)')

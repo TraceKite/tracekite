@@ -9,6 +9,8 @@ the same paths in the same order.
 
 from collections import deque
 
+from tracekite.services.linker.edge_view import edge_record
+
 
 def find_paths(edges: list, source: str, target: str, *,
                max_hops: int = 6, limit: int = 3) -> list[list[dict]]:
@@ -34,10 +36,7 @@ def find_paths(edges: list, source: str, target: str, *,
         if len(path) >= max_hops and node != target:
             continue
         if node == target and path:
-            found.append([{
-                "source": e.source_id, "target": e.target_id,
-                "type": e.type, "confidence": round(e.confidence, 4),
-                "evidence": list(e.evidence or [])} for e in path])
+            found.append([edge_record(edge) for edge in path])
             continue
         seen_on_path = {e.source_id for e in path} | {node}
         for edge in adjacency.get(node, []):

@@ -32,7 +32,8 @@ def cmd_explain(args) -> int:
         return emit(ExplainReport, {
             "found": False, "source": source, "target": target,
             "candidates": sorted({e.source_id for e in result.edges})})
-    return emit(ExplainReport, {"found": True,
+    return emit(ExplainReport, {"found": True, "source": source,
+                                 "target": target,
                                  "edges": [_derivation(e) for e in matches]})
 
 

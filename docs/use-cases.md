@@ -85,8 +85,14 @@ tracekite mcp /absolute/path/orders /absolute/path/billing
 Useful questions map directly to tools:
 
 - Which repository-backed services are loaded? Use `services()`.
+- Which exact node ID names this class, method, contract, or source path? Use
+  `search(query)`, then `node(node_id)`.
 - Who depends on this exact service or contract node? Use
   `consumers_of(node_id)`.
+- What is adjacent to this node, or what bounded ego graph surrounds it? Use
+  `neighbors(node_id, ...)` or `subgraph(node_id, ...)`.
+- Which transitive dependents could be affected, and through which evidence
+  path? Use `impact(node_id, ...)`.
 - Is there an active path from one exact service ID to another? Use
   `trace(from_id, to_id)`.
 - Which deprecated contracts still have consumers? Use `deprecations()`.
@@ -122,4 +128,3 @@ result = link(InMemoryLinkerStore(sinks).load_claims())
 ```
 
 The host owns persistence. Core does not require the HTTP server or Neo4j.
-

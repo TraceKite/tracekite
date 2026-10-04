@@ -42,10 +42,15 @@ def resolve(index: ClaimIndex, ctx: LinkContext) -> ResolverOutput:
         if target[0] == "ServiceName":
             ctx.count("r4.dead_end_targets")
 
+        # The claim resolves to the discovery name when one exists, else to
+        # the target itself — labelled as what it is. A Service target written
+        # as a ServiceName matched no node, and the writer, fail-closed,
+        # rejected the whole estate's link run (twenty's k8s Ingress).
+        sn_id = ctx.servicename_id.get(("discovery", target_name))
+        resolved_label, resolved_id = ("ServiceName", sn_id) if sn_id else target
         out.edges.append(linker_edge(
-            ctx, RESOLVER_ID, "RESOLVED_TO", claim.id,
-            ctx.servicename_id.get(("discovery", target_name), target[1]),
-            source_label="ContractClaim", target_label="ServiceName",
+            ctx, RESOLVER_ID, "RESOLVED_TO", claim.id, resolved_id,
+            source_label="ContractClaim", target_label=resolved_label,
             confidence=ctx.conf("r4", "route_declared"), match_type="gateway_route",
             evidence=claim.evidence, claim_key=claim.key,
             source_repo=claim.repo_id, origin="declared",

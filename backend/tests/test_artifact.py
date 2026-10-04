@@ -7,6 +7,8 @@ determinism is tested here, not assumed from B6.
 """
 
 import os
+import tempfile
+from unittest.mock import patch
 
 import pytest
 
@@ -34,6 +36,14 @@ class TestSelfContained:
         assert os.path.isfile(ref.path)
         assert ref.path.endswith(ARTIFACT_SUFFIX)
         assert len(os.listdir(tmp_path)) == 1, "one repo, one file"
+
+    def test_temporary_database_uses_the_destination_filesystem(self, scanned,
+                                                                tmp_path):
+        with patch("tracekite.db.artifact.tempfile.TemporaryDirectory",
+                   wraps=tempfile.TemporaryDirectory) as temporary:
+            write_artifact(scanned, "repo_a", str(tmp_path))
+
+        assert temporary.call_args.kwargs["dir"] == str(tmp_path)
 
     def test_the_artifact_is_queryable_without_the_repository(self, scanned,
                                                               tmp_path):

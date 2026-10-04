@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     # 17). The UI therefore enforces this AND shows the live service/link
     # counts, so the cheap rule stops accidents while the real cost stays
     # visible. Operators with small repos can raise it.
-    max_scope_repos: int = 10
+    max_scope_repos: int = 20
 
     # Maximum exact nodes shown after expanding one repository/module group.
     # Search remains exhaustive; the canvas stays a bounded reasoning surface.

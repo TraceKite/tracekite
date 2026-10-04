@@ -26,6 +26,7 @@ src/billing_client.py:14" is a work item.
 from dataclasses import dataclass, field
 
 from tracekite.services.linker.history import changed_between, edge_key
+from tracekite.utils.evidence import evidence_path
 
 
 @dataclass(frozen=True)
@@ -130,15 +131,34 @@ def _consumer_evidence(edge) -> tuple[str, ...]:
     return tuple(out)
 
 
+def _consumer_moved(repo: str, evidence: tuple[str, ...], changed: set[str],
+                    changed_files: dict[str, set[str]]) -> bool:
+    """Whether the consumer's own code changed.
+
+    Repository-level unless the branch also named that repository's files.
+    In a monorepo provider and consumer share the repository, so at that
+    level every loss read as self-inflicted and none could block: removing
+    a proto rpc did not block the build though checkout still calls it.
+    """
+    if repo not in changed:
+        return False
+    files = changed_files.get(repo)
+    if files is None:
+        return True
+    return any(evidence_path(citation) in files for citation in evidence)
+
+
 def impact(base_edges: list, head_edges: list, *,
-           changed_repos: set[str] | None = None) -> Impact:
+           changed_repos: set[str] | None = None,
+           changed_files: dict[str, set[str]] | None = None) -> Impact:
     """Which consumers a change breaks, with a citation for each.
 
     `changed_repos` is the set of repositories this branch touched, which the
     caller knows from git and this does not. Given it, each loss can say
     whether the provider or the consumer moved; without it, every loss is
     reported and none is attributed — degraded, and visibly so, rather than
-    quietly guessing that the provider is always at fault.
+    quietly guessing that the provider is always at fault. `changed_files`
+    (repo id -> paths, also git's) makes the consumer side file-precise.
     """
     changed = changed_repos if changed_repos is not None else set()
     attributing = changed_repos is not None
@@ -150,7 +170,8 @@ def impact(base_edges: list, head_edges: list, *,
         consumer_repo = str(getattr(edge, "source_repo_id", "") or "")
         provider_repo = str(getattr(edge, "target_repo_id", "") or "")
         provider_moved = provider_repo in changed
-        consumer_moved = consumer_repo in changed
+        consumer_moved = _consumer_moved(consumer_repo, evidence, changed,
+                                         changed_files or {})
 
         if not evidence:
             # An edge with no citation is one this tool should not have

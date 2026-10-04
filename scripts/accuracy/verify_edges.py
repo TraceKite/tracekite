@@ -26,13 +26,24 @@ ROUTE_MARKERS = re.compile(
     # `s.HandlePath(http.MethodGet, ...)` is a real route registration, and
     # missing it made the checker flag a correct edge as a false positive.
     r"|\.(?:Get|Post|Put|Patch|Delete|HandleFunc|HandlePath|Handle)\s*\("
-    r"|(?:app|router|r|mux)\.(?:get|post|put|patch|delete)\s*\("
+    r"|(?:app|router|r|mux)\.(?:get|post|put|patch|delete|all)\s*\("
     r"|(?:get|post|put|patch|delete)\s*\(\s*[\"'`/]"
     r"|@(?:app_)?route"
+    # NestJS on the controller's base path, `@Get()`, and axum/actix
+    # `.route(` with the path on the next line: both flagged correct edges.
+    r"|@(?:Get|Post|Put|Patch|Delete|Head|Options|All)\s*\("
+    r"|\.route\s*\("
+    # Remix/React Router file routes: loader/action is the HTTP handler and
+    # the path comes from the file location.
+    r"|export\s+(?:async\s+)?(?:function|const)\s+"
+    r"(?:loader|clientLoader|action)\b"
     # Next.js App Router: the directory IS the path and the exported
     # verb-named function or const IS the handler.
-    r"|export\s+(?:async\s+)?(?:function|const)\s+(?:GET|POST|PUT|PATCH|DELETE|HEAD)\b",
+    r"|export\s+(?:async\s+)?(?:function|const)\s+(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b",
     re.IGNORECASE)
+# Next.js pages/api: the file's location is the path and its default export
+# the handler, so the cited line never spells the route.
+PAGES_HANDLER = re.compile(r"export\s+default\b")
 
 results: list[dict] = []
 
@@ -59,7 +70,8 @@ def check_exposes(repo: str) -> None:
             record(repo, "EXPOSES/annotation", row, "UNVERIFIABLE", f"no such file: {path}")
             continue
         tail = re.sub(r"\{.*\}", "", (row.get("path") or "").strip("/").split("/")[-1])
-        has_route = bool(ROUTE_MARKERS.search(ctx))
+        has_route = bool(ROUTE_MARKERS.search(ctx)) or (
+            "/pages/api/" in f"/{path}" and bool(PAGES_HANDLER.search(ctx)))
         has_path = (tail and tail in ctx) or (row.get("path") or "") in ctx
         if has_route and (has_path or not tail):
             record(repo, "EXPOSES/annotation", row, "TP",
@@ -188,7 +200,7 @@ def check_mcp(repo: str) -> None:
             record(repo, "EXPOSES/mcp", row, "UNVERIFIABLE", f"no such file: {path}")
             continue
         tool = (row.get("tool") or "").split("/")[-1]
-        if tool and f'"{tool}"' in text:
+        if tool and re.search(rf"['\"`]\s*{re.escape(tool)}\s*['\"`]", text):
             record(repo, "EXPOSES/mcp", row, "TP", f"tool '{tool}' declared in {path}")
         else:
             record(repo, "EXPOSES/mcp", row, "FP?", f"tool '{tool}' not in {path}")
@@ -205,7 +217,9 @@ def check_sql(repo: str) -> None:
             record(repo, "READS/WRITES sql", row, "UNVERIFIABLE", f"no such file: {path}")
             continue
         table = (row.get("ds") or "").split(":")[-1]
-        if table and re.search(re.escape(table), ctx, re.IGNORECASE):
+        # Keys drop identifier quotes: `"core"."keyValuePair"` is core.keyvaluepair.
+        bare = re.sub(r'["`\[\]]', "", ctx)
+        if table and re.search(re.escape(table), bare, re.IGNORECASE):
             record(repo, "READS/WRITES sql", row, "TP", f"table '{table}' at cited line")
         else:
             record(repo, "READS/WRITES sql", row, "FP?",

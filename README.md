@@ -427,12 +427,17 @@ cite callers in `billing-service` and routes in `gateway`.
 | MCP Tool | Description | Inputs |
 |---|---|---|
 | **`services`** | Repository-backed services, plus artifact commit metadata | *(none)* |
+| **`node`** | Identity and source location for one exact node | `node_id` |
+| **`search`** | Ranked node IDs by name, label, path, or ID | `query`, `limit` |
 | **`consumers_of`** | Active incoming edges with `file:line` evidence | `node_id` |
 | **`trace`** | Up to 3 shortest active paths between two node IDs | `from_id`, `to_id`, `max_hops` |
+| **`neighbors`** | Bounded adjacency in asserted edge direction | `node_id`, `direction`, `depth`, `edge_types`, `limit` |
+| **`impact`** | Transitive dependents with evidence paths and compounded confidence | `node_id`, `depth`, `limit`, `min_confidence`, `edge_types` |
+| **`subgraph`** | Bounded ego graph with described nodes and induced edges | `node_id`, `depth`, `direction`, `edge_types`, `node_limit`, `edge_limit` |
 | **`deprecations`** | Deprecated contract endpoints and their live active consumers | *(none)* |
 
-Every tool response includes per-edge confidence values (0.6–0.99) and
-`file:line` evidence spans for each connection. An empty result for
+Every edge response includes confidence bounds, resolver and match metadata,
+repository attribution, and `file:line` evidence spans. An empty result for
 `consumers_of` means no active consumers were found in the linked graph —
 it does not mean the target is safe to delete, because extraction may not
 cover every framework or language in the estate.
@@ -529,7 +534,7 @@ worth knowing:
 |---|---|---|
 | `BIND_ADDR` | `127.0.0.1` | interface the ports bind to |
 | `AUTH_ENABLED` | `false` | token required on every route when true |
-| `MAX_SCOPE_REPOS` | `10` | repositories selectable at once in the UI |
+| `MAX_SCOPE_REPOS` | `20` | repositories selectable at once in the UI |
 | `GRAPH_DETAIL_NODE_LIMIT` | `80` | exact nodes shown in bounded Module, Focus and Impact canvases |
 | `GITHUB_TOKEN` | *(empty)* | needed only for private repositories |
 

@@ -25,6 +25,9 @@ from tracekite.parsers.tree_sitter.core.models import (
 )
 from tracekite.parsers.tree_sitter.core.parser import TreeSitterParser
 from tracekite.parsers.tree_sitter.core.extractor import TreeSitterExtractor
+from tracekite.parsers.tree_sitter.route_calls import (
+    extract_route_calls, framework_for_language,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -321,13 +324,13 @@ def _extract_api_endpoints(
                 # The annotation may know better than the language default:
                 # @ServerEndpoint is a websocket wherever it appears.
                 framework=endpoint.get(
-                    "framework", _framework_for_language(language)),
+                    "framework", framework_for_language(language)),
             )
         )
 
     # TypeScript/Express and Python/Flask/FastAPI route calls are already in
     # method_calls. Convert obvious ones.
-    endpoints.extend(_extract_route_calls(method_calls, language))
+    endpoints.extend(extract_route_calls(method_calls, language))
 
     return endpoints
 
@@ -484,185 +487,3 @@ def _parse_endpoint_annotation(text: str, language: LanguageType) -> Optional[di
             return {"method": m.group(1).upper(), "path": m.group(2)}
 
     return None
-
-
-def _extract_route_calls(method_calls: list[ParsedMethodCall], language: LanguageType) -> list[ParsedApiEndpoint]:
-    endpoints: list[ParsedApiEndpoint] = []
-    framework = _framework_for_language(language)
-
-    for call in method_calls:
-        context = call.context or ""
-        if language == LanguageType.CSHARP:
-            # Minimal APIs: app.MapGet("/owners", handler)
-            m = re.search(
-                r"\.Map(Get|Post|Put|Delete|Patch)\s*\(\s*['\"]([^'\"]+)['\"]",
-                context)
-            if m:
-                endpoints.append(
-                    ParsedApiEndpoint(
-                        method=m.group(1).upper(),
-                        path=m.group(2),
-                        handler_name=call.caller_name or "",
-                        line=call.line,
-                        framework=framework,
-                    )
-                )
-        if language in (LanguageType.JAVASCRIPT, LanguageType.TYPESCRIPT):
-            # app.get('/path', ...) or router.post('/path', ...)
-            m = re.search(
-                r"(?:app|router|server)\.(get|post|put|delete|patch)\s*\(\s*['\"]([^'\"]+)['\"]",
-                context,
-                re.IGNORECASE,
-            )
-            if m:
-                endpoints.append(
-                    ParsedApiEndpoint(
-                        method=m.group(1).upper(),
-                        path=m.group(2),
-                        handler_name=call.caller_name or "",
-                        line=call.line,
-                        framework=framework,
-                    )
-                )
-        elif language == LanguageType.PYTHON:
-            # Flask: @app.route('/path', methods=['GET'])
-            m = re.search(
-                r"@(\w+)\.route\s*\(\s*['\"]([^'\"]+)['\"](?:\s*,\s*methods\s*=\s*\[(.*?)\])?",
-                context,
-            )
-            if m:
-                methods = m.group(3) or "GET"
-                method = re.search(r"['\"](\w+)['\"]", methods)
-                method_str = method.group(1).upper() if method else "GET"
-                endpoints.append(
-                    ParsedApiEndpoint(
-                        method=method_str,
-                        path=m.group(2),
-                        handler_name=call.caller_name or "",
-                        line=call.line,
-                        framework=framework,
-                    )
-                )
-                continue
-            m = re.search(
-                r"(\w+)\.websocket\s*\(\s*['\"](/[^'\"]*)['\"]", context)
-            if m and m.group(1).lower() not in _PY_HTTP_CLIENTS:
-                endpoints.append(ParsedApiEndpoint(
-                    method="GET", path=m.group(2),
-                    handler_name=call.caller_name or "", line=call.line,
-                    framework="websocket"))
-                continue
-            # FastAPI: @app.get('/path')
-            #
-            # The path MUST start with "/". Matching any quoted first argument
-            # made `dict.get("task_id")` -- the most common call in Python --
-            # a GET endpoint, and manufactured 361 contracts like
-            # `GET /caller_id` on the demo corpus.
-            #
-            # The `@` cannot be required here even though the decorator is how
-            # routes are really registered: `context` is the call node's own
-            # text, so the decorator sits in a parent node and is never
-            # visible. The leading slash is the discriminator that IS present.
-            m = re.search(
-                r"(\w+)\.(get|post|put|delete|patch)\s*\(\s*['\"](/[^'\"]*)['\"]",
-                context,
-            )
-            # A slash-leading path is still a client call when the receiver is
-            # an HTTP client, and recording that as a PROVIDER contract points
-            # the edge the wrong way -- worse than dropping it.
-            if m and m.group(1).lower() in _PY_HTTP_CLIENTS:
-                m = None
-            if m:
-                endpoints.append(
-                    ParsedApiEndpoint(
-                        method=m.group(2).upper(),
-                        path=m.group(3),
-                        handler_name=call.caller_name or "",
-                        line=call.line,
-                        framework=framework,
-                    )
-                )
-
-        elif language == LanguageType.GO:
-            # Standard net/http: http.HandleFunc("/path", handler)
-            m = re.search(
-                r"(?:http|mux)\s*\.\s*Handle(?:Func)?\s*\(\s*['\"]([^'\"]+)['\"]",
-                context,
-                re.IGNORECASE,
-            )
-            if m:
-                endpoints.append(
-                    ParsedApiEndpoint(
-                        method="GET",
-                        path=m.group(1),
-                        handler_name=call.caller_name or "",
-                        line=call.line,
-                        framework=framework,
-                    )
-                )
-                continue
-            # Gin/Echo/Fiber: r.GET("/path", handler). Same two gates the
-            # Python branch above earned the hard way: the path MUST start
-            # with "/" — `w.Header.Get("Content-Type")`,
-            # `field.Tag.Get("protobuf")` and `url.Values.Get("key")` all
-            # match the verb pattern and fabricated endpoints on the
-            # reference corpus — and a trailing comma requires the handler
-            # argument, which is what distinguishes a route registration
-            # from a single-argument client call like `client.Get("/x")`.
-            m = re.search(
-                r"\.(GET|POST|PUT|DELETE|PATCH)\s*\(\s*['\"](/[^'\"]*)['\"]\s*,",
-                context,
-                re.IGNORECASE,
-            )
-            if m:
-                endpoints.append(
-                    ParsedApiEndpoint(
-                        method=m.group(1).upper(),
-                        path=m.group(2),
-                        handler_name=call.caller_name or "",
-                        line=call.line,
-                        framework=framework,
-                    )
-                )
-
-        elif language == LanguageType.RUST:
-            # Axum: .route("/path", routing::get(handler)) or .route("/path", get(handler))
-            m = re.search(
-                r"\.route\s*\(\s*['\"]([^'\"]+)['\"]\s*,\s*(?:\w+::)?(get|post|put|delete|patch)\b",
-                context,
-                re.IGNORECASE,
-            )
-            if m:
-                endpoints.append(
-                    ParsedApiEndpoint(
-                        method=m.group(2).upper(),
-                        path=m.group(1),
-                        handler_name=call.caller_name or "",
-                        line=call.line,
-                        framework=framework,
-                    )
-                )
-
-    return endpoints
-
-
-# Receivers whose `.get("/path")` is an outbound HTTP call, not a route
-# registration. Recording one as a provider contract inverts the direction of
-# the edge, which is worse than missing it.
-_PY_HTTP_CLIENTS = frozenset({
-    "requests", "session", "s", "client", "http", "httpx", "aiohttp",
-    "urllib3", "conn", "connection", "api", "rest",
-})
-
-
-def _framework_for_language(language: LanguageType) -> str:
-    return {
-        LanguageType.JAVA: "spring",
-        LanguageType.KOTLIN: "spring",
-        LanguageType.PYTHON: "fastapi",
-        LanguageType.JAVASCRIPT: "express",
-        LanguageType.TYPESCRIPT: "express",
-        LanguageType.GO: "gin",
-        LanguageType.RUST: "actix",
-        LanguageType.CSHARP: "aspnetcore",
-    }.get(language, "unknown")

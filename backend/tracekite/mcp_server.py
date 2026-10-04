@@ -19,13 +19,9 @@ import sys
 from tracekite.answer import CONFIG_VERSION, ENGINE_VERSION, SnapshotIdentity
 from tracekite.facade import collect_claims as _collect_claims
 from tracekite.mcp_envelope import wrap_answer
-from tracekite.scan_meta import (
-    ScanMeta,
-    repo_scan_meta_from_sink,
-)
+from tracekite.mcp_tools import GraphTools
+from tracekite.scan_meta import ScanMeta, repo_scan_meta_from_sink
 from tracekite.source_meta import collect_input_meta
-from tracekite.utils import rendezvous_ids as rid
-from tracekite.utils.evidence import as_spans
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +31,17 @@ TOOLS = [
     {"name": "services",
      "description": "Every service backed by a scanned repository.",
      "inputSchema": {"type": "object", "properties": {}}},
+    {"name": "node",
+     "description": "Describe one exact graph node id.",
+     "inputSchema": {"type": "object", "required": ["node_id"],
+                     "properties": {"node_id": {"type": "string"}}}},
+    {"name": "search",
+     "description": "Find graph node ids by name, label, path, or id.",
+     "inputSchema": {"type": "object", "required": ["query"],
+                     "properties": {
+                         "query": {"type": "string", "minLength": 1},
+                         "limit": {"type": "integer", "minimum": 1,
+                                   "maximum": 100}}}},
     {"name": "consumers_of",
      "description": "Who depends on this node id, with file:line evidence citations across repositories.",
      "inputSchema": {"type": "object", "required": ["node_id"],
@@ -48,123 +55,49 @@ TOOLS = [
                                     "max_hops": {"type": "integer",
                                                  "minimum": 1,
                                                  "maximum": 8}}}},
+    {"name": "neighbors",
+     "description": "Bounded adjacent nodes and evidence-rich edges in asserted direction.",
+     "inputSchema": {"type": "object", "required": ["node_id"],
+                     "properties": {
+                         "node_id": {"type": "string"},
+                         "direction": {"enum": ["in", "out", "both"]},
+                         "depth": {"type": "integer", "minimum": 1,
+                                   "maximum": 8},
+                         "edge_types": {"type": "array",
+                                        "items": {"type": "string"}},
+                         "limit": {"type": "integer", "minimum": 1,
+                                   "maximum": 500}}}},
+    {"name": "impact",
+     "description": "Transitive dependents with evidence paths and path confidence.",
+     "inputSchema": {"type": "object", "required": ["node_id"],
+                     "properties": {
+                         "node_id": {"type": "string"},
+                         "depth": {"type": "integer", "minimum": 1,
+                                   "maximum": 8},
+                         "limit": {"type": "integer", "minimum": 1,
+                                   "maximum": 500},
+                         "min_confidence": {"type": "number", "minimum": 0,
+                                            "maximum": 1},
+                         "edge_types": {"type": "array",
+                                        "items": {"type": "string"}}}}},
+    {"name": "subgraph",
+     "description": "A bounded ego graph with described nodes and induced edges.",
+     "inputSchema": {"type": "object", "required": ["node_id"],
+                     "properties": {
+                         "node_id": {"type": "string"},
+                         "direction": {"enum": ["in", "out", "both"]},
+                         "depth": {"type": "integer", "minimum": 1,
+                                   "maximum": 8},
+                         "edge_types": {"type": "array",
+                                        "items": {"type": "string"}},
+                         "node_limit": {"type": "integer", "minimum": 2,
+                                        "maximum": 500},
+                         "edge_limit": {"type": "integer", "minimum": 1,
+                                        "maximum": 1000}}}},
     {"name": "deprecations",
      "description": "Deprecated contracts and their live consumers.",
      "inputSchema": {"type": "object", "properties": {}}},
 ]
-
-
-class GraphTools:
-    """The four questions, answered from one in-memory link result."""
-
-    def __init__(self, result, commits: dict | None = None,
-                 snapshot: SnapshotIdentity | None = None,
-                 scan_meta: ScanMeta | None = None):
-        self._result = result
-        # repo_id -> head_sha from each artifact's own meta. Spans carry no
-        # per-string commit because edge evidence merges both sides and
-        # guessing which repo a path belongs to would be invented
-        # attribution; agents join file paths against this map themselves.
-        self._commits = commits or {}
-        self._snapshot = snapshot
-        self._scan_meta = scan_meta
-
-    def _known_node_ids(self) -> set[str]:
-        active = {
-            node_id
-            for edge in self._result.edges if edge.status == "active"
-            for node_id in (edge.source_id, edge.target_id)
-        }
-        backed_services = {
-            service.service_id for service in self._result.services
-            if service.repo_ids
-        }
-        return active | backed_services
-
-    def _resolve_node_id(self, query: str) -> tuple[str | None, list[str]]:
-        """Resolve one unambiguous service name or exact known node ID."""
-        if not isinstance(query, str):
-            raise ValueError("node id must be a string")
-        if not query:
-            return query, []
-        known_ids = self._known_node_ids()
-        named = set()
-        for s in self._result.services:
-            if query != s.service_id and query.lower() != s.name.lower():
-                continue
-            named.update(candidate for candidate in (
-                s.service_id, rid.service_id(s.name)) if candidate in known_ids)
-        if query in known_ids:
-            # The exact id can also be a *different* node's name — a Repo
-            # node whose id equals its Service's name. Answering for one
-            # would silently answer the other question, so decline with
-            # both candidates and let the caller pick the canonical id.
-            if named - {query}:
-                return None, sorted({query} | named)
-            return query, []
-        ordered = sorted(named)
-        if len(ordered) == 1:
-            return ordered[0], []
-        if len(ordered) > 1:
-            return None, ordered
-        return query, []
-
-    def services(self) -> dict:
-        return {"services": [
-            {"id": s.service_id, "name": s.name,
-             "repos": sorted(s.repo_ids or [])}
-            for s in sorted(self._result.services,
-                            key=lambda s: s.service_id)
-            if s.repo_ids],
-            "commits": dict(sorted(self._commits.items()))}
-
-    def consumers_of(self, node_id: str) -> dict:
-        target, ambiguous = self._resolve_node_id(node_id)
-        if ambiguous:
-            return {"found": False, "node_id": node_id,
-                    "reason": "ambiguous service name",
-                    "candidates": ambiguous}
-        consumers = [
-            {"consumer": e.source_id, "type": e.type,
-             "confidence": round(e.confidence, 4),
-             "evidence": list(e.evidence or []),
-             "spans": as_spans(e.evidence)}
-            for e in self._result.edges
-            if e.target_id == target and e.status == "active"]
-        if not consumers:
-            known = self._known_node_ids()
-            if target not in known:
-                friendly_candidates = sorted([
-                    f"{s.name} ({s.service_id})" for s in self._result.services
-                    if s.repo_ids
-                ] or list(known))[:25]
-                return {"found": False, "node_id": node_id,
-                        "candidates": friendly_candidates}
-        return {"found": True, "node_id": target, "consumers": consumers}
-
-    def trace(self, from_id: str, to_id: str, max_hops: int = 6) -> dict:
-        from tracekite.services.linker.traverse import find_paths
-
-        src, from_candidates = self._resolve_node_id(from_id)
-        dst, to_candidates = self._resolve_node_id(to_id)
-        if from_candidates or to_candidates:
-            return {"from": from_id, "to": to_id, "paths": [],
-                    "found": False, "reason": "ambiguous service name",
-                    "candidates": {"from": from_candidates,
-                                   "to": to_candidates}}
-        hops = int(max_hops)
-        if not 1 <= hops <= 8:
-            raise ValueError("max_hops must be between 1 and 8")
-        paths = find_paths(self._result.edges, src, dst, max_hops=hops)
-        return {"from": from_id, "to": to_id,
-                "resolved_from": src, "resolved_to": dst, "paths": paths,
-                "found": bool(paths)}
-
-    def deprecations(self) -> dict:
-        from tracekite.services.linker.deprecations import deprecation_report
-
-        return {"contracts": deprecation_report(
-            self._result.edges, self._result.rendezvous)}
 
 
 def _response(request_id, result=None, error=None) -> dict:
@@ -226,6 +159,7 @@ def handle(message: object, tools: GraphTools | None) -> dict | None:
 def _load_tools(paths: list[str]) -> GraphTools:
     """Scan or load each input once, when the first graph query arrives."""
     from tracekite import engine_config
+    from tracekite.db.artifact_node_lookup import node_lookup_for_inputs
     from tracekite.scan_meta import config_digest
     from tracekite.services.linker.engine import link
 
@@ -248,8 +182,9 @@ def _load_tools(paths: list[str]) -> GraphTools:
         repos=revisions, engine_version=ENGINE_VERSION,
         config_version=CONFIG_VERSION,
         config_digest=config_digest(cfg))
-    return GraphTools(result, commits=commits, snapshot=snapshot,
-                      scan_meta=scan_meta)
+    return GraphTools(
+        result, commits=commits, snapshot=snapshot, scan_meta=scan_meta,
+        node_lookup=node_lookup_for_inputs(paths, sinks))
 
 
 def _valid_tool_call(message: object) -> bool:

@@ -2,7 +2,7 @@
   "name": "tracekite",
   "displayName": "TraceKite",
   "description": "Evidence-backed dependency tracing across source repositories.",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "author": {
     "name": "TraceKite",
     "url": "https://github.com/TraceKite"
