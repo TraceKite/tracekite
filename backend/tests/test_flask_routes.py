@@ -32,6 +32,20 @@ def remove(order_id): pass
 
 def test_blueprint_default_prefix():
     source = '''
+from flask import Flask, Blueprint
+app = Flask(__name__)
+bp = Blueprint("users", __name__, url_prefix="/api")
+app.register_blueprint(bp)
+
+@bp.route("/users")
+def users(): pass
+'''
+
+    assert _keys(source) == {("GET", "/api/users", "flask")}
+
+
+def test_blueprint_without_a_visible_registration_is_declined():
+    source = '''
 from flask import Blueprint
 bp = Blueprint("users", __name__, url_prefix="/api")
 
@@ -39,7 +53,10 @@ bp = Blueprint("users", __name__, url_prefix="/api")
 def users(): pass
 '''
 
-    assert _keys(source) == {("GET", "/api/users", "flask")}
+    routes, declined = extract_flask_routes(source)
+
+    assert routes == []
+    assert declined == 1
 
 
 def test_registration_prefix_overrides_blueprint_default():
@@ -100,6 +117,7 @@ def test_scan_relabels_flask_shortcut_and_emits_blueprint_contract(tmp_path):
 from flask import Flask, Blueprint
 app = Flask(__name__)
 bp = Blueprint("api", __name__, url_prefix="/api")
+app.register_blueprint(bp)
 
 @app.get("/health")
 def health(): return "ok"

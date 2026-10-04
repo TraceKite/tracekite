@@ -3,6 +3,7 @@
 Only literal paths, methods and prefixes become routes. A registration option
 overrides a blueprint's constructor default, matching Flask's own contract.
 Dynamic values are counted as declines rather than guessed.
+Blueprint routes require a registration visible in the same file.
 """
 
 from __future__ import annotations
@@ -120,10 +121,6 @@ def _mounts(apps: set[str], blueprints: dict[str, str | None], registrations):
         if not changed:
             break
         unresolved = remaining
-    registered = {child for _, child, _ in registrations}
-    for blueprint, prefix in blueprints.items():
-        if blueprint not in registered and prefix is not None:
-            mounts.setdefault(blueprint, set()).add(prefix)
     return mounts
 
 

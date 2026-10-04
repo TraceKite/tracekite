@@ -13,9 +13,9 @@ for the published `tracekite-core` distribution.
 - MCP node identity and ranked search, bounded neighbors and subgraphs, and
   transitive impact paths with evidence, confidence bounds, deterministic
   budgets, and explicit truncation.
-- Flask application and blueprint route extraction, including literal method
-  lists, registration overrides, nested prefixes, and visible declines for
-  dynamic values.
+- Flask application and same-file blueprint route extraction, including
+  literal method lists, registration overrides, nested prefixes, and visible
+  declines for dynamic or cross-file-unresolved mounts.
 - File-precise monorepo attribution for `tracekite pr --changed-file`.
 
 ### Changed
