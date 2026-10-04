@@ -45,17 +45,22 @@ def get_view_graph(repo_id: str, node_types: list[str], edge_types: list[str],
         ), nodes, node_ids)
 
         if node_ids:
-            # Direct parents of returned nodes (e.g. Files for Classes), over
-            # edges this view draws: any edge pulled in evidence claims, which
-            # then rendered as orphans and spent the budget meant for handlers.
+            # One parent for every selected node — its container first, else
+            # whatever exposes or calls it — over edges this view draws. A
+            # shared budget returned arbitrary parents: nest's overview drew
+            # 91 endpoints with no handler and its code view 42 classes in no
+            # file, though every one has both. Any edge type pulled evidence
+            # claims in as parents, each an orphan.
             collect_nodes(session.run(
                 "MATCH (parent:GraphNode)-[r]->(child:GraphNode) "
                 "WHERE parent.repo_id = $repo_id AND child.repo_id = $repo_id "
                 "AND child.id IN $node_ids AND NOT parent.id IN $node_ids "
                 "AND ($edge_types = [] OR type(r) IN $edge_types) "
-                "RETURN DISTINCT properties(parent) AS props LIMIT $lim",
+                "WITH child, parent, type(r) AS kind ORDER BY CASE kind "
+                "WHEN 'CONTAINS' THEN 0 WHEN 'DECLARES' THEN 1 ELSE 2 END, parent.id "
+                "WITH child, collect(parent)[0] AS parent "
+                "RETURN DISTINCT properties(parent) AS props",
                 repo_id=repo_id, node_ids=list(node_ids), edge_types=edge_types,
-                lim=max(1, limit // 2),
             ), nodes, node_ids)
 
             # Folder/Repo ancestors so containment paths are complete.
@@ -90,4 +95,9 @@ def get_view_graph(repo_id: str, node_types: list[str], edge_types: list[str],
         )
         links = [link_from_record(record) for record in edge_result]
 
+    # The root is ranked first but joins only through its top-level folders;
+    # in a deep monorepo none of them makes the cut, leaving a lone dot the
+    # header already names.
+    touched = {end for link in links for end in (link.source, link.target)}
+    nodes = [n for n in nodes if n.type != "Repo" or n.id in touched]
     return nodes, links

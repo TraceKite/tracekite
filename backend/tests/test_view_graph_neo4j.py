@@ -35,7 +35,9 @@ def estate():
     create_constraints()
     clear_repo_graph(REPO)
     source = _node("File", "app.controller.ts")
-    nodes, edges = [source], []
+    root, folder = _node("Repo", REPO, path=""), _node("Folder", "src", path="src")
+    nodes = [source, root, folder]
+    edges = [_edge("CONTAINS", root, folder), _edge("CONTAINS", folder, source)]
     for i in range(ENDPOINTS):
         handler = _node("Method", f"handler{i:02d}")
         endpoint = _node("ApiEndpoint", f"GET /r{i:02d}")
@@ -60,6 +62,26 @@ def test_no_returned_node_is_an_orphan():
     # EVIDENCED_BY is not a view edge, so a claim pulled in as a "parent"
     # arrived with nothing drawn to it.
     graph = get_graph(REPO, view="api", limit=LIMIT)
+
+    touched = {end for link in graph.links for end in (link.source, link.target)}
+    assert {node.id for node in graph.nodes} <= touched
+
+
+def test_every_endpoint_brings_its_handler_past_the_old_budget():
+    # Parents shared a budget of half the limit, so a view that selected
+    # more endpoints than that drew the rest with no handler: 91 of them in
+    # nest's overview.
+    graph = get_graph(REPO, view="api", limit=ENDPOINTS)
+
+    exposed = {link.target for link in graph.links if link.type == "EXPOSES_API"}
+    endpoints = {node.id for node in graph.nodes if node.type == "ApiEndpoint"}
+    assert len(endpoints) == ENDPOINTS and endpoints <= exposed
+
+
+def test_a_root_with_nothing_beneath_it_in_view_is_not_drawn():
+    # Architecture ranks the Repo first; at this limit its folder misses the
+    # cut and nothing in view reaches it.
+    graph = get_graph(REPO, view="architecture", limit=ENDPOINTS + 1)
 
     touched = {end for link in graph.links for end in (link.source, link.target)}
     assert {node.id for node in graph.nodes} <= touched
