@@ -169,7 +169,7 @@ class TestDeleteStaleLinkerEdges:
             deleted = link_writer.delete_stale_linker_edges("run1")
         assert deleted == 4
         query, params = session.calls[0]
-        assert "CALL { WITH r DELETE r } IN TRANSACTIONS" in query
+        assert "CALL (r) { DELETE r } IN TRANSACTIONS" in query
         assert params["run"] == "run1"
 
     def test_zero_deleted_skips_log(self):
@@ -332,6 +332,33 @@ class TestLinkerServiceLinkFull:
         assert result["claims_loaded"] == 1
         assert len(store.created) == 1
         assert len(store.stamped) == 1
+        assert store.finished["status"] == "done"
+
+    def test_link_full_reports_each_storage_stage(self):
+        store = FakeLinkerStore(claims=[])
+        progress = []
+        conf, aliases, rollups = self._patches()
+        with conf, aliases, rollups:
+            linker_service.LinkerService(
+                store, on_progress=lambda *update: progress.append(update),
+            ).link_full()
+
+        assert [percent for percent, _ in progress] == [30, 40, 50, 60, 90, 95]
+        assert "relationships" in progress[3][1]
+
+    def test_a_failing_progress_observer_does_not_fail_the_run(self):
+        store = FakeLinkerStore(claims=[])
+
+        def fail(*_args):
+            raise RuntimeError("job ledger unavailable")
+
+        conf, aliases, rollups = self._patches()
+        with conf, aliases, rollups:
+            result = linker_service.LinkerService(
+                store, on_progress=fail,
+            ).link_full()
+
+        assert result["link_run_id"]
         assert store.finished["status"] == "done"
 
     def test_link_full_empty_claims(self):

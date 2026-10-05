@@ -104,9 +104,14 @@ def test_handle_link_full():
     with patch("tracekite.services.linker.LinkerService", fake_service), \
          patch("tracekite.services.job_handlers.create_or_update_job") as update:
         job_handlers._handle_link_full(job)
-    assert update.call_args_list[0].args[2] == "running"
-    assert update.call_args_list[-1].args[2] == "completed"
-    assert "7 edges" in update.call_args_list[-1].args[4]
+        assert update.call_args_list[0].args[2] == "running"
+        assert update.call_args_list[-1].args[2] == "completed"
+        assert "7 edges" in update.call_args_list[-1].args[4]
+        progress = fake_service.call_args.kwargs["on_progress"]
+        progress(60, "Linking: writing 7 relationships")
+        update.assert_called_with(
+            "j3", "r1", "running", 60,
+            "Linking: writing 7 relationships")
 
 
 def test_handle_link_full_exception_propagates():

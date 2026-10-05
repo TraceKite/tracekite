@@ -348,6 +348,26 @@ class TestAbsenceIsRecorded:
             ec._active = original
         assert any("size cap" in r for r in sink.absence["incomplete_because"])
 
+    def test_specialized_parsers_count_as_supported_files(self, tmp_path):
+        engine_config.configure(graph_hmac_key="artifact-test-key")
+        (tmp_path / "main.tf").write_text(
+            'resource "aws_sns_topic" "orders" {\n'
+            '  name = "order-events"\n}\n')
+        (tmp_path / "orders.proto").write_text(
+            'syntax = "proto3";\npackage demo;\n'
+            'service Orders { rpc Get(GetRequest) returns (GetReply); }\n')
+        (tmp_path / "orders-value.avsc").write_text(
+            '{"type":"record","name":"OrderEvent",'
+            '"namespace":"demo","fields":[]}')
+
+        sink = scan(str(tmp_path), "structured")
+
+        assert sink.absence["complete"] is True
+        assert sink.absence["incomplete_because"] == []
+        for language in ("Protobuf", "Terraform", "Unknown"):
+            assert sink.coverage[language]["files_parsed"] == 1
+            assert sink.coverage[language]["tier"] == "lite"
+
     def test_absence_travels_with_the_artifact(self, tmp_path):
         engine_config.configure(graph_hmac_key="artifact-test-key")
         ref = write_artifact(scan(SAMPLE, "repo_a"), "repo_a", str(tmp_path))

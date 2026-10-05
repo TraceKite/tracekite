@@ -83,14 +83,14 @@ def clear_repo_graph(repo_id: str) -> dict:
         result = session.run(
             "MATCH (n:GraphNode {repo_id: $repo_id})-[r]-() "
             "WHERE r.created_by = 'linker' "
-            "CALL { WITH r DELETE r } IN TRANSACTIONS OF 10000 ROWS",
+            "CALL (r) { DELETE r } IN TRANSACTIONS OF 10000 ROWS",
             repo_id=repo_id,
         )
         counts["linker_edges_deleted"] = result.consume().counters.relationships_deleted
 
         result = session.run(
             "MATCH (n:GraphNode {repo_id: $repo_id}) "
-            "CALL { WITH n DETACH DELETE n } IN TRANSACTIONS OF 10000 ROWS",
+            "CALL (n) { DETACH DELETE n } IN TRANSACTIONS OF 10000 ROWS",
             repo_id=repo_id,
         )
         summary = result.consume().counters
@@ -115,7 +115,7 @@ def gc_orphan_rendezvous() -> int:
         for label in RENDEZVOUS_LABELS + ("Service",):
             result = session.run(
                 f"MATCH (n:{label}) WHERE NOT (n)--() "
-                f"CALL {{ WITH n DELETE n }} IN TRANSACTIONS OF 10000 ROWS",
+                f"CALL (n) {{ DELETE n }} IN TRANSACTIONS OF 10000 ROWS",
             )
             total += result.consume().counters.nodes_deleted
     return total

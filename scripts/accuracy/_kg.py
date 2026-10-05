@@ -11,6 +11,7 @@ or $TRACEKITE_REPO, and defaults to every repo the graph knows about, so the
 harness runs against whatever you have ingested.
 """
 import os
+import shlex
 import subprocess
 import sys
 
@@ -167,6 +168,20 @@ def find(repo_id: str, *predicate: str) -> list[str]:
     return [p for p in sh("docker", "exec", BACKEND_CONTAINER, "sh", "-c",
                           f'find {repo_path(repo_id)} {expr} -not -path "*/.git/*" 2>/dev/null'
                           ).split("\n") if p.strip()]
+
+
+def find_containing(repo_id: str, needle: str, *predicate: str) -> list[str]:
+    """Files matching a find predicate and a literal content prefilter."""
+    expr = " ".join(predicate)
+    root = shlex.quote(repo_path(repo_id))
+    wanted = shlex.quote(needle)
+    command = (
+        f'find {root} {expr} -not -path "*/.git/*" -type f '
+        f'-exec grep -Il -- {wanted} {{}} + 2>/dev/null'
+    )
+    return [path for path in sh(
+        "docker", "exec", BACKEND_CONTAINER, "sh", "-c", command,
+    ).split("\n") if path.strip()]
 
 
 def evidence_parts(ev: str) -> tuple[str | None, int | None]:

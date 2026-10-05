@@ -26,13 +26,22 @@ class LinkerService:
     and an embedding host supplies its own (architecture §2).
     """
 
-    def __init__(self, store: LinkerStore, on_run=None):
+    def __init__(self, store: LinkerStore, on_run=None, on_progress=None):
         self._store = store
         # Called with (run_id, counters, timings) when a run finishes. Injected
         # the same way the store is, and for the same reason: publishing a
         # measurement is I/O, and this class must stay callable by a host that
         # has no exporter, no metrics SDK and no opinion about either.
         self._on_run = on_run
+        self._on_progress = on_progress
+
+    def _progress(self, percent: int, message: str) -> None:
+        if self._on_progress is None:
+            return
+        try:
+            self._on_progress(percent, message)
+        except Exception:                                     # noqa: BLE001
+            logger.warning("progress observer failed", exc_info=True)
 
     def link_full(self, mode: str = "full") -> dict:
         run_id = f"linkrun_{uuid.uuid4().hex[:12]}"
@@ -90,13 +99,7 @@ class LinkerService:
 
     def _run(self, run_id: str) -> tuple[dict, object]:
         result = link(self._store.load_claims(), run_id=run_id)
-
-        self._store.write_rendezvous_nodes(result.rendezvous)
-        self._store.write_service_nodes(result.services)
-        written = self._store.write_linker_edges(result.edges)
-        deleted = self._store.delete_stale_linker_edges(run_id)
-        orphans = self._store.gc_orphan_rendezvous()
-        self._store.stamp_repos_linked(result.repo_ids, run_id)
+        written, deleted, orphans = self._write_result(run_id, result)
 
         # I7: a repo excluded from the link is named, not merely missing.
         # Without this an estate with a broken repo is indistinguishable from
@@ -119,3 +122,19 @@ class LinkerService:
             "orphans_gcd": orphans,
         })
         return counters, result.timings
+
+    def _write_result(self, run_id: str, result) -> tuple[dict, int, int]:
+        self._progress(30, f"Linking: resolved {len(result.edges)} relationships")
+        self._progress(
+            40, f"Linking: writing {len(result.rendezvous)} rendezvous nodes")
+        self._store.write_rendezvous_nodes(result.rendezvous)
+        self._progress(50, f"Linking: writing {len(result.services)} services")
+        self._store.write_service_nodes(result.services)
+        self._progress(60, f"Linking: writing {len(result.edges)} relationships")
+        written = self._store.write_linker_edges(result.edges)
+        self._progress(90, "Linking: retiring stale relationships")
+        deleted = self._store.delete_stale_linker_edges(run_id)
+        orphans = self._store.gc_orphan_rendezvous()
+        self._progress(95, "Linking: finalizing repository state")
+        self._store.stamp_repos_linked(result.repo_ids, run_id)
+        return written, deleted, orphans

@@ -49,6 +49,27 @@ def parse_files(repo_id: str, files: list, file_ids: dict[str, str],
             raise
 
 
+def _record_specialized_parse(file_info, result: dict,
+                              sink: IngestSink) -> None:
+    """Count a file parsed by a manifest or contract parser.
+
+    Source coverage and structured-file coverage share the same file total.
+    A protobuf, Terraform, or Avro file has no source AST, but calling it
+    unsupported after its dedicated parser emitted claims makes absence and
+    every MCP completeness envelope contradict the graph.
+    """
+    parsed = any(
+        value is not None
+        for name, value in result.items()
+        if name != "source_result"
+    )
+    if not parsed:
+        return
+    counters = sink.lang(file_info.language)
+    counters["files_parsed"] += 1
+    sink.upgrade_tier(file_info.language, "lite")
+
+
 def _parse_one_file(repo_id: str, file_info, file_node_id: str,
                     sink: IngestSink) -> None:
     counters = sink.lang(file_info.language)
@@ -93,6 +114,9 @@ def _parse_one_file(repo_id: str, file_info, file_node_id: str,
         # loses consumer-side recall for the exact files most likely to be
         # partially parseable.
         emit_source_claims(repo_id, file_info, content, [], file_node_id, sink)
+
+    if source is None or source.errors:
+        _record_specialized_parse(file_info, result, sink)
 
     if deps := result.get("dependencies"):
         process_dependencies(repo_id, file_info, deps, file_node_id, sink,
