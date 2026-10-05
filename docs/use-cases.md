@@ -1,130 +1,104 @@
-# Developer use cases
+# What can TraceKite help me do?
 
-These examples use only commands and inputs implemented by the current CLI.
-All graph answers remain subject to the extraction coverage and decline
-counters shipped with the result.
+[Docs](README.md) · [Feature coverage](features.md)
 
-## Inspect one repository
+Choose a question, supply the repositories that could answer it, and inspect the
+source citations before acting. “Indexed” below means present in those inputs
+and recognized by the extractors.
 
-```bash
-tracekite scan /absolute/path/orders --repo-id orders
-```
+## Understand an unfamiliar system
 
-This prints claim counts, parser coverage, and explicit absence information.
-It does not create cross-repository edges.
+**Use:** the app's Repo and Service Map tabs.
 
-## Link related repositories
+Ingest related repositories, wait for automatic linking, and apply a shared
+scope. Start with services, select one to see Calls/Called by, then search its
+source in Repo. Open a module, read a node's properties, and use Back to return.
 
-```bash
-tracekite link /absolute/path/orders /absolute/path/billing \
-  --now 2026-01-01T00:00:00+00:00
-```
+**You get:** an overview plus source locations to explore. Source-only libraries
+may appear in Repo without becoming services. Follow the
+[app walkthrough](quickstart.md) and [view guide](using-the-views.md).
 
-The output contains active and candidate edges, evidence, confidence, and
-resolver counters. A fixed `--now` makes time-dependent output reproducible.
+## Find callers before changing an endpoint
 
-## Explain one edge
+**Use:** MCP/Python `search` → `node` → `consumers_of` or `impact`.
 
-First copy the exact source and target IDs from `tracekite link`, then run:
+Find the exact HTTP contract or service ID, inspect its metadata, then ask for
+consumers. Use `impact` for supported transitive dependency paths and a bounded
+`subgraph` when you need surrounding context. Open the cited caller and provider
+code. In the app, Service Map → Trace → Code (Crossings) shows supported HTTP
+crossings between services.
 
-```bash
-tracekite explain /absolute/path/orders /absolute/path/billing \
-  --edge 'SOURCE_NODE_ID' 'TARGET_NODE_ID'
-```
+**You get:** indexed dependents to investigate. A URL assembled only at runtime
+may be absent. [Tool reference](mcp-tools.md) explains direction and limits.
 
-A missing edge returns `found: false`; the command does not synthesize an
-explanation.
+## Understand frontend-to-backend connections
 
-## Publish portable artifacts
+**Use:** multi-repository Repo view or MCP graph queries.
 
-```bash
-tracekite artifact /absolute/path/orders \
-  --repo-id orders --head-sha "$GIT_COMMIT" --out ./artifacts
-```
+Load the frontend, backend, and any gateway/configuration repository. Apply the
+scope in Repo. Inspect supported HTTP contract bridges; `UI_CALLS` can identify
+a frontend call site. In 0.2.0, leave **Show connections only** off when inspecting
+UI calls: that filter can hide a source connected only by `UI_CALLS`.
 
-The command prints the content-addressed artifact path. Create one artifact per
-repository.
+**You get:** evidence where a frontend call meets a backend contract. A relative
+`/api/...` path needs enough configuration to identify its destination. The UI
+bridge view is not a complete map of package, SQL, or message dependencies.
 
-## Review a branch across repositories
+## Plan a shared-library upgrade
 
-Create base and head artifacts for every repository in scope, then run:
+**Use:** [HTTP library impact](api.md#specialized-queries) or MCP/Python queries.
 
-```bash
-tracekite pr \
-  --base ./base/orders-<digest>.tracekite ./base/billing-<digest>.tracekite \
-  --head ./head/orders-<digest>.tracekite ./head/billing-<digest>.tracekite \
-  --changed-repo orders --comment
-```
+Ingest the publisher and consumers. Query the library's version-free package
+key, such as `pkg:npm/@acme/client`, or find its `Library` node with `search`.
+Inspect publishers, dependents, and recorded versions.
 
-The base and head options take artifact lists, not git branch names. The
-`--changed-repo` flag is repeatable.
+**You get:** indexed consumers and version differences. Private package manifests
+are not automatically treated as public publishers; internal namespace
+configuration and loaded publish identities control linking.
 
-## Find contract drift and live deprecations
+## Follow an event or data dependency
 
-```bash
-tracekite drift ./head/orders-<digest>.tracekite \
-  --base ./base/orders-<digest>.tracekite
+**Use:** HTTP topic-chain queries, or `neighbors` / `subgraph` around a `Topic`
+or `Dataset` node.
 
-tracekite deprecations ./head/orders-<digest>.tracekite \
-  ./head/billing-<digest>.tracekite
-```
+Supply producers, consumers, schemas, and infrastructure. Resolve the topic or
+dataset ID, then inspect publish/consume, fan-out, read, or write edges and their
+citations. `CONSUMES_FROM` points from consumer to topic: arrow direction is not
+always message-flow direction.
 
-Drift compares declared and observed contracts. Deprecations reports only
-relationships present in the supplied artifact estate.
+**You get:** supported static lineage. Identical table/topic names do not prove
+shared infrastructure when scope is ambiguous. See the [graph model](graph-model.md).
 
-## Ask from an AI client
+## Review a pull request across repositories
 
-Register the stdio server as described in
-[Agent and MCP integration](plugins-and-mcp-guide.md), using either source
-directories or artifacts:
+**Use:** `tracekite pr` with complete base/head artifact sets.
 
-```bash
-tracekite mcp /absolute/path/orders /absolute/path/billing
-```
+Capture snapshots for the changed provider and unchanged consumers. Supply the
+changed repo IDs and, for monorepos, changed file paths. Inspect attributed
+losses, unexplained changes, and citations; run application tests alongside it.
 
-Useful questions map directly to tools:
+**You get:** a review report and exit status for indexed losses. It does not
+fetch arbitrary branches or post comments automatically. Follow
+[change review](change-review.md) for a reproducible workflow.
 
-- Which repository-backed services are loaded? Use `services()`.
-- Which exact node ID names this class, method, contract, or source path? Use
-  `search(query)`, then `node(node_id)`.
-- Who depends on this exact service or contract node? Use
-  `consumers_of(node_id)`.
-- What is adjacent to this node, or what bounded ego graph surrounds it? Use
-  `neighbors(node_id, ...)` or `subgraph(node_id, ...)`.
-- Which transitive dependents could be affected, and through which evidence
-  path? Use `impact(node_id, ...)`.
-- Is there an active path from one exact service ID to another? Use
-  `trace(from_id, to_id)`.
-- Which deprecated contracts still have consumers? Use `deprecations()`.
+## Audit configuration or a deprecation
 
-The returned citations are navigation evidence. Open the cited source before
-making a method-level claim.
+**Use:** HTTP config ownership, CLI/MCP `deprecations`, CLI `drift` and `reverify`.
 
-## Embed the engine
+Look up an environment key's definitions/read sites, inspect deprecated contracts
+and consumers, or recheck old citations against today's checkout.
 
-Install the standalone core distribution:
+**You get:** a scoped maintenance worklist. “Observed” in drift means found in
+source, not captured traffic. No-consumer and dead-endpoint candidates require
+manual validation before removal.
 
-```bash
-pip install tracekite-core
-```
+## Add graph evidence to your own developer tool
 
-For unreleased source, build it from `packaging/tracekite-core` with
-`uv build --project packaging/tracekite-core --out-dir dist`.
+**Use:** the [Python facade](library.md) or [MCP server](plugins-and-mcp-guide.md).
 
-A host can call the same pure scan and link surfaces:
+Load local checkouts or artifacts, query exact identities, and show the evidence,
+snapshot, coverage, and truncation with the answer. Keep your own decision,
+notification, storage, and agent behavior in the host application.
 
-```python
-from tracekite import engine_config
-from tracekite.db.memory_store import InMemoryLinkerStore
-from tracekite.services.linker.engine import link
-from tracekite.services.scan import scan
-
-engine_config.configure(graph_hmac_key="host-owned-redaction-key")
-sinks = [
-    scan("/absolute/path/orders", "orders"),
-    scan("/absolute/path/billing", "billing"),
-]
-result = link(InMemoryLinkerStore(sinks).load_claims())
-```
-
-The host owns persistence. Core does not require the HTTP server or Neo4j.
+**You get:** a shared scan/link engine without adopting TraceKite's web stack.
+Restart or reload explicitly after source changes.

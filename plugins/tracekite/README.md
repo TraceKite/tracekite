@@ -1,92 +1,55 @@
-# TraceKite Agent Plugin
+# TraceKite agent plugin
 
-This one plugin source supports Claude Code, Codex, and Kimi Code. It bundles
-the TraceKite skill with an MCP server declaration; each client reads its own
-manifest and ignores the others.
+[Documentation](../../docs/README.md) · [MCP setup](../../docs/plugins-and-mcp-guide.md)
 
-Every relationship returned by the MCP tools carries the evidence stored in
-the graph. An empty or declined answer means TraceKite did not establish the
-relationship.
+This local plugin bundle contains the same TraceKite skill and stdio MCP command
+in manifests for Claude Code, Codex, and Kimi Code. A skill supplies instructions;
+MCP supplies graph tools. The plugin does not include the CLI executable.
 
-## Prerequisite
+## Install the CLI first
 
-Install the local TraceKite CLI before enabling the plugin:
+Requires Python 3.13+ and uv:
 
 ```bash
+uv tool install tracekite-core
+tracekite --help
 git clone https://github.com/TraceKite/tracekite.git
 cd tracekite
-uv tool install .
-tracekite --help
 ```
 
-The bundled MCP command is `tracekite mcp` with no explicit path. It scans the
-client's current repository lazily on the first graph query, then answers from
-that in-memory graph for the rest of the session.
+## Load the bundle
 
-## Claude Code
+Choose the workflow your installed client supports:
 
-For a development session:
+| Client | Local workflow, from this checkout |
+|---|---|
+| Claude Code | `claude --plugin-dir ./plugins/tracekite` for a development session |
+| Codex | `codex plugin marketplace add .`, then `codex plugin add tracekite@tracekite` |
+| Kimi Code | `/plugins install ./plugins/tracekite` in the TUI, then start a new session |
 
-```bash
-claude --plugin-dir ./plugins/tracekite
-```
+Plugin support and commands vary by client version. Check its help if unavailable;
+[direct MCP registration](../../docs/plugins-and-mcp-guide.md#3-register-with-your-client)
+is the simpler fallback and supports explicit multi-repo paths.
 
-To exercise the repository marketplace locally:
+## Select the intended source
 
-```bash
-claude plugin marketplace add .
-claude plugin install tracekite@tracekite
-```
+The bundled server runs `tracekite mcp` with no input path. It scans the client's
+working directory on the first graph query. Launch the client from the repository
+you want analyzed; installing this bundle from TraceKite's checkout does not make
+it automatically discover your other projects.
 
-## Codex
-
-Add the repository marketplace, install the plugin, and start a new session:
-
-```bash
-codex plugin marketplace add .
-codex plugin add tracekite@tracekite
-```
-
-## Kimi Code
-
-Start Kimi from this repository, then run these commands in the TUI:
-
-```text
-/plugins install ./plugins/tracekite
-/reload
-```
-
-Kimi plugin support must be present in the installed release. If `/plugins`
-is unavailable, update Kimi before using this bundle.
-
-## Multiple repositories
-
-The bundled server intentionally defaults to the current repository. For an
-estate, register a separate MCP server with every absolute source or artifact
-path:
-
-```bash
-claude mcp add --scope user tracekite-estate -- tracekite mcp \
-  /path/to/orders /path/to/billing /path/to/gateway
-
-codex mcp add tracekite-estate -- tracekite mcp \
-  /path/to/orders /path/to/billing /path/to/gateway
-```
-
-Kimi Code users can add the same command and arguments with `/mcp-config`.
+For multiple repositories, register a separate server such as `tracekite-estate`
+with one absolute path per repo or artifact. Do not edit an installed plugin
+cache to encode local paths. Configure a private redaction key in the MCP process
+environment before analyzing sensitive source.
 
 ## Verify
 
-Ask the client to list services first. Then use an exact service ID or one
-unambiguous service name returned by that tool:
+Ask the agent to list TraceKite services, describe an exact returned ID, and then
+show its consumers with citations. The nine tools are `services`, `node`, `search`,
+`consumers_of`, `trace`, `neighbors`, `impact`, `subgraph`, and `deprecations`.
+See [query semantics](../../docs/mcp-tools.md) for bounds and direction.
 
-```text
-What services does TraceKite know about?
-Who depends on the billing service?
-Trace the active path from the gateway service to billing.
-```
-
-The MCP surface exposes `services`, `node`, `search`, `consumers_of`, `trace`,
-`neighbors`, `impact`, `subgraph`, and `deprecations`. See the
-[agent integration guide](https://github.com/TraceKite/tracekite/blob/main/docs/plugins-and-mcp-guide.md)
-for argument and evidence semantics.
+The snapshot stays in memory for the session. Restart after source/artifact
+changes. The server does not use the Docker app's Neo4j graph, and an empty answer
+is not permission to delete code.

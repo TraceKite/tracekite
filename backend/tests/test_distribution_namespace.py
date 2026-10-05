@@ -167,11 +167,8 @@ class TestImageRunsWhatTestsRan:
             f"image python {actual} is below requires-python {floor}")
 
 
-class TestReadmeDocumentsTheCli:
-    """A subcommand nobody documents is one nobody finds. The README listed
-    2 of 17 before this — the CLI is the library's whole surface for anyone
-    who does not embed it, so drift here is the difference between a usable
-    open-source tool and a private one."""
+class TestCliDocumentation:
+    """README links to one complete CLI reference instead of duplicating it."""
 
     def _subcommands(self) -> set[str]:
         import argparse
@@ -181,17 +178,22 @@ class TestReadmeDocumentsTheCli:
                 return set(action.choices)
         raise AssertionError("no subparsers on the CLI")
 
-    def test_every_subcommand_appears_in_the_readme(self):
+    def test_readme_links_to_the_cli_reference(self):
         readme = (REPO / "README.md").read_text(encoding="utf-8")
+        assert "](docs/cli.md)" in readme
+
+    def test_every_subcommand_appears_in_the_cli_reference(self):
+        reference = (REPO / "docs" / "cli.md").read_text(encoding="utf-8")
         missing = sorted(c for c in self._subcommands()
-                         if f"tracekite {c}" not in readme)
+                         if f"tracekite {c}" not in reference)
         assert not missing, (
             f"undocumented subcommand(s): {missing} — add them to the CLI "
-            f"section of the README")
+            f"reference")
 
-    def test_the_readme_documents_no_command_that_does_not_exist(self):
+    def test_documented_cli_commands_exist(self):
         import re
-        readme = (REPO / "README.md").read_text(encoding="utf-8")
-        claimed = set(re.findall(r"`tracekite ([a-z][a-z-]+)", readme))
+        docs = ((REPO / "README.md").read_text(encoding="utf-8") +
+                (REPO / "docs" / "cli.md").read_text(encoding="utf-8"))
+        claimed = set(re.findall(r"`tracekite ([a-z][a-z-]+)", docs))
         unknown = sorted(claimed - self._subcommands())
-        assert not unknown, f"README documents non-existent command(s): {unknown}"
+        assert not unknown, f"docs name non-existent command(s): {unknown}"

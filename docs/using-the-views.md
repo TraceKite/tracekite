@@ -1,234 +1,147 @@
-# Using the views
+# Use the browser views
 
-Reference for the three views and the controls they share. The
-[README](../README.md) covers what TraceKite is and how to run it; this is what
-to do once it is running.
+[Docs](README.md) · Prerequisite: [App quickstart](quickstart.md)
 
-## Three views, three questions
+## Three tabs, one repository scope
 
-| | **Repo** | **Service Map** | **Trace** |
-|---|---|---|---|
-| The question | *What is in these codebases, and where do they touch?* | *What exists, and what talks to what?* | *How does A reach B, and through which hops?* |
-| Altitude | code — files, classes, endpoints | services | one journey between two services |
-| Layout | grouped 2D/3D with bounded exact detail | force-directed service topology | hop-ordered columns |
-| Use it to | read a codebase, and see the call sites that cross into another module | find a service, see its callers, spot an unexpected cluster | answer "if I change this endpoint, who breaks?" with a file and line per hop |
+| Tab | Question | What you see |
+|---|---|---|
+| **Repo** | What is in these repositories? | Source structure, nodes, local edges, supported call/contract bridges |
+| **Service Map** | Which services are connected? | Resolved services and service/topic relationships |
+| **Trace** | How can service A reach service B? | Ranked static paths with evidence; optional HTTP crossings |
 
-**They are a sequence, not alternatives.** Start on the Service Map, select a
-service, and choose **Trace from here** — Trace opens with that endpoint
-already filled in.
+Trace is source-based dependency tracing, not recorded distributed telemetry.
+Repo and Service Map have different node families, so their totals need not
+match. Their repository selection should match.
 
-## The header
+Open the header's repository picker, change the selection, then click **Apply
+scope**. **Cancel** discards edits; Escape closes the picker. The default scope
+cap is 20 repos; **All repositories** is disabled when the estate exceeds it.
+The picker displays source-node counts in Repo and service counts in map/trace
+mode, with service/link cost when map data is loaded.
 
-One row holds the workspace tabs, **Ingest**, and the repository picker. Repo
-also exposes node search and the 2D/3D projection switch; those controls are
-hidden in Service Map and Trace because both have their own fixed layouts.
+In Trace, scope restricts the endpoint picker. A path may still pass through
+an unselected repo; outside-scope hops remain visible.
 
-Ingest sits behind its button because it is a once-per-repository setup
-action. The picker and the search are what you reach for every session.
-
-## Choosing repositories
-
-One picker serves all three views. Selection is staged: edit the checkboxes,
-then choose **Apply scope** to cause one navigation and one data load. Search
-filters the list; the cap is `MAX_SCOPE_REPOS` in `.env`, default 20. **All
-repositories** is disabled when the estate is larger than that cap.
-
-The cap is a guardrail, not a measure of cost — repository size varies
-enormously, and on the demo corpus one repo carries 48 services while five
-others total 17. When Service Map data is loaded, the cross-view picker also
-shows the live service/link cost and warns as it approaches the map's edge
-ceiling.
-
-**Scope applies to all three views**, with one asymmetry worth knowing: in
-Trace it limits which services you can *pick*, but paths are still walked
-through every repository. Filtering intermediate hops would report "no path"
-whenever a real route passes through an unselected repo — a false negative in
-the one view whose whole value is trustworthy evidence. Hops outside the scope
-are marked in the result rather than hidden.
-
-## Search
-
-Search queries every repository in scope while the canvas draws a capped
-sample. Results identify their repository and path; the dropdown visibly caps
-itself at 50 rows.
-
-Selecting a result navigates directly to that node's exact bounded local
-neighborhood and opens its inspector. It does not merge the result into an
-unrelated sampled graph. **Return to Overview**, Back, or Escape clears the
-search investigation and reloads grouped Overview.
-
-## Repo View Modes and graph levels
-
-View Mode chooses the backend dataset; it does not disable the density rules:
+## Repo view modes
 
 | Mode | Emphasizes |
 |---|---|
-| **Overview** | repository, folder, file, class, endpoint and dependency structure |
-| **Architecture** | endpoints, infrastructure, dependencies, config and major code containers |
-| **Code** | files, classes, interfaces, methods, functions and calls |
-| **API** | endpoints and the files/functions/methods that expose them |
-| **Dependencies** | manifests, dependencies and `DEPENDS_ON` relationships |
-| **Impact** | the selected node's exact two-hop neighborhood; disabled until a node is selected |
+| **Overview** | Source structure, grouped by repository/module |
+| **Architecture** | Endpoints, infrastructure, dependencies, config, code containers |
+| **Code** | Files, classes, interfaces, methods, functions, local calls |
+| **API** | Endpoints and their handlers/source containers |
+| **Dependencies** | Manifests, local dependency records, dependency edges |
+| **Impact** | Up to two **outgoing** hops from the selected node in its local graph |
 
-Every broad mode opens as repository/module groups. Open a group for bounded
-exact detail, then open a node for its neighborhood — see *Selecting versus
-opening* below. `GRAPH_DETAIL_NODE_LIMIT` (default 80) caps Module, Focus and
-Impact display without inventing edges; search still reaches nodes outside that
-display bound.
+Repo Impact requires a selected node. It is not MCP's transitive “who depends
+on this?” query and is not a complete cross-repo blast radius.
 
-The context bar distinguishes groups, filter-eligible nodes, loaded nodes,
-displayed nodes and exact visible edges. For example, Dependencies may say
-`4 groups · 29 eligible of 320 loaded` while **Lockfile leaves hidden** is on.
+Broad modes initially show module groups. Each group summarizes the returned
+source nodes; it is not a new database node. The context bar distinguishes
+loaded nodes, filtered/eligible nodes, displayed nodes, and visible edges.
+Search can reach nodes outside the loaded sample.
 
-2D and 3D share scope, filters, selected node and navigation level. Switching
-dimensions preserves Module/Focus; a local 3D path is cleared because 2D does
-not render it.
+## Selecting versus opening
 
-### Selecting versus opening
+| Action | Result |
+|---|---|
+| Click a node/group | Read properties or a group summary in the drawer |
+| Double-click, or `o` with a node selected | Open a module's members or a node's one-hop neighborhood |
+| Select a search result | Fetch its bounded neighborhood and open the inspector |
+| Click an inspector relationship | Inspect the related node; load its neighborhood if it is outside the sample |
+| Drawer **X** | Close the inspector and keep the canvas level |
+| **Back** or Escape | Unwind a path/selection, opened node, or module toward the grouped entry |
+| **Return to Overview** | Clear the focused investigation and reload Overview |
 
-One rule, whatever you click. A click selects: the details drawer on the right
-fills in and the canvas stays exactly as it was. **Double-click** — or press `o`
-with something selected — opens it: a module into its members, any other node
-into its one-hop neighborhood (its bounded impact in the Impact view). A
-module's drawer is a summary this UI counted, not a stored node: how many nodes
-and edges it holds, and of which types.
+The default exact display cap is 80 nodes. A long list or a large module can
+be truncated; use search to reach an omitted node. Navigation has overview,
+module, and focused-neighborhood levels; it is not an unlimited history of
+every node visited. Opening another node replaces the current node focus.
 
-Search results and the drawer's "Load this node's neighborhood" open the node
-they name, because fetching a graph around a node is the same request.
+2D/3D share scope, filters, and graph level. Switching dimensions preserves
+module/focus context; the local 3D path is cleared.
 
-Back and Escape unwind one level at a time: a 3D path, then what you opened,
-then the module, then the grouped entry. Reading a thing you had opened is one
-step, so one press leaves both. Closing the drawer with its X is not a
-navigation step and leaves the canvas where it is.
+## Search, filters, and controls
 
-### Canvas controls
+Type at least two characters. Search queries the scoped repositories and shows
+repo/path with each result. Each repo ranks exact spelling/case first; the
+combined dropdown shows up to 50 rows. An empty result is explicit.
+**Clear search** clears the text/results; **Return to Overview** leaves the
+focused graph.
 
-- **2D:** Reset camera, Fit, Rotate, Settle/Re-layout, Labels, directional
-  Particles and Fullscreen. Settling forces never disables navigation.
-- **3D:** Less noise, Labels, zoom in/out/100% and camera Reset. Once the graph
-  has keyboard focus, `L` toggles labels and `o` opens the selected node.
-  Shift+click or Shift+Enter a second node for a directed local path through
-  edges already on the sampled canvas.
+- **Node Types:** hide/show source node families present in the loaded dataset.
+- **Edge Types / Relations shown:** click a row to highlight it; use the eye
+  icon to hide it. Several relationship types can be highlighted together.
+- **Lockfile leaves hidden:** suppress indirect dependency clutter while
+  retaining direct dependency information.
+- **Show connections only:** in multi-repo mode, focus the view on supported
+  HTTP contract bridges instead of each repo's internals.
+- **2D controls:** Reset, Fit, Rotate, Settle/Re-layout, Labels, Particles,
+  Fullscreen. Escape or Exit fullscreen restores the normal layout.
+- **3D controls:** Less noise, Labels, zoom in/out/100%, Reset. Focus the graph
+  for keyboard shortcuts; `L` toggles labels. Shift-click/Shift-Enter another
+  node requests a directed local path through the loaded graph.
 
-The camera re-frames only when the drawn scene changes — a new scope, view
-mode, expanded module or focus fetch — and it stops short of the zoom where
-more magnification adds nothing, so a module holding a single file no longer
-fills the screen with it. Selecting a node keeps your zoom, because the nodes
-keep their positions; the view pans only when the selection would otherwise sit
-off screen. Fit and Reset are there for a deliberate re-frame.
+In 0.2.0, **Show connections only** can hide call sites connected only by
+`UI_CALLS`; leave it off to inspect those frontend bridges.
 
-### The left panel
+A 3D local path is not a distributed Trace. A hidden type can remain listed so
+you can turn it back on. Repo filter counts describe the loaded dataset;
+Service Map relation counts describe the projected visible links.
 
-Repo, Service Map and Trace each collapse their left panel to a labelled rail —
-the chevron in the panel's top corner closes it, the rail itself reopens it.
-It also collapses on its own when the window no longer has room for the panel,
-a readable canvas and an open details drawer at once, and comes back when the
-room does.
+Each sidebar can collapse to a labelled rail. It may collapse automatically on
+narrow screens to leave space for the graph and inspector. The rail reopens it.
 
-Collapsing or expanding by hand settles that layout and only that one: a panel
-you closed on a wide window stays closed while a drawer opens and shuts, and
-the automatic rule still decides the layouts you have not spoken about. The
-state follows you across the three views.
+## Inspect evidence
 
-3D's local path is orientation, not a ranked distributed Trace. The path bar
-names it accordingly.
+A node drawer shows its ID, type, path/language where available, stored
+properties, and incoming/outgoing relationships. **Copy path** copies the path.
+A group drawer shows a computed summary rather than source-node properties.
 
-## Highlighting versus filtering
-
-Two different operations on the same list.
-
-**Filtering removes.** To see where one relationship lives you delete every
-other one — and lose the structure that made it meaningful.
-
-**Highlighting emphasises.** Matching edges keep full strength and thicken;
-everything else recedes to a few percent but stays on screen. You see the
-needle *and* the haystack.
-
-In **Edge types** (Repo) and **Relations shown** (Service Map), clicking a row
-highlights it and the eye icon hides it. They compose: filtering decides what
-exists, highlighting decides what stands out. Several types can be lit at
-once, and each row shows how many edges of that type are present — often the
-fastest way to notice a relationship you expected has a count of zero.
-
-Switching workspace clears the highlight, because Repo and Service Map do not
-share an edge vocabulary.
-
-## Where modules connect
-
-**The boundary is the module, not the repository.** A repository is how code
-is *stored*; a module is what owns behaviour. A monorepo holds many services,
-so treating the repo as the boundary would hide every crossing inside it.
-
-A module is the directory owning a unit of behaviour: the segment beneath
-`projects/`, `services/`, `apps/`, `packages/` and similar container
-directories, or the top-level directory in a single-service repository.
-Crossings therefore show up whether the two sides live in one repository or
-two.
-
-A repository's own graph is *intra-repo* by construction — files contain
-classes, classes declare methods. Nothing in it crosses a boundary, so drawing
-two repositories together would otherwise give you two disconnected islands.
-
-What crosses is a **rendezvous**: a call site `INVOKES` a contract that
-another module's endpoint `EXPOSES`, and the contract is the meeting point.
-
-```
-foyer/registry_projection_cache.py ──INVOKES──▶ GET /v1/callers ◀──EXPOSES── capability-registry/routes.go
-```
-
-The Repo view fetches those bridges and draws the contracts as connectors.
-**Show connections only** hides each codebase's internals and leaves just the
-joining tissue.
-
-If a selection has no bridges, the view says so rather than drawing silent
-islands. That is not a failure — two modules that never call each other
-genuinely have nothing between them.
-
-Bridges come from the linker, so they appear once a link run completes. You do
-not have to trigger one — every ingest and refresh queues a relink
-automatically, and a burst of ingests coalesces into a single run. A manual
-rebuild exists for when you have changed linker configuration rather than
-code.
+A relationship drawer shows its type, confidence/range, detection signals,
+available routing details, and citations. Open the cited source revision to
+check the claim. Node fill identifies type; rings identify module when several
+modules are visible; edge colors distinguish relationships and crossings.
 
 ## Service Map
 
-The top status reports nodes and links actually displayed; the sidebar reports
-services and relation candidates in scope. Unconnected services are kept in a
-stable shelf and counted instead of stretching the connected topology.
+Use **Find a service on the map** or select a service on the canvas. Its panel
+shows Called by, Calls, repository attribution, and **Trace from/to here**.
+Selecting a relationship opens the evidence drawer. Services with no displayed
+links remain in the unconnected shelf.
 
-Use minimum confidence and the five **Relations shown** rows to change the
-map. Row click highlights; the eye button hides. **Find a service** is the
-keyboard-accessible route to every displayed service. A focused service shows
-Called by, Calls, repository attribution and **Trace from/to here**. Selecting
-a relationship opens confidence, detection signals and cited `file:line`
-evidence.
+The top bar counts displayed nodes/links. The sidebar counts services and links
+using the same scope/filter projection; displayed nodes can also include topics.
+Minimum confidence and relation visibility change the counts.
 
-The transient **Arranging service map…** state hides unstable force positions
-until the map has been framed.
+Ingestion and refresh queue linking automatically. The map shows **Rebuilding
+links**, prevents duplicate rebuild clicks, and refreshes after an observed run
+completes. **Links are stale** means ingested data is newer than the successful
+link state. If rebuilding fails, inspect the status/error using the
+[HTTP API](api.md#jobs-and-freshness) before retrying.
+
+“No services in this scope” can be valid for a library or unsupported service
+identity. A populated Repo graph alone does not imply a populated Service Map.
 
 ## Trace
 
-Choose different origin and destination services, then set:
+Choose different origin/destination services, then click **Trace Paths**.
 
-- **Altitude:** Service or Code (Crossings);
-- minimum confidence: 0.60–1.00;
-- maximum hops: 1–8;
-- maximum ranked paths: 1–5.
+| Setting | Choices |
+|---|---|
+| Altitude | Service or Code (Crossings) |
+| Minimum confidence | 0.60–1.00 |
+| Maximum hops | 1–8 |
+| Maximum paths | 1–5 |
 
-Changing an endpoint or constraint clears prior results and any stale edge
-drawer. Success renders ranked left-to-right paths; no-match is an explicit
-state, not a blank canvas. Each path lists **Inspect source → target**, which
-opens the same evidence drawer without requiring a precision click on a line.
+Changing a constraint clears old results. Click **Inspect source → target** on
+a hop to open its evidence drawer. Code altitude adds supported HTTP crossings;
+it does not reconstruct every method call in the application.
 
-## Reading the colours
+A no-path result means no path matched the graph and constraints. Try a broader
+scope for endpoint discovery, inspect coverage, or adjust constraints; do not
+assume that runtime communication is impossible.
 
-Colour does two orthogonal jobs, so they never compete:
-
-| Channel | Carries | Why there |
-|---|---|---|
-| edge colour | the *kind* of relationship — reserved rust means "crosses a module" | an edge spans two modules and has no single identity to encode |
-| node ring | *which* module the node belongs to | a node does have one identity, and two hues either end of a line make a crossing self-evident |
-
-The node's fill still carries its type, so nothing is displaced. A sidebar
-legend names the colours; rings appear only when more than one module is on
-screen.
+Manage source through **Ingest**, **Refresh repository**, and **Delete
+repository** as described in the [quickstart](quickstart.md#4-keep-it-current).

@@ -1,85 +1,71 @@
-# Measuring the graph against real repositories
+# Check graph accuracy against source
 
-The calibration harness in `backend/tracekite/services/calibration.py` scores the
-resolvers on hand-built labelled estates. It is necessary but not sufficient:
-it can only be as good as the cases someone thought to write, and a tier with
-no estate scores nothing at all while still reporting 1.0 overall.
+[Documentation](../../docs/README.md) · [Contributing](../../CONTRIBUTING.md)
 
-These two scripts measure the graph against repositories that are actually
-ingested. Neither asks the graph whether it agrees with itself.
+Run these scripts against the Docker application's **stored** graph and cloned
+source. Unit/calibration tests use known fixtures; this harness checks real
+repositories and can find patterns those fixtures missed.
 
-Both take repo ids as arguments and default to every repo in the graph:
+## Before running
 
-    python scripts/accuracy/verify_edges.py
-    python scripts/accuracy/measure_recall.py spring-petclinic_spring-petclinic-cloud
+1. Build the backend containing the extraction/linking changes.
+2. Re-ingest the relevant repositories and wait for the automatic link run.
+3. Install the development environment with `uv sync --frozen`.
+4. Keep the source clone used by ingestion available in the backend container.
 
-Shared plumbing lives in `_kg.py`. Container names, the Neo4j credentials and
-the workspace root all come from the environment (`TRACEKITE_NEO4J_CONTAINER`,
-`TRACEKITE_BACKEND_CONTAINER`, `NEO4J_PASSWORD`, `TRACEKITE_REPO_ROOT`), so nothing is
-pinned to one machine or one estate.
+From the repository root:
 
-## `verify_edges.py` — precision
+```bash
+.venv/bin/python scripts/accuracy/verify_edges.py
+.venv/bin/python scripts/accuracy/measure_recall.py
+```
 
-Samples edges per stratum, reads the `file:line` each cites as evidence out of
-the ingested clone, and decides whether the source supports the claim.
+Both default to every stored repository. Pass specific repo IDs to narrow the
+run; use IDs from `/api/repos`:
 
-Verdicts: `TP` supported, `TP_WEAK` partially supported, `FP?` not supported,
-`UNVERIFIABLE` no mechanical check possible.
+```bash
+.venv/bin/python scripts/accuracy/verify_edges.py spring-petclinic_spring-petclinic-cloud
+.venv/bin/python scripts/accuracy/measure_recall.py spring-petclinic_spring-petclinic-cloud
+```
 
-**Every `FP?` must be read by hand before being believed — the checker has been
-wrong at least as often as the graph.** Three times so far:
+Do not use `--help` to discover options: these scripts execute their checks.
+`verify_edges.py` accepts `--json` for a detailed machine-readable report.
 
-- A Next.js `export const GET = withGuards(...)` handler was flagged because
-  the regex only recognised `export function GET`. The graph was right.
-- `s.HandlePath(http.MethodGet, ...)` in grpc-gateway was flagged because the
-  pattern matched `Handle(` and `HandlePath` never reached the paren. Ordered
-  alternation, correctly ordered, fixed it. The graph was right.
-- The whole MCP stratum scored 0.00 because the checker read `b.name` on a
-  node type whose tool name lives in `b.rpc`. Every row compared against
-  `NULL`. The graph was right.
+## Interpret the output
 
-The pattern is consistent enough to be a rule: when a stratum scores
-suspiciously badly, suspect the checker first.
+| Check | Direction | Scope |
+|---|---|---|
+| Precision (`verify_edges.py`) | Edge → cited source | Samples HTTP/MCP exposures, service calls, HTTP invocations, SQL reads/writes |
+| Recall (`measure_recall.py`) | Source fact → stored graph | Enumerates admitted Compose dependencies, supported Next.js handlers, gateway routes, MCP manifests |
 
-## `measure_recall.py` — recall
+Precision verdicts: `TP` supported, `TP_WEAK` supported without a literal match
+for every detail, `FP?` needs manual inspection, `UNVERIFIABLE` could not be
+checked mechanically. Read every suspected false positive and unverifiable case
+before reporting a score; either the graph or checker may be wrong.
 
-The opposite direction, and exhaustive rather than sampled for the categories
-it covers: enumerates facts from the source — every compose `depends_on`, every
-Next.js route handler, every MCP capability manifest — and checks the graph
-contains each one. Anything absent is a false negative.
+Recall enumerates files admitted by the stored scan. Production Compose checks
+exclude test files. Shared facts attributed to another repo are reported as
+present, not missing. A category with no source examples is 0/0, not evidence of
+perfect coverage.
 
-Two things it deliberately does not treat as misses:
+Neither script is a universal pass/fail release gate by exit code alone; inspect
+the reported findings. Messaging, package, gRPC, and GraphQL recall do not have
+complete source enumerators here.
 
-- **Cross-repo attribution.** When two repos declare the same dependency
-  between the same two services, unification produces one edge stamped with
-  whichever repo linked first. The fact is in the graph; requiring this repo's
-  id would report a false miss. Such matches are counted and reported
-  separately rather than hidden.
-- **Nothing to find.** A repo with no compose files scores 0/0, not 0%.
+## Connection settings
 
-## The trap that matters most: staleness
+[`_kg.py`](_kg.py) uses:
 
-**These scripts read the stored graph, not your working tree.** The graph was
-written by whatever version of the extractors ran at ingest time, so a repo
-ingested before a fix will still exhibit that fix's bug.
+| Variable | Default |
+|---|---|
+| `TRACEKITE_NEO4J_CONTAINER` | `tracekite-neo4j` |
+| `TRACEKITE_BACKEND_CONTAINER` | `tracekite-backend` |
+| `NEO4J_USER` | `neo4j` |
+| `NEO4J_PASSWORD` | Environment value, otherwise repository `.env` |
+| `TRACEKITE_REPO_ROOT` | `/app/data/repos` inside the backend container |
+| `TRACEKITE_REPO` | Optional comma-separated repo IDs instead of arguments |
 
-This is not hypothetical. Compose recall on `spring-petclinic-cloud` read
-2/11 and looked like a serious resolver defect. The parser on disk handled all
-11 correctly; the repo had simply been ingested before a claim-identity fix
-landed. Re-ingesting took the same measurement to 11/11.
-
-Both scripts now print each repo's ingest timestamp for exactly this reason.
-Re-ingest before believing a low score.
-
-## What this does not measure
-
-Only the strata listed above. Messaging, package dependencies and gateway
-routes have no ground-truth enumerator yet. A category with no enumerator
-contributes nothing to these numbers — the same trap as an uncovered
-calibration tier, so add an enumerator when you add a resolver.
-
-Note also what the clone contains rather than what your working copy does.
-Ingestion does not fetch git submodules, so nothing inside one can appear in
-either the source enumeration or the graph. Counts taken from a working copy
-with submodules initialised will disagree with these; the clone is the source
-of truth for anything the graph is expected to see.
+The harness reads files from the ingested clone, not your host working tree.
+Submodules missing from that clone cannot be used as expected ground truth.
+After changing extraction code, a score from an older stored ingest does not
+validate the change.
