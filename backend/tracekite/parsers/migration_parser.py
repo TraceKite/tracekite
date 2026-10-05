@@ -14,86 +14,9 @@ is preserved alongside).
 import re
 from dataclasses import dataclass, field
 
-# One identifier, optionally quoted per dialect: `t`, "T", [T], sch.t, `p.d.t`.
-_IDENT = r"[`\"\[]?[A-Za-z_][\w.$]*[`\"\]]?(?:\.[`\"\[]?[A-Za-z_][\w$]*[`\"\]]?)*"
-_QUOTES = "`\"[]"
-
-# Words that can follow FROM/JOIN/INTO without being tables; declining these
-# beats guessing (a captured keyword is always wrong, a skip is merely absent).
-_SQL_KEYWORDS = {
-    "select", "from", "where", "join", "on", "set", "values", "into", "table",
-    "if", "not", "exists", "only", "inner", "left", "right", "outer", "cross",
-    "lateral", "dual", "unnest", "function", "procedure", "immediate", "when",
-}
-
-_SQL_CREATE = re.compile(
-    r"\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:UNLOGGED\s+|TEMP(?:ORARY)?\s+)?TABLE\s+"
-    r"(?:IF\s+NOT\s+EXISTS\s+)?(" + _IDENT + ")", re.I)
-_SQL_ALTER = re.compile(
-    r"\bALTER\s+TABLE\s+(?:ONLY\s+)?(?:IF\s+EXISTS\s+)?(" + _IDENT + ")", re.I)
-_SQL_DROP = re.compile(
-    r"\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?(" + _IDENT + ")", re.I)
-# FROM with a subquery/parens is not a table reference; skip via (?!\().
-_SQL_FROM = re.compile(r"\bFROM\s+(?!\()(" + _IDENT + ")", re.I)
-_SQL_JOIN = re.compile(r"\bJOIN\s+(?!\()(" + _IDENT + ")", re.I)
-_SQL_INSERT = re.compile(r"\bINSERT\s+(?:IGNORE\s+)?INTO\s+(" + _IDENT + ")", re.I)
-# SET is required so prose containing "update" never yields a table.
-_SQL_UPDATE = re.compile(r"\bUPDATE\s+(" + _IDENT + r")\s+SET\b", re.I)
-_SQL_DELETE = re.compile(r"\bDELETE\s+FROM\s+(" + _IDENT + ")", re.I)
-_SQL_PROC = re.compile(r"\b(?:CALL|EXEC(?:UTE)?)\s+(" + _IDENT + ")", re.I)
-# Placeholder in table position -> dynamic, never a name.
-_SQL_DYNAMIC = re.compile(
-    r"\b(FROM|INTO|UPDATE|JOIN)\s+(?:%s|%\(\w+\)s|\?|\{[^}]*\}|\$\{[^}]*\})", re.I)
-_DELETE_BEFORE = re.compile(r"DELETE\s+$", re.I)
-
-
-def _line_of(content: str, pos: int) -> int:
-    return content.count("\n", 0, pos) + 1
-
-
-def _clean(raw: str) -> str:
-    """Identity form of a SQL identifier: quotes stripped, lowercased."""
-    return "".join(ch for ch in raw if ch not in _QUOTES).lower().rstrip(".")
-
-
-def _collect(pattern: re.Pattern, content: str, out: list, *, skip_after_delete=False):
-    for match in pattern.finditer(content):
-        raw = match.group(1)
-        name = _clean(raw)
-        if not name or name.split(".")[0] in _SQL_KEYWORDS:
-            continue
-        if skip_after_delete and _DELETE_BEFORE.search(content[max(0, match.start() - 12):match.start()]):
-            continue  # the FROM of DELETE FROM; the DELETE rule owns it
-        out.append((name, _line_of(content, match.start()), raw))
-
-
-def parse_sql_tables(content: str) -> dict:
-    """Table references in a SQL text, by statement class.
-
-    Returns lists of ``(name, line, raw)`` under keys ``created`` / ``altered``
-    / ``dropped`` / ``reads`` (SELECT FROM, JOIN) / ``writes`` (INSERT, UPDATE,
-    DELETE) / ``procedures`` (CALL/EXEC), plus ``dynamic``: ``(role, line)``
-    pairs for placeholder table positions.
-    """
-    out: dict = {k: [] for k in
-                 ("created", "altered", "dropped", "reads", "writes",
-                  "procedures", "dynamic")}
-    _collect(_SQL_CREATE, content, out["created"])
-    _collect(_SQL_ALTER, content, out["altered"])
-    _collect(_SQL_DROP, content, out["dropped"])
-    _collect(_SQL_FROM, content, out["reads"], skip_after_delete=True)
-    _collect(_SQL_JOIN, content, out["reads"])
-    _collect(_SQL_INSERT, content, out["writes"])
-    _collect(_SQL_UPDATE, content, out["writes"])
-    _collect(_SQL_DELETE, content, out["writes"])
-    _collect(_SQL_PROC, content, out["procedures"])
-    for match in _SQL_DYNAMIC.finditer(content):
-        role = "reads" if match.group(1).upper() in ("FROM", "JOIN") else "writes"
-        if role == "reads" and _DELETE_BEFORE.search(
-                content[max(0, match.start() - 12):match.start()]):
-            role = "writes"  # DELETE FROM <placeholder>
-        out["dynamic"].append((role, _line_of(content, match.start())))
-    return out
+from tracekite.parsers.sql_tables import (
+    clean_identifier, line_of, parse_sql_tables,
+)
 
 
 @dataclass
@@ -102,6 +25,7 @@ class MigrationInfo:
     tables_created: list[str] = field(default_factory=list)
     tables_altered: list[str] = field(default_factory=list)
     tables_dropped: list[str] = field(default_factory=list)
+    table_lines: dict[str, int] = field(default_factory=dict)
     framework: str = "sql"    # flyway | liquibase | alembic | django | rails | prisma | ef | sql
     version: str = ""         # V1_2__ prefix, alembic revision, EF [Migration], ...
 
@@ -198,12 +122,37 @@ def _dedupe(names: list[str]) -> list[str]:
     return [n for n in names if not (n in seen or seen.add(n))]
 
 
+def _captured(pattern: re.Pattern, content: str,
+              group: int = 1) -> list[tuple[str, int]]:
+    return [
+        (clean_identifier(match.group(group)),
+         line_of(content, match.start(group)))
+        for match in pattern.finditer(content)
+    ]
+
+
+def _names(pairs: list[tuple[str, int]]) -> list[str]:
+    return _dedupe([name for name, _ in pairs])
+
+
+def _first_lines(*groups: list[tuple[str, int]]) -> dict[str, int]:
+    lines: dict[str, int] = {}
+    for pairs in groups:
+        for name, line in pairs:
+            lines.setdefault(name, line)
+    return lines
+
+
 def _from_sql(content: str, framework: str, version: str) -> MigrationInfo:
     tables = parse_sql_tables(content)
+    created = [(name, line) for name, line, _ in tables["created"]]
+    altered = [(name, line) for name, line, _ in tables["altered"]]
+    dropped = [(name, line) for name, line, _ in tables["dropped"]]
     return MigrationInfo(
-        tables_created=_dedupe([n for n, _, _ in tables["created"]]),
-        tables_altered=_dedupe([n for n, _, _ in tables["altered"]]),
-        tables_dropped=_dedupe([n for n, _, _ in tables["dropped"]]),
+        tables_created=_names(created),
+        tables_altered=_names(altered),
+        tables_dropped=_names(dropped),
+        table_lines=_first_lines(created, altered, dropped),
         framework=framework, version=version)
 
 
@@ -214,10 +163,14 @@ def _alembic(content: str) -> MigrationInfo:
     m = re.search(r"\bdef\s+downgrade\s*\(", content)
     body = content[:m.start()] if m else content
     rev = _ALEMBIC_REVISION.search(content)
+    created = _captured(_ALEMBIC_CREATE, body)
+    altered = _captured(_ALEMBIC_ALTER, body)
+    dropped = _captured(_ALEMBIC_DROP, body)
     return MigrationInfo(
-        tables_created=_dedupe([m.group(1) for m in _ALEMBIC_CREATE.finditer(body)]),
-        tables_altered=_dedupe([m.group(1) for m in _ALEMBIC_ALTER.finditer(body)]),
-        tables_dropped=_dedupe([m.group(1) for m in _ALEMBIC_DROP.finditer(body)]),
+        tables_created=_names(created),
+        tables_altered=_names(altered),
+        tables_dropped=_names(dropped),
+        table_lines=_first_lines(created, altered, dropped),
         framework="alembic", version=rev.group(1) if rev else "")
 
 
@@ -225,59 +178,82 @@ def _django(content: str, version: str) -> MigrationInfo:
     # Explicit db_table (within that CreateModel's options) wins; otherwise
     # the lowercased model name stands in — the real table is app-prefixed,
     # so the orchestrator treats django-inferred names as lower confidence.
-    created: list[str] = []
+    created: list[tuple[str, int]] = []
     matches = list(_DJANGO_CREATE.finditer(content))
     for i, m in enumerate(matches):
         end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
         db = _DJANGO_DB_TABLE.search(content[m.start():end])
-        created.append(db.group(1).lower() if db else m.group(1).lower())
+        name = clean_identifier(db.group(1) if db else m.group(1))
+        pos = m.start() + db.start(1) if db else m.start(1)
+        created.append((name, line_of(content, pos)))
+    altered = _captured(_DJANGO_ALTER, content)
+    dropped = _captured(_DJANGO_DELETE, content)
     return MigrationInfo(
-        tables_created=_dedupe(created),
-        tables_altered=_dedupe([m.group(1).lower() for m in _DJANGO_ALTER.finditer(content)]),
-        tables_dropped=_dedupe([m.group(1).lower() for m in _DJANGO_DELETE.finditer(content)]),
+        tables_created=_names(created),
+        tables_altered=_names(altered),
+        tables_dropped=_names(dropped),
+        table_lines=_first_lines(created, altered, dropped),
         framework="django", version=version)
 
 
 def _rails(content: str, version: str) -> MigrationInfo:
+    created = _captured(_RAILS_CREATE, content)
+    altered = _captured(_RAILS_ALTER, content)
+    dropped = _captured(_RAILS_DROP, content)
     return MigrationInfo(
-        tables_created=_dedupe([m.group(1).lower() for m in _RAILS_CREATE.finditer(content)]),
-        tables_altered=_dedupe([m.group(1).lower() for m in _RAILS_ALTER.finditer(content)]),
-        tables_dropped=_dedupe([m.group(1).lower() for m in _RAILS_DROP.finditer(content)]),
+        tables_created=_names(created),
+        tables_altered=_names(altered),
+        tables_dropped=_names(dropped),
+        table_lines=_first_lines(created, altered, dropped),
         framework="rails", version=version)
 
 
 def _ef(content: str, version: str) -> MigrationInfo:
     attr = _EF_ATTR_VERSION.search(content)
+    created = _captured(_EF_CREATE, content)
+    altered = _captured(_EF_ALTER, content)
+    dropped = _captured(_EF_DROP, content)
     return MigrationInfo(
-        tables_created=_dedupe([m.group(1).lower() for m in _EF_CREATE.finditer(content)]),
-        tables_altered=_dedupe([m.group(1).lower() for m in _EF_ALTER.finditer(content)]),
-        tables_dropped=_dedupe([m.group(1).lower() for m in _EF_DROP.finditer(content)]),
+        tables_created=_names(created),
+        tables_altered=_names(altered),
+        tables_dropped=_names(dropped),
+        table_lines=_first_lines(created, altered, dropped),
         framework="ef", version=attr.group(1) if attr else version)
 
 
 def _liquibase(content: str) -> MigrationInfo:
-    info = MigrationInfo(framework="liquibase")
+    created: list[tuple[str, int]] = []
+    altered: list[tuple[str, int]] = []
+    dropped: list[tuple[str, int]] = []
     for pattern in (_LB_XML, _LB_YAML):
         for m in pattern.finditer(content):
-            tag, name = m.group(1), _clean(m.group(2))
+            tag = m.group(1)
+            pair = (clean_identifier(m.group(2)),
+                    line_of(content, m.start(2)))
             if tag == "createTable":
-                info.tables_created.append(name)
+                created.append(pair)
             elif tag == "dropTable":
-                info.tables_dropped.append(name)
+                dropped.append(pair)
             else:
-                info.tables_altered.append(name)
+                altered.append(pair)
     for m in _LB_SQL_BLOCK.finditer(content):   # raw <sql> through the SQL path
         raw = _from_sql(m.group(1), "liquibase", "")
-        info.tables_created += raw.tables_created
-        info.tables_altered += raw.tables_altered
-        info.tables_dropped += raw.tables_dropped
-    info.tables_created = _dedupe(info.tables_created)
-    info.tables_altered = _dedupe(info.tables_altered)
-    info.tables_dropped = _dedupe(info.tables_dropped)
+        offset = line_of(content, m.start(1)) - 1
+        created += [(name, raw.table_lines[name] + offset)
+                    for name in raw.tables_created]
+        altered += [(name, raw.table_lines[name] + offset)
+                    for name in raw.tables_altered]
+        dropped += [(name, raw.table_lines[name] + offset)
+                    for name in raw.tables_dropped]
     cs = _LB_CHANGESET_ID.search(content)
-    if cs:
-        info.version = cs.group(1) or cs.group(2) or ""
-    return info
+    return MigrationInfo(
+        tables_created=_names(created),
+        tables_altered=_names(altered),
+        tables_dropped=_names(dropped),
+        table_lines=_first_lines(created, altered, dropped),
+        framework="liquibase",
+        version=(cs.group(1) or cs.group(2) or "") if cs else "",
+    )
 
 
 def parse_migration(file_path: str, content: str) -> MigrationInfo | None:

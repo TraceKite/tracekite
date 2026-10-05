@@ -1374,7 +1374,7 @@ def emit_migration_claims(repo_id: str, file_info, content: str,
         add_claim(repo_id, ContractClaim(
             repo_id=repo_id, kind="db", direction=PROVIDES,
             key=dataset_key("table", table), hint_source="none",
-            evidence=[f"{file_info.path}:1"],
+            evidence=[f"{file_info.path}:{migration.table_lines.get(table, 1)}"],
             subject=f"migration/{migration.framework}/{table}",
             provenance=provenance,
             attrs={"source": "migration", "declares": True,

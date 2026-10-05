@@ -1,5 +1,7 @@
 """Migration parsing and shared SQL table extraction."""
 
+import pytest
+
 from tracekite.parsers.migration_parser import (
     MigrationInfo, is_migration_file, parse_migration, parse_sql_tables,
 )
@@ -221,6 +223,25 @@ class TestStandaloneSql:
 
     def test_non_sql_non_migration_returns_none(self):
         assert parse_migration("src/app/service.py", "print('hi')") is None
+
+
+@pytest.mark.parametrize(("path", "content"), [
+    ("db/migration/V2__add_owners.sql", FLYWAY_V2),
+    ("migrations/versions/3f2a_add_owners.py", ALEMBIC_REV),
+    ("clinic/migrations/0002_add_owner.py", DJANGO_MIG),
+    ("db/changelog/db.changelog-owners.xml", LIQUIBASE_XML),
+    ("db/migrate/20240301120000_create_owners.rb", RAILS_MIG),
+    ("Migrations/20240301120000_AddOwners.cs", EF_MIG),
+])
+def test_each_table_cites_the_line_that_names_it(path, content):
+    info = parse_migration(path, content)
+    lines = content.lower().splitlines()
+    tables = info.tables_created + info.tables_altered + info.tables_dropped
+
+    assert set(info.table_lines) == set(tables)
+    for table in tables:
+        cited = lines[info.table_lines[table] - 1]
+        assert table.replace("_", "") in cited.replace("_", "")
 
 
 class TestParseSqlTables:

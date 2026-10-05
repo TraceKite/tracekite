@@ -183,6 +183,13 @@ class TestPipelines:
 
 
 class TestDeclarationTiers:
+    def test_migration_claim_cites_the_table_statement(self):
+        [claim] = _migration(
+            "repo_owners", "db/migration/V2__create_owners.sql", FLYWAY_SQL)
+
+        assert claim.key == "table:owners"
+        assert claim.evidence == ["db/migration/V2__create_owners.sql:2"]
+
     def test_migration_beats_literal_confidence(self):
         claims = (_migration("repo_owners",
                              "db/migration/V2__create_owners.sql", FLYWAY_SQL)
