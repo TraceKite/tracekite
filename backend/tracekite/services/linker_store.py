@@ -66,14 +66,26 @@ class Neo4jLinkerStore:
                 states=list(LINKABLE_STATES)).data()
         return {row["id"]: row["state"] or "unknown" for row in rows}
 
+    def linkable_repo_ids(self) -> list[str]:
+        with get_session() as session:
+            rows = session.run(
+                "MATCH (r:Repo) WHERE r.lifecycle_state IN $states "
+                "RETURN r.id AS id ORDER BY r.id",
+                states=list(LINKABLE_STATES)).data()
+        return [row["id"] for row in rows]
+
     def claim_fingerprints(self) -> dict[str, str]:
         by_repo: dict[str, list[str]] = {}
         with get_session() as session:
             rows = session.run(
-                "MATCH (c:GraphNode:ContractClaim) "
-                "RETURN c.repo_id AS repo, c.id AS id")
+                "MATCH (r:Repo) WHERE r.lifecycle_state IN $states "
+                "OPTIONAL MATCH (c:GraphNode:ContractClaim {repo_id: r.id}) "
+                "RETURN r.id AS repo, c.id AS id",
+                states=list(LINKABLE_STATES))
             for row in rows:
-                by_repo.setdefault(row["repo"], []).append(row["id"])
+                claims = by_repo.setdefault(row["repo"], [])
+                if row["id"]:
+                    claims.append(row["id"])
         return {repo: hashlib.sha256("\n".join(sorted(ids)).encode())
                 .hexdigest()[:16] for repo, ids in by_repo.items()}
 

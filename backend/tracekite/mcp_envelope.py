@@ -51,6 +51,14 @@ def _classify_for_envelope(tool_name: str, answer: dict,
         return classify_impact(answer)
     if tool_name == "subgraph":
         return classify_subgraph(answer)
+    if tool_name == "services":
+        if answer.get("services"):
+            return AnswerStatus.PRESENT, [], ""
+        return AnswerStatus.KNOWN_EMPTY, [], "no services resolved"
+    if tool_name == "deprecations":
+        if answer.get("contracts"):
+            return AnswerStatus.PRESENT, [], ""
+        return AnswerStatus.KNOWN_EMPTY, [], "no deprecated contracts"
     if answer.get("found") is True:
         has_results = bool(
             answer.get("consumers") or answer.get("paths")

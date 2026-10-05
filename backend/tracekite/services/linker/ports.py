@@ -37,6 +37,9 @@ class LinkerStore(Protocol):
         with a broken repo look identical to a smaller estate.
         """
 
+    def linkable_repo_ids(self) -> list[str]:
+        """Every repository included in the run, even if it has no claims."""
+
     def claim_fingerprints(self) -> dict[str, str]:
         """Repo id → digest of that repo's current claim ids."""
 

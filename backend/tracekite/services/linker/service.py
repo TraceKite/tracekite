@@ -136,5 +136,5 @@ class LinkerService:
         deleted = self._store.delete_stale_linker_edges(run_id)
         orphans = self._store.gc_orphan_rendezvous()
         self._progress(95, "Linking: finalizing repository state")
-        self._store.stamp_repos_linked(result.repo_ids, run_id)
+        self._store.stamp_repos_linked(self._store.linkable_repo_ids(), run_id)
         return written, deleted, orphans

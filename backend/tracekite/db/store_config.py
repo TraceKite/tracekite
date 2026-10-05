@@ -28,7 +28,7 @@ class StoreConfig:
     neo4j_uri: str = "bolt://127.0.0.1:7687"
     neo4j_user: str = "neo4j"
     neo4j_password: str = ""
-    write_batch_size: int = 5000
+    write_batch_size: int = 500
 
 
 _active = StoreConfig()

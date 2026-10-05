@@ -98,10 +98,8 @@ export const api = {
     fetchJson<RepoSummary>(`${API_BASE}/api/repos/${repoId}`),
 
   deleteRepo: (repoId: string) =>
-    fetch(`${API_BASE}/api/repos/${repoId}`, {
-      method: "DELETE",
-      headers: apiToken ? { "Authorization": `Bearer ${apiToken}` } : {}
-    }),
+    fetchJson<{ job_id: string; repo_id: string; status: string; message: string }>(
+      `${API_BASE}/api/repos/${repoId}`, { method: "DELETE" }),
 
   refreshRepo: (repoId: string) =>
     fetchJson<{ job_id: string; repo_id: string; status: string; message: string }>(

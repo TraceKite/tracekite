@@ -8,23 +8,7 @@ for the published `tracekite-core` distribution.
 
 ## [Unreleased]
 
-### Fixed
-
-- Link jobs report resolution, write, cleanup, and finalization progress during
-  long Neo4j rebuilds instead of remaining at 10 percent until completion.
-- Multi-repository code views retain `UI_CALLS` edges and their frontend call
-  evidence instead of showing the frontend and backend as disconnected.
-- Protobuf, Terraform, Avro, and other dedicated structured-file parsers count
-  as parsed coverage, so MCP completeness no longer calls extracted evidence
-  unsupported.
-- Migration ownership claims cite the statement that names each table across
-  SQL, Prisma, Flyway, Alembic, Django, Liquibase, Rails, and EF migrations.
-- Neo4j cleanup queries use scoped subqueries accepted without deprecation
-  warnings by Neo4j 5.26 and later.
-- The real-repository recall harness enumerates only files admitted by the
-  stored scan and excludes test Compose files from production recall.
-
-## [0.2.0] - 2026-10-04
+## [0.2.0] - 2026-10-05
 
 ### Added
 
@@ -47,6 +31,34 @@ for the published `tracekite-core` distribution.
 
 ### Fixed
 
+- Link jobs report resolution, write, cleanup, and finalization progress during
+  long Neo4j rebuilds instead of remaining at 10 percent until completion.
+- Neo4j writes use bounded transactions and split only timed-out batches, and
+  successful full runs mark zero-claim repositories current so stale-link
+  warnings clear after small or empty repositories are ingested.
+- Service Map recognizes automatically queued link runs, shows their active
+  state, prevents duplicate rebuild clicks, and reloads its graph when the
+  observed run completes. Its total and per-relation counts now use the same
+  repository projection as the canvas.
+- Rebuild, refresh, ingest, and delete jobs reopen a visible progress panel for
+  every new job; repository deletion uses an application dialog and changes
+  scope only after the queued backend deletion completes.
+- Exact node drill-down uses the node's repository in multi-repo scopes and
+  includes every incident relationship; hidden 3D overlays no longer remain
+  exposed to assistive technology after a scope change.
+- Empty MCP service and deprecation collections report `known_empty` rather
+  than claiming a result is present.
+- Multi-repository code views retain `UI_CALLS` edges and their frontend call
+  evidence instead of showing the frontend and backend as disconnected.
+- Protobuf, Terraform, Avro, and other dedicated structured-file parsers count
+  as parsed coverage, so MCP completeness no longer calls extracted evidence
+  unsupported.
+- Migration ownership claims cite the statement that names each table across
+  SQL, Prisma, Flyway, Alembic, Django, Liquibase, Rails, and EF migrations.
+- Neo4j cleanup queries use scoped subqueries accepted without deprecation
+  warnings by Neo4j 5.26 and later.
+- The real-repository recall harness enumerates only files admitted by the
+  stored scan and excludes test Compose files from production recall.
 - Workspace `packages/` directories are scanned as first-party code; NuGet
   restore folders remain excluded. Scoped npm and Go publishers now join the
   same package keys as their consumers, while private packages publish no

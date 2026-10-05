@@ -10,6 +10,12 @@ export default function IngestionStatus() {
   const [dots, setDots] = useState("");
 
   useEffect(() => {
+    if (!ingestionJob) return;
+    setVisible(true);
+    setDots("");
+  }, [ingestionJob?.job_id]);
+
+  useEffect(() => {
     if (!ingestionJob) return undefined;
     if (ingestionJob.status === "running" || ingestionJob.status === "queued") {
       const interval = setInterval(() => {
@@ -19,6 +25,12 @@ export default function IngestionStatus() {
     }
     return undefined;
   }, [ingestionJob?.status]);
+
+  useEffect(() => {
+    if (ingestionJob?.status !== "completed") return undefined;
+    const timeout = window.setTimeout(() => setVisible(false), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [ingestionJob?.job_id, ingestionJob?.status]);
 
   useEffect(() => {
     if (!ingestionJob) return;
@@ -36,8 +48,12 @@ export default function IngestionStatus() {
           if (newRepo && !selectedRepo) {
             setSelectedRepo(newRepo);
             setScopeRepos([newRepo.id]);
+          } else if (!newRepo && status.repo_id !== "__linker__"
+                     && selectedRepo?.id === status.repo_id) {
+            const next = list.repos[0] ?? null;
+            setSelectedRepo(next);
+            setScopeRepos(next ? [next.id] : []);
           }
-          setTimeout(() => setVisible(false), 4000);
         }
         // A failure does NOT auto-dismiss. It is the one state carrying
         // information the user cannot recover anywhere else (the clone error,
@@ -56,6 +72,8 @@ export default function IngestionStatus() {
   const isRunning = ingestionJob.status === "running" || ingestionJob.status === "queued";
   const isCompleted = ingestionJob.status === "completed";
   const isFailed = ingestionJob.status === "failed";
+  const isLinker = ingestionJob.repo_id === "__linker__";
+  const isDelete = ingestionJob.message.toLowerCase().includes("delet");
 
   const borderColor = isCompleted ? "border-[#315b47]/30" : isFailed ? "border-[#a45138]/30" : "border-[#9b7a31]/30";
 
@@ -74,11 +92,12 @@ export default function IngestionStatus() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-[#1a1d23]">
-                {isRunning && "Ingesting repository"}
-                {isCompleted && "Ingestion complete"}
-                {isFailed && "Ingestion failed"}
+                {isRunning && (isLinker ? "Rebuilding links" : isDelete ? "Deleting repository" : "Ingesting repository")}
+                {isCompleted && (isLinker ? "Link rebuild complete" : isDelete ? "Repository deleted" : "Ingestion complete")}
+                {isFailed && (isLinker ? "Link rebuild failed" : isDelete ? "Repository deletion failed" : "Ingestion failed")}
               </h4>
-              <button onClick={() => setVisible(false)} className="text-[#8b929e] hover:text-[#1a1d23] transition-colors">
+              <button onClick={() => setVisible(false)} aria-label="Dismiss ingestion status"
+                className="text-[#8b929e] hover:text-[#1a1d23] transition-colors">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>

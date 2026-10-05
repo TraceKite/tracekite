@@ -1,5 +1,7 @@
 """Coverage for the linker write path, execution service, job handlers, queue."""
 
+import hashlib
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -30,6 +32,9 @@ class FakeResult:
 
     def consume(self):
         return self._consume
+
+    def data(self):
+        return list(self._records)
 
 
 class FakeSession:
@@ -234,6 +239,24 @@ class TestLoadClaims:
         _query, params = session.calls[0]
         assert params["states"] == ["ingested", "linking", "linked"]
 
+    def test_linkable_repo_ids_include_repos_without_claims(self):
+        session = FakeSession([FakeResult(records=[{"id": "empty-repo"}])])
+        with patch("tracekite.services.linker_store.get_session",
+                   return_value=_ctx(session)):
+            repo_ids = Neo4jLinkerStore().linkable_repo_ids()
+        assert repo_ids == ["empty-repo"]
+
+    def test_empty_claim_set_has_a_stable_fingerprint(self):
+        records = [{"repo": "empty-repo", "id": None},
+                   {"repo": "with-claim", "id": "c1"}]
+        session = FakeSession([FakeResult(records=records)])
+        with patch("tracekite.services.linker_store.get_session",
+                   return_value=_ctx(session)):
+            fingerprints = Neo4jLinkerStore().claim_fingerprints()
+        assert set(fingerprints) == {"empty-repo", "with-claim"}
+        empty_digest = hashlib.sha256(b"").hexdigest()[:16]
+        assert fingerprints["empty-repo"] == empty_digest
+
 
 class FakeLinkerStore:
     """A LinkerStore held in memory, so a link run needs no database.
@@ -244,8 +267,10 @@ class FakeLinkerStore:
     """
 
     def __init__(self, claims=None, fingerprints=None, stored=None,
-                 unlinkable=None):
+                 unlinkable=None, linkable=None):
         self.claims = list(claims or [])
+        self.linkable = (list(linkable) if linkable is not None
+                         else sorted({claim.repo_id for claim in self.claims}))
         self.fingerprints = dict(fingerprints or {})
         self.stored = dict(stored or {})
         self.unlinkable = dict(unlinkable or {})
@@ -261,6 +286,9 @@ class FakeLinkerStore:
 
     def unlinkable_repos(self):
         return self.unlinkable
+
+    def linkable_repo_ids(self):
+        return self.linkable
 
     def claim_fingerprints(self):
         return self.fingerprints
@@ -362,12 +390,13 @@ class TestLinkerServiceLinkFull:
         assert store.finished["status"] == "done"
 
     def test_link_full_empty_claims(self):
-        store = FakeLinkerStore(claims=[])
+        store = FakeLinkerStore(claims=[], linkable=["empty-repo"])
         conf, aliases, rollups = self._patches()
         with conf, aliases, rollups:
             result = linker_service.LinkerService(store).link_full()
         assert result["claims_loaded"] == 0
         assert store.finished["status"] == "done"
+        assert store.stamped[0][0] == ("empty-repo",)
 
     def test_link_full_failure_propagates(self):
         store = FakeLinkerStore(claims=[])

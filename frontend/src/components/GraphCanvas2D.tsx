@@ -21,7 +21,7 @@ import {
   paintNodePointerArea,
 } from "@/lib/graph2dPainter";
 import { endpointId } from "@/lib/graphVisibility";
-import { cameraSceneKey, effectiveRepoIds } from "@/lib/graphNavigation";
+import { cameraSceneKey, effectiveRepoIds, nodeFocusTarget } from "@/lib/graphNavigation";
 import GraphCanvasMessage from "@/components/GraphCanvasMessage";
 import GraphContextBar from "@/components/GraphContextBar";
 import Graph2DHoverCard from "@/components/Graph2DHoverCard";
@@ -48,7 +48,7 @@ export default function GraphCanvas2D() {
     filteredEdgeTypes,
     hideLockfileDeps,
     clientConfig,
-    focusNodeId,
+    focusNodeId, setFocusNode,
   } = useGraphStore();
   const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
   const [ForceGraphComponent, setForceGraphComponent] = useState<any>(null);
@@ -199,7 +199,10 @@ export default function GraphCanvas2D() {
   const openedLabel = visibleNodes.find((node) => node.id === openedNodeId)?.label ?? null;
   const { handleNodeClick, openNode } = useGraphNodeClick({
     onSelect: setSelectedNode,
-    onOpenNode: setExpandedNode,
+    onOpenNode: (node) => {
+      const target = nodeFocusTarget(node, selectedRepo?.id ?? null);
+      setExpandedNode(target.nodeId); setFocusNode(target.nodeId, target.repoId);
+    },
     onOpenGroup: setExpandedGroup,
   });
   const navigateBack = useGraphBackNavigation();

@@ -88,6 +88,18 @@ test("an edge with no repo attribution survives scoping", () => {
   assert.equal(projected.links.length, 1);
 });
 
+test("an unattributed edge outside the selected scope is still pruned", () => {
+  const data = response();
+  data.edges = [{
+    source: "svc:c", target: "svc:c", type: "CALLS_SERVICE", confidence: 0.9,
+    min_confidence: 0.9, max_confidence: 0.9, via: [], weight: 1, evidence: [],
+  }];
+  const projected = projectServiceMap(data, EDGE_TYPES, ["repo-one"]);
+
+  assert.equal(projected.links.length, 0);
+  assert.deepEqual(projected.nodes.map((node) => node.id), ["svc:a", "svc:b"]);
+});
+
 test("each projection owns its arrays, because force-graph mutates them", () => {
   const first = projectServiceMap(null, EDGE_TYPES, []);
   const second = projectServiceMap(null, EDGE_TYPES, []);

@@ -4,7 +4,9 @@ import json
 import logging
 
 from tracekite.db.neo4j_client import get_session
-from tracekite.services.graph_writer import RENDEZVOUS_LABELS, _batches, _utcnow
+from tracekite.db.neo4j_batch_writer import Neo4jBatchWriter
+from tracekite.db.store_config import get_config
+from tracekite.services.graph_writer import RENDEZVOUS_LABELS, _utcnow
 
 logger = logging.getLogger(__name__)
 
@@ -22,15 +24,15 @@ def write_rendezvous_nodes(specs: list) -> int:
     total = 0
     with get_session() as session:
         for label, rows in groups.items():
-            for batch in _batches(rows, 500):
-                result = session.run(
-                    f"UNWIND $rows AS row "
-                    f"MERGE (n:{label}:Rendezvous {{id: row.id}}) "
-                    f"SET n += row.props, n.updated_at = $now "
-                    f"RETURN count(n) AS c",
-                    rows=batch, now=_utcnow(),
-                )
-                total += result.single()["c"]
+            writer = Neo4jBatchWriter(
+                session,
+                f"UNWIND $rows AS row "
+                f"MERGE (n:{label}:Rendezvous {{id: row.id}}) "
+                f"SET n += row.props, n.updated_at = $now "
+                f"RETURN count(n) AS c",
+                now=_utcnow(),
+            )
+            total += writer.write(rows, get_config().write_batch_size)
     return total
 
 
@@ -38,18 +40,17 @@ def write_service_nodes(specs: list) -> int:
     rows = [{"id": s.service_id, "name": s.name, "repo_ids": s.repo_ids}
             for s in specs]
     gateway_ids = [s.service_id for s in specs if s.is_gateway]
-    total = 0
     with get_session() as session:
-        for batch in _batches(rows, 500):
-            result = session.run(
-                "UNWIND $rows AS row "
-                "MERGE (n:Service {id: row.id}) "
-                "SET n.name = row.name, n.repo_ids = row.repo_ids, "
-                "    n.updated_at = $now "
-                "RETURN count(n) AS c",
-                rows=batch, now=_utcnow(),
-            )
-            total += result.single()["c"]
+        writer = Neo4jBatchWriter(
+            session,
+            "UNWIND $rows AS row "
+            "MERGE (n:Service {id: row.id}) "
+            "SET n.name = row.name, n.repo_ids = row.repo_ids, "
+            "    n.updated_at = $now "
+            "RETURN count(n) AS c",
+            now=_utcnow(),
+        )
+        total = writer.write(rows, get_config().write_batch_size)
         if gateway_ids:
             session.run(
                 "MATCH (n:Service) WHERE n.id IN $ids SET n:Gateway",

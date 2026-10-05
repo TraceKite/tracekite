@@ -9,6 +9,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from tracekite.db.neo4j_batch_writer import Neo4jBatchWriter
 from tracekite.db.store_config import get_config
 from tracekite.db.neo4j_client import get_session
 from tracekite.models.graph_models import GraphEdge, GraphNode, REPO_STATES
@@ -87,11 +88,6 @@ def _utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _batches(rows: list, size: int):
-    for i in range(0, len(rows), size):
-        yield rows[i:i + size]
-
-
 def write_nodes_batch(nodes: list[GraphNode]) -> int:
     """MERGE nodes per label; rejects node types outside the registry."""
     by_label: dict[str, list[dict]] = {}
@@ -104,15 +100,14 @@ def write_nodes_batch(nodes: list[GraphNode]) -> int:
     total = 0
     with get_session() as session:
         for label, rows in by_label.items():
-            for batch in _batches(rows, get_config().write_batch_size):
-                result = session.run(
-                    f"UNWIND $rows AS row "
-                    f"MERGE (n:GraphNode:{label} {{id: row.id}}) "
-                    f"SET n += row "
-                    f"RETURN count(n) AS c",
-                    rows=batch,
-                )
-                total += result.single()["c"]
+            writer = Neo4jBatchWriter(
+                session,
+                f"UNWIND $rows AS row "
+                f"MERGE (n:GraphNode:{label} {{id: row.id}}) "
+                f"SET n += row "
+                f"RETURN count(n) AS c",
+            )
+            total += writer.write(rows, get_config().write_batch_size)
     return total
 
 
@@ -165,18 +160,16 @@ def write_edges_batch(edges: list[GraphEdge]) -> dict[str, int]:
     written: dict[str, int] = {}
     with get_session() as session:
         for edge_type, rows in by_type.items():
-            count = 0
-            for batch in _batches(rows, get_config().write_batch_size):
-                result = session.run(
-                    f"UNWIND $rows AS row "
-                    f"MATCH (a:GraphNode {{id: row.source}}) "
-                    f"MATCH (b:GraphNode {{id: row.target}}) "
-                    f"MERGE (a)-[r:{edge_type}]->(b) "
-                    f"SET r += row.props "
-                    f"RETURN count(r) AS c",
-                    rows=batch,
-                )
-                count += result.single()["c"]
+            writer = Neo4jBatchWriter(
+                session,
+                f"UNWIND $rows AS row "
+                f"MATCH (a:GraphNode {{id: row.source}}) "
+                f"MATCH (b:GraphNode {{id: row.target}}) "
+                f"MERGE (a)-[r:{edge_type}]->(b) "
+                f"SET r += row.props "
+                f"RETURN count(r) AS c",
+            )
+            count = writer.write(rows, get_config().write_batch_size)
             expected = len(rows)
             if count != expected:
                 samples = _diagnose_missing(session, rows)
@@ -203,22 +196,20 @@ def write_linker_edges(edges: list[GraphEdge]) -> dict[str, int]:
     written: dict[str, int] = {}
     with get_session() as session:
         for (edge_type, src_label, dst_label), rows in groups.items():
-            count = 0
-            for batch in _batches(rows, get_config().write_batch_size):
-                result = session.run(
-                    f"UNWIND $rows AS row "
-                    f"MATCH (a:{src_label} {{id: row.source}}) "
-                    f"MATCH (b:{dst_label} {{id: row.target}}) "
-                    f"MERGE (a)-[r:{edge_type} {{detected_by: row.detected_by}}]->(b) "
-                    # Temporal edges: MERGE preserves the
-                    # relationship across runs, so first_seen_at survives
-                    # every relink until the edge truly disappears.
-                    f"ON CREATE SET r.first_seen_at = $now "
-                    f"SET r += row.props "
-                    f"RETURN count(r) AS c",
-                    rows=batch, now=_utcnow(),
-                )
-                count += result.single()["c"]
+            writer = Neo4jBatchWriter(
+                session,
+                f"UNWIND $rows AS row "
+                f"MATCH (a:{src_label} {{id: row.source}}) "
+                f"MATCH (b:{dst_label} {{id: row.target}}) "
+                f"MERGE (a)-[r:{edge_type} {{detected_by: row.detected_by}}]->(b) "
+                # Temporal edges: MERGE preserves the relationship across
+                # runs, so first_seen_at survives until the edge disappears.
+                f"ON CREATE SET r.first_seen_at = $now "
+                f"SET r += row.props "
+                f"RETURN count(r) AS c",
+                now=_utcnow(),
+            )
+            count = writer.write(rows, get_config().write_batch_size)
             expected = len(rows)
             if count != expected:
                 samples = _diagnose_missing(session, rows, src_label, dst_label)

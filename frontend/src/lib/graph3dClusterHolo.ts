@@ -78,6 +78,7 @@ export function createClusterHoloPool(
   layer.style.pointerEvents = "none";
   layer.style.overflow = "hidden";
   layer.style.zIndex = "4";
+  layer.setAttribute("aria-hidden", "true");
   container.appendChild(layer);
 
   const elements: HTMLDivElement[] = [];

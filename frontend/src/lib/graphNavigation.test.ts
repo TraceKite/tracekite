@@ -6,6 +6,7 @@ import {
   cameraSceneKey,
   effectiveRepoIds,
   graphContextKey,
+  nodeFocusTarget,
   synchronizeGraphContext,
   toggleDraftRepoScope,
 } from "./graphNavigation.ts";
@@ -42,6 +43,16 @@ test("repository selection can be cleared back to every repository", () => {
 test("empty repository scope consistently means every loaded repository", () => {
   assert.deepEqual(effectiveRepoIds([repo("a"), repo("b")], [], repo("a")), ["a", "b"]);
   assert.deepEqual(effectiveRepoIds([repo("a"), repo("b")], ["b"], repo("a")), ["b"]);
+});
+
+test("opening a node fetches its repository rather than the selected repo", () => {
+  assert.deepEqual(nodeFocusTarget(
+    { id: "repo-b:File:1", repo_id: "repo-b" } as any, "repo-a"), {
+    nodeId: "repo-b:File:1", repoId: "repo-b",
+  });
+  assert.deepEqual(nodeFocusTarget({ id: "repo-a:File:1" } as any, "repo-a"), {
+    nodeId: "repo-a:File:1", repoId: "repo-a",
+  });
 });
 
 test("the camera frames a scene, and a selection is not one", () => {
