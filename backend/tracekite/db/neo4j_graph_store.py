@@ -103,7 +103,7 @@ class Neo4jGraphStore:
         with get_session() as session:
             session.run(
                 "MATCH ()-[r]->() WHERE r.link_run_id = $run "
-                "CALL { WITH r DELETE r } IN TRANSACTIONS OF 5000 ROWS",
+                "CALL (r) { DELETE r } IN TRANSACTIONS OF 5000 ROWS",
                 run=link_run_id).consume()
 
     # --- reads ------------------------------------------------------------

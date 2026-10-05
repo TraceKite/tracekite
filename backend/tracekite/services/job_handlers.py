@@ -60,7 +60,7 @@ def _handle_ingest_upload(job: Job) -> None:
         _enqueue_relink(f"upload ingest of {job.repo_id}")
 
 
-def _linker():
+def _linker(job: Job):
     """Compose the application's linker: core driver over the Neo4j store.
 
     Choosing the backend is the server's job, not the linker's — this is the
@@ -70,7 +70,11 @@ def _linker():
     from tracekite.services.linker import LinkerService
     from tracekite.services.linker_store import Neo4jLinkerStore
 
-    return LinkerService(Neo4jLinkerStore(), on_run=_publish_run)
+    def report(progress: int, message: str) -> None:
+        create_or_update_job(job.id, job.repo_id, "running", progress, message)
+
+    return LinkerService(Neo4jLinkerStore(), on_run=_publish_run,
+                         on_progress=report)
 
 
 def _publish_run(run_id: str, counters: dict, timings) -> None:
@@ -89,7 +93,7 @@ def _handle_link_full(job: Job) -> None:
     create_or_update_job(job.id, job.repo_id, "running", 10,
                          "Linking: loading claims and resolving")
     with run_context(f"job_{job.id}"):
-        counters = _linker().link_full()
+        counters = _linker(job).link_full()
     edges = counters.get("edges_written", 0)
     create_or_update_job(job.id, job.repo_id, "completed", 100,
                          f"Link run complete ({edges} edges)")
@@ -99,7 +103,7 @@ def _handle_link_delta(job: Job) -> None:
     create_or_update_job(job.id, job.repo_id, "running", 10,
                          "Delta link: checking claim fingerprints")
     with run_context(f"job_{job.id}"):
-        counters = _linker().link_delta()
+        counters = _linker(job).link_delta()
     if counters.get("skipped"):
         create_or_update_job(job.id, job.repo_id, "completed", 100,
                              "Delta link skipped: no claims changed")

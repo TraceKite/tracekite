@@ -104,7 +104,7 @@ def delete_stale_linker_edges(current_run_id: str) -> int:
             "MATCH ()-[r]->() "
             "WHERE r.created_by = 'linker' "
             "AND coalesce(r.link_run_id, '') <> $run "
-            "CALL { WITH r DELETE r } IN TRANSACTIONS OF 10000 ROWS",
+            "CALL (r) { DELETE r } IN TRANSACTIONS OF 10000 ROWS",
             run=current_run_id,
         )
         deleted = result.consume().counters.relationships_deleted
