@@ -6,6 +6,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for the published `tracekite-core` distribution.
 
+## [Unreleased]
+
+### Fixed
+
+- Link jobs report resolution, write, cleanup, and finalization progress during
+  long Neo4j rebuilds instead of remaining at 10 percent until completion.
+- Multi-repository code views retain `UI_CALLS` edges and their frontend call
+  evidence instead of showing the frontend and backend as disconnected.
+- Protobuf, Terraform, Avro, and other dedicated structured-file parsers count
+  as parsed coverage, so MCP completeness no longer calls extracted evidence
+  unsupported.
+- Migration ownership claims cite the statement that names each table across
+  SQL, Prisma, Flyway, Alembic, Django, Liquibase, Rails, and EF migrations.
+- Neo4j cleanup queries use scoped subqueries accepted without deprecation
+  warnings by Neo4j 5.26 and later.
+- The real-repository recall harness enumerates only files admitted by the
+  stored scan and excludes test Compose files from production recall.
+
 ## [0.2.0] - 2026-10-04
 
 ### Added

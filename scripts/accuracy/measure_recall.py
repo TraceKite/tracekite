@@ -12,11 +12,32 @@ With no argument it measures every repo in the graph.
 """
 import json
 import re
+from functools import lru_cache
 
 import yaml
 
-from _kg import cypher_set, find, ingested_at, read_file, target_repos
+from _kg import (
+    cypher_set, find, find_containing, ingested_at, read_file, repo_path,
+    target_repos,
+)
 from tracekite.services.file_classifier import is_test_path
+
+
+@lru_cache(maxsize=None)
+def _scanned_files(repo: str) -> set[str]:
+    return cypher_set(
+        f"MATCH (f:File {{repo_id:'{repo}'}}) RETURN f.path;")
+
+
+def source_paths(repo: str, *predicate: str) -> list[str]:
+    """Source paths that the stored scan actually admitted."""
+    return _admitted_paths(repo, find(repo, *predicate))
+
+
+def _admitted_paths(repo: str, paths: list[str]) -> list[str]:
+    root = repo_path(repo).rstrip("/") + "/"
+    return [path for path in paths
+            if path.removeprefix(root) in _scanned_files(repo)]
 
 
 def _pairs(where: str) -> set[tuple[str, str]]:
@@ -40,7 +61,10 @@ def compose_recall(repo: str) -> tuple[int, int, list]:
     the fallbacks reported separately rather than hidden.
     """
     expected = set()
-    for path in find(repo, '-name "docker-compose*.y*ml" -o -name "compose*.y*ml"'):
+    for path in source_paths(
+            repo, '-name "docker-compose*.y*ml" -o -name "compose*.y*ml"'):
+        if is_test_path(path):
+            continue
         try:
             doc = yaml.safe_load(read_file(repo, path) or "") or {}
         except yaml.YAMLError:
@@ -71,8 +95,9 @@ VERB = re.compile(
 def nextjs_recall(repo: str) -> tuple[int, int, list]:
     """Next.js App Router: the directory under app/ IS the URL path."""
     expected = set()
-    for path in find(repo, '-path "*/app/api/*" \\( -name "route.ts" -o -name "route.js"'
-                           ' -o -name "route.tsx" \\)'):
+    for path in source_paths(
+            repo, '-path "*/app/api/*" \\( -name "route.ts" -o -name "route.js"'
+                  ' -o -name "route.tsx" \\)'):
         if is_test_path(path):
             continue
         match = re.search(r"/app(/api/.*)/route\.[jt]sx?$", path)
@@ -104,7 +129,9 @@ def mcp_recall(repo: str) -> tuple[int, int, list, list]:
     expected, modules = set(), set()
     # Any JSON could be a manifest, so sniff by shape rather than by one
     # estate's filename convention -- same rule the parser itself uses.
-    for path in find(repo, '-name "*.json" -size -256k'):
+    candidates = find_containing(
+        repo, '"tools"', '-name "*.json" -size -256k')
+    for path in _admitted_paths(repo, candidates):
         raw = read_file(repo, path) or ""
         if '"tools"' not in raw or '"name"' not in raw:
             continue
@@ -121,8 +148,9 @@ def mcp_recall(repo: str) -> tuple[int, int, list, list]:
             continue
         for tool in named:
             expected.add(f"mcp:{server}/{tool['name']}")
-        for mod in find(repo, f'-path "{path.rsplit("/", 1)[0]}/tools/*.py"'
-                              ' -maxdepth 1 ! -name "__init__.py"'):
+        for mod in source_paths(
+                repo, f'-path "{path.rsplit("/", 1)[0]}/tools/*.py"'
+                      ' -maxdepth 1 ! -name "__init__.py"'):
             modules.add(f"mcp:{server}/{mod.rsplit('/', 1)[1][:-3]}")
 
     graph = cypher_set(
@@ -165,7 +193,8 @@ def gateway_recall(repo: str) -> tuple[int, int, list]:
     rather than announcing itself.
     """
     expected = set()
-    for path in find(repo, '-name "application*.y*ml" -o -name "bootstrap*.y*ml"'):
+    for path in source_paths(
+            repo, '-name "application*.y*ml" -o -name "bootstrap*.y*ml"'):
         try:
             # Spring configs are routinely multi-document: one `---` per
             # profile. safe_load RAISES on the second document, and catching
