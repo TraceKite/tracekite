@@ -1,5 +1,9 @@
 # TraceKite intelligence and open-source release plan
 
+> Historical proposal, reviewed at the commit named below. For shipped behavior,
+> use [Features](../features.md), [Library](../library.md), and [MCP tools](../mcp-tools.md).
+> Phase names here are planning labels, not release-version promises.
+
 ## Decision
 
 Build both ideas, with a shared intelligence contract behind them. The UI should help a person explore connections and their limits. Framework integrations should receive the same analysis, evidence, scope and uncertainty in a stable machine-readable form.
@@ -10,7 +14,7 @@ proposals. The later [agent verification design](agent-verification-layer.md) an
 staged plan: shared receipts and scoped claim verification first, optional
 context compilation after evaluation. Reuse the existing PR engine. Do not
 create separate receipt stores or validators, and do not require a compiler to
-release the verifier. The basic four-method facade now exists; richer typed
+release the verifier. The current facade has nine graph methods; the richer typed
 operations below remain proposed. This clarification does not update tracker
 completion states or establish current package-publication status.
 
@@ -41,7 +45,7 @@ The live connected MCP returned a consumer with confidence 0.99 and three eviden
 
 ## The intelligence engine
 
-A proposed integration facade should accept typed, bounded requests such as `explain_connection`, `assess_change`, `inspect_contract` and `investigate_missing_connection`. These are proposed interfaces, not existing callable tools. Keep the four existing MCP primitives usable.
+A proposed integration facade should accept typed, bounded requests such as `explain_connection`, `assess_change`, `inspect_contract` and `investigate_missing_connection`. These are proposed interfaces, not existing callable tools. Keep the shipped MCP graph tools usable.
 
 A request supplies its scope and the question it can actually answer: node/contract IDs, repository set, source snapshot, optional base/head or an explicit hypothetical mutation, relevant environment conditions, direction, filters and limits. Arbitrary natural-language interpretation remains a host concern.
 
@@ -161,7 +165,7 @@ The older engine and coverage roadmaps are explicitly ignored by Git and record 
 | Later | 2 | Supported counterfactual linking and incremental answer invalidation. |
 | Deferred | 1 | Optional host relevance/budget ranking, only after evidence that it helps. |
 
-“Public preview” is a recommended feature gate, not an assertion of production readiness. Public source, a tagged release and a published registry distribution have distinct acceptance checks. The repository is currently private; making it public and publishing the package are future maintainer release actions, not actions performed by this planning change.
+“Public preview” is a recommended feature gate, not an assertion of production readiness. Public source, a tagged release and a published registry distribution have distinct acceptance checks. The repository was private when this plan was written. Current publication state belongs to the [release record](../../CHANGELOG.md), not this historical proposal.
 
 ### Recommended implementation order
 

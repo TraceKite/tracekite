@@ -1,5 +1,14 @@
 # TraceKite future designs and research
 
+[Current documentation](../README.md) describes shipped behavior. This folder
+contains proposals and dated evidence; its old counts and screen descriptions
+are not current product guarantees.
+
+- [Historical scale measurements](scale-measurements.md)
+- [Release record, 0.1.x](release-0.1.1-record-2026-09-28.md)
+- [Incremental scan proposal](../design/incremental-scan-and-file-context.md)
+- [Intelligence release plan](../design/intelligence-release-plan.md)
+
 ## Agent intelligence research
 
 The [agent verification design](../design/agent-verification-layer.md) and

@@ -77,7 +77,7 @@ Important limits established by source inspection and bounded checks:
 | An agent needs a write-capable MCP path to submit a claim | A read-only adjudication operation can accept a claim as an argument without modifying the graph. |
 | Receipts must be signed from the first release | Deterministic replay and authenticity are separate. A trusted CI issuer may add an optional attestation later. |
 | The compiler and verifier each need their own evidence store | Share artifacts, receipt schema and replay services. Packet/session state belongs to the optional adapter. |
-| Scale is only extrapolated from six repositories | Architecture §7.5 records historical 100- and 1,001-repository synthetic measurements, with claim-density caveats. Do not call them representative production-scale proof. |
+| Scale is only extrapolated from six repositories | [Historical scale measurements](../future/scale-measurements.md) record 100- and 1,001-repository synthetic runs, with claim-density caveats. Do not call them representative production-scale proof. |
 | A loss proves a runtime break or a regression in TraceKite | It proves a difference in indexed results. Source/config/tool changes, missing inputs and attribution quality require separate analysis. |
 
 The historical 189 TP / 0 FP result applies to its labeled cases. It is not a
@@ -282,7 +282,7 @@ Primary code references: [PR command](../../backend/tracekite/cli_inspect.py),
 [answer contract](../../backend/tracekite/answer.py),
 [storage protocol](../../backend/tracekite/db/graph_store.py),
 [packaging checks](../../backend/tests/test_packaging.py), and
-[historical scale measurements](architecture.md#75-measured-not-extrapolated).
+[historical scale measurements](../future/scale-measurements.md).
 
 The review ran 72 focused tests across `test_impact.py`, `test_cli.py`,
 `test_packaging.py` and `test_answer_contract.py`. It also reproduced the Go

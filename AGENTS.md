@@ -94,7 +94,7 @@ backend/tracekite/parsers/     bytes + path → structured data.  Pure. No I/O, 
 backend/tracekite/services/    extraction, claims, ingestion orchestration
 backend/tracekite/services/linker/   rN_*.py resolvers: claims → edges
 backend/tracekite/routes/      HTTP surface only — thin, no business logic
-backend/tracekite/db/          the only place that talks to Neo4j
+backend/tracekite/db/          storage protocols and adapters
 config/*.yml             operator-tunable knobs (confidence, aliases, limits)
 frontend/src/components/ views and widgets
 frontend/src/components/ui/    vendored shadcn — do not hand-edit, regenerate
@@ -104,9 +104,10 @@ lib/                     shared TS packages consumed across the workspace
 ```
 
 **Dependencies point down, never up.** `core` logic imports nothing from the
-layers above it; parsers may import core; only `db/` performs storage I/O;
-nothing imports the UI. `architecture.md` §2 describes the layer checks and
-their historical fixes. Run the check; do not rely on an old violation count.
+layers above it; parsers may import core; only store-layer adapters perform
+storage I/O; nothing imports the UI. Existing adapters also live under
+`services/`; `backend/tools/layer_map.py` assigns their layer. `architecture.md`
+§2 describes the layer checks and current boundaries. Run the check; do not rely on an old violation count.
 
 A route handler that contains a `for` loop over graph nodes is in the wrong
 file. Move the logic to a service and let the route call it.
@@ -167,9 +168,8 @@ Name the module after what it *is*: `path_rewriter.py`, `confidence_scale.ts`.
 
 ### Files that already exceed the limit
 
-31 production files do today — `ingest_claims.py` (1833),
-`dependency_parser.py` (1475), `calibration.py` (1449), `GraphCanvas2D.tsx`
-(869), and others. They predate the rule.
+Some production files predate this rule and exceed the limit. Check current
+line counts instead of relying on a historical file list.
 
 They are not a licence to add more. **When you touch a file that is already
 over 300 lines, it must not get longer.** Add your change by extracting the
