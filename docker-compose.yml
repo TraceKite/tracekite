@@ -58,6 +58,7 @@ services:
       # needs to be allowlisted unless the UI is served from elsewhere.
       KG_CORS_ORIGINS: "${TRACEKITE_CORS_ORIGINS:-}"
       INGEST_WORKERS: "${INGEST_WORKERS:-2}"
+      WRITE_BATCH_SIZE: "${WRITE_BATCH_SIZE:-500}"
       MAX_SCOPE_REPOS: "${MAX_SCOPE_REPOS:-20}"
     volumes:
       - repo_workspace:/app/data/repos

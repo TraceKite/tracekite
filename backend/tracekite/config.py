@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     confidence_floor: float = 0.6
 
     ingest_workers: int = 2
-    write_batch_size: int = 5000
+    write_batch_size: int = 500
     # Operator control plane (confidence.yml, service_aliases.yml, ...).
     # Empty falls back to the workspace-root `config/` beside `backend/`.
     # Aliased because the deployed name is KG_CONFIG_DIR, not CONFIG_DIR.

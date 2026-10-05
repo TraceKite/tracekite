@@ -1,9 +1,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useGraphStore } from "@/store/graphStore";
-import { api } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { getConfidenceStyle, EDGE_COLORS } from "@/lib/graphStyle";
-import { isPreviewMode } from "@/lib/previewFixtures";
 import ServiceMapStatus from "@/components/ServiceMapStatus";
 import GraphCanvasMessage from "@/components/GraphCanvasMessage";
 import WorkspaceWarning from "@/components/WorkspaceWarning";
@@ -16,6 +14,8 @@ import {
 } from "@/lib/serviceMapPainter";
 import { useServiceMapLabels } from "@/hooks/useServiceMapLabels";
 import { useServiceMapLayout } from "@/hooks/useServiceMapLayout";
+import { useServiceMapData } from "@/hooks/useServiceMapData";
+import ServiceMapFocusPanel from "@/components/ServiceMapFocusPanel";
 
 /* Stable identities: react-kapsule re-applies a prop whenever its reference
  * changes, so inline arrows here re-set the accessor on every React render. */
@@ -24,7 +24,6 @@ const linkReplaceMode = () => "replace" as const;
 
 function ServiceMapCanvasComponent() {
   const { serviceMapData, setSelectedEdge, selectedEdge, mapEdgeTypes, scopeRepoIds,
-          setAppMode, traceFrom, traceTo, setTraceEndpoints,
           highlightedEdgeTypes } = useGraphStore();
   const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
   const [ForceGraphComponent, setForceGraphComponent] = useState<any>(null);
@@ -198,75 +197,8 @@ function ServiceMapCanvasComponent() {
         </div>
       )}
       {focusNode && focus && (
-        <div className="absolute top-3 right-3 z-30 w-72 max-h-[70%] overflow-y-auto rounded-lg
-                        bg-white border border-[#dfe2e8] shadow-lg text-xs">
-          <div className="flex items-start justify-between gap-2 p-3 border-b border-[#dfe2e8]">
-            <div className="min-w-0">
-              <div className="font-bold text-[#1a1d23] truncate">{focusNode.name}</div>
-              <div className="mt-1 flex flex-wrap gap-1">
-                <span className="text-2xs text-[#8b929e] bg-slate-100 px-1.5 py-0.5 rounded">
-                  {focusNode.kind}
-                </span>
-                {focusNode.is_gateway && (
-                  <span className="text-2xs text-[#274a3a] bg-[#315b47]/10 px-1.5 py-0.5 rounded">
-                    Gateway
-                  </span>
-                )}
-              </div>
-              {(focusNode.repo_ids ?? []).length > 0 && (
-                <div className="mt-2 text-2xs text-[#8b929e] leading-relaxed">
-                  {/* A service joined across repos carries several repo_ids —
-                      seeing that here is the clearest signal that cross-repo
-                      unification actually happened. */}
-                  built from {(focusNode.repo_ids as string[]).join(", ")}
-                </div>
-              )}
-            </div>
-            <button onClick={() => setFocusNode(null)}
-                    className="shrink-0 text-[#8b929e] hover:text-[#1a1d23] px-1"
-                    aria-label="Clear selection">×</button>
-          </div>
-          {focusNode.kind === "service" && (
-            <div className="flex gap-1.5 px-3 py-2 border-b border-[#dfe2e8]">
-            <button
-              onClick={() => { setTraceEndpoints(focusNode.id, traceTo); setAppMode("trace"); }}
-              className="flex-1 text-2xs px-2 py-1.5 rounded-md bg-[#315b47]/10
-                         text-[#274a3a] hover:bg-[#315b47]/15 transition-colors">
-              Trace from here
-            </button>
-            <button
-              onClick={() => { setTraceEndpoints(traceFrom, focusNode.id); setAppMode("trace"); }}
-              className="flex-1 text-2xs px-2 py-1.5 rounded-md bg-[#315b47]/10
-                         text-[#274a3a] hover:bg-[#315b47]/15 transition-colors">
-              Trace to here
-            </button>
-            </div>
-          )}
-          {([["Called by", focus.inbound, "source"],
-             ["Calls", focus.outbound, "target"]] as const).map(([label, list, end]) => (
-            <div key={label} className="p-3 border-b border-slate-200 last:border-0">
-              <div className="uppercase tracking-wider text-2xs text-[#8b929e] mb-1.5">
-                {label} ({list.length})
-              </div>
-              {list.length === 0 ? (
-                <div className="text-2xs text-[#5c636d]">nothing recorded</div>
-              ) : list.map((link: any, i: number) => {
-                const other = link[end];
-                const name = typeof other === "object" ? other?.name ?? other?.id : other;
-                return (
-                  <button key={i} onClick={() => setSelectedEdge(link)}
-                          className="w-full text-left py-1 px-1.5 rounded hover:bg-slate-100
-                                     flex items-center justify-between gap-2">
-                    <span className="truncate text-[#1a1d23]">{name}</span>
-                    <span className="shrink-0 text-2xs text-[#8b929e]">
-                      {link.confidence != null ? Number(link.confidence).toFixed(2) : ""}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+        <ServiceMapFocusPanel node={focusNode} incoming={focus.inbound}
+          outgoing={focus.outbound} onClear={() => setFocusNode(null)} />
       )}
       {hoverNode && (
         <div ref={tooltipRef} className="absolute pointer-events-none z-20" style={{ left: 0, top: 0, transform: "translate(-50%, -120%)" }}>
@@ -282,24 +214,9 @@ function ServiceMapCanvasComponent() {
 }
 
 export default function ServiceMapView() {
-  const { serviceMapData, setServiceMapData, setError } = useGraphStore();
   const [minConf, setMinConf] = useState(0.6);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  
-  useEffect(() => {
-    // Fixture mode already seeded the store; a fetch here can only 401.
-    if (isPreviewMode()) return;
-    const timer = setTimeout(() => {
-      setLoading(true);
-      setLoadError(null);
-      api.getServiceMap(minConf)
-        .then(setServiceMapData)
-        .catch(err => { setLoadError(err.message); setError(err.message); })
-        .finally(() => setLoading(false));
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [minConf, setServiceMapData, setError]);
+  const { serviceMapData, loading, loadError, setLoadError } =
+    useServiceMapData(minConf);
 
   return (
     <>

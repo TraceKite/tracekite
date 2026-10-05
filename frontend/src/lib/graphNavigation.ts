@@ -1,4 +1,4 @@
-import type { RepoSummary, ViewMode } from "./types.ts";
+import type { GraphNode, RepoSummary, ViewMode } from "./types.ts";
 
 export interface GraphNavigationContext {
   contextKey: string | null;
@@ -79,6 +79,10 @@ export function effectiveRepoIds(
   if (scopeRepoIds.length > 0) return scopeRepoIds;
   if (repos.length > 0) return repos.map((repo) => repo.id);
   return selectedRepo ? [selectedRepo.id] : [];
+}
+
+export function nodeFocusTarget(node: GraphNode, fallbackRepoId: string | null) {
+  return { nodeId: node.id, repoId: node.repo_id ?? fallbackRepoId };
 }
 
 export function toggleDraftRepoScope(

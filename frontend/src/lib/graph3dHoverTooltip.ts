@@ -14,6 +14,7 @@ export function createDomHoverTooltip(container: HTMLElement): DomHoverTooltip {
   el.className = "absolute top-0 left-0 z-30 pointer-events-none transition-opacity duration-100 select-none";
   el.style.opacity = "0";
   el.style.willChange = "transform, opacity";
+  el.setAttribute("aria-hidden", "true");
   container.appendChild(el);
 
   let lastNodeId: string | null = null;

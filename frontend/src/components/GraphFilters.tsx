@@ -125,7 +125,7 @@ export default function GraphFilters() {
           <p className="text-2xs text-[#6f5723] leading-relaxed font-medium">
             {viewMode === "impact"
               ? "Showing the selected node's exact two-hop impact neighborhood."
-              : "Showing the searched node's exact local neighborhood."}
+              : "Showing the focused node's exact local neighborhood."}
           </p>
           <button
             onClick={resetFocusedView}

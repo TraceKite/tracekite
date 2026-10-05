@@ -11,6 +11,8 @@ import { isPreviewMode } from "@/lib/previewFixtures";
 import { effectiveRepoIds } from "@/lib/graphNavigation";
 import { initialRepo, repoLabel } from "@/lib/repoChoice";
 import WorkspaceNavigation from "@/components/WorkspaceNavigation";
+import DeleteRepoDialog from "@/components/DeleteRepoDialog";
+import type { RepoSummary } from "@/lib/types";
 
 export default function AppHeader() {
   const {
@@ -24,6 +26,8 @@ export default function AppHeader() {
   const [showPicker, setShowPicker] = useState(false);
   const [showIngest, setShowIngest] = useState(false);
   const [ingesting, setIngesting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<RepoSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const ingestButtonRef = useRef<HTMLButtonElement>(null);
   const scopeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -127,17 +131,21 @@ export default function AppHeader() {
   };
 
   const handleDelete = async () => {
-    if (!managedRepo) return;
-    if (!confirm(`Delete ${managedRepo.name}? This cannot be undone.`)) return;
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await api.deleteRepo(managedRepo.id);
-      const updated = await api.listRepos();
-      setRepos(updated.repos);
-      const next = updated.repos[0] ?? null;
-      setSelectedRepo(next);
-      setScopeRepos(next ? [next.id] : []);
+      const result = await api.deleteRepo(deleteTarget.id);
+      const now = new Date().toISOString();
+      setIngestionJob({
+        job_id: result.job_id, repo_id: result.repo_id, status: "queued",
+        progress: 0, message: result.message, error: null,
+        created_at: now, updated_at: now,
+      });
+      setDeleteTarget(null);
     } catch (err: any) {
       useGraphStore.getState().setError(err.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -251,13 +259,24 @@ export default function AppHeader() {
             </button>
           )}
           <button
-            onClick={handleDelete}
+            onClick={() => setDeleteTarget(managedRepo)}
             title="Delete repository"
             className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
+      )}
+      {deleteTarget && (
+        <DeleteRepoDialog
+          repoName={deleteTarget.name}
+          open
+          deleting={deleting}
+          onOpenChange={(open) => {
+            if (!open && !deleting) setDeleteTarget(null);
+          }}
+          onConfirm={handleDelete}
+        />
       )}
     </header>
   );

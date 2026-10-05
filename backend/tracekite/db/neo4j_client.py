@@ -1,7 +1,7 @@
 """Neo4j driver lifecycle: singleton driver, sessions, health checks.
 
 The driver enforces a non-default password at startup (design §9) and sets
-client-side timeouts; the server enforces db.transaction.timeout=60s.
+client-side timeouts; the server enforces db.transaction.timeout=120s.
 """
 
 import logging

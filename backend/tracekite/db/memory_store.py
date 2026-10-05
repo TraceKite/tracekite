@@ -75,6 +75,7 @@ class InMemoryLinkerStore:
 
     def __init__(self, sinks=()):
         self._claims: list[ClaimRecord] = []
+        self._repo_ids: set[str] = set()
         self._stored_fingerprints: dict[str, str] = {}
         # What a link run produced, kept so a caller can read it back.
         self.edges: list = []
@@ -87,8 +88,11 @@ class InMemoryLinkerStore:
 
     def add_scan(self, sink) -> int:
         """Add one scanned repository's claims. Returns how many were added."""
+        self._repo_ids.update(
+            node.id for node in sink.nodes if node.type == "Repo")
         found = claims_from_scan(sink)
         self._claims.extend(found)
+        self._repo_ids.update(claim.repo_id for claim in found)
         return len(found)
 
     # --- reads ------------------------------------------------------------
@@ -100,8 +104,11 @@ class InMemoryLinkerStore:
         # Claims arrive here already scanned; nothing is filtered by lifecycle.
         return {}
 
+    def linkable_repo_ids(self) -> list[str]:
+        return sorted(self._repo_ids)
+
     def claim_fingerprints(self) -> dict[str, str]:
-        by_repo: dict[str, list[str]] = {}
+        by_repo: dict[str, list[str]] = {repo: [] for repo in self._repo_ids}
         for claim in self._claims:
             by_repo.setdefault(claim.repo_id, []).append(claim.id)
         return {repo: hashlib.sha256("\n".join(sorted(ids)).encode())

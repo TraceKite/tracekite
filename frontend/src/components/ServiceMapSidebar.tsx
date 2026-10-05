@@ -1,58 +1,55 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Eye, EyeOff, Loader2, Network, RefreshCw, ShieldAlert } from "lucide-react";
 
 import { api } from "@/lib/api";
 import { EDGE_COLORS, MAP_EDGE_LEGEND } from "@/lib/graphStyle";
 import { isPreviewMode } from "@/lib/previewFixtures";
+import { projectServiceMap } from "@/lib/serviceMapProjection";
 import { useGraphStore } from "@/store/graphStore";
 import SidebarPanel from "@/components/SidebarPanel";
 
 export default function ServiceMapSidebar({ minConf, setMinConf }: { minConf: number, setMinConf: (n: number) => void }) {
   const { serviceMapData, linkerStatus, setLinkerStatus, mapEdgeTypes,
           toggleMapEdgeType, scopeRepoIds, highlightedEdgeTypes,
-          toggleHighlightEdgeType, clearHighlightedEdgeTypes } = useGraphStore();
-  const [rebuilding, setRebuilding] = useState(false);
+          toggleHighlightEdgeType, clearHighlightedEdgeTypes,
+          ingestionJob, setIngestionJob, setError } = useGraphStore();
+  const linkJobActive = ingestionJob?.repo_id === "__linker__"
+    && ["queued", "running"].includes(ingestionJob.status);
+  const linkRunActive = linkerStatus?.latest?.status === "running";
+  const rebuilding = linkJobActive || linkRunActive;
 
   useEffect(() => {
     if (isPreviewMode()) return;
     api.getLinkerStatus().then(setLinkerStatus).catch(console.error);
     const interval = setInterval(() => {
       api.getLinkerStatus().then(setLinkerStatus).catch(() => {});
-    }, 10000);
+    }, rebuilding ? 1500 : 10000);
     return () => clearInterval(interval);
-  }, [setLinkerStatus]);
+  }, [rebuilding, setLinkerStatus]);
 
   const handleRebuild = async () => {
-    setRebuilding(true);
     try {
-      await api.rebuildLinks();
-      setTimeout(() => api.getLinkerStatus().then(setLinkerStatus), 2000);
-    } catch(err) {
-      console.error(err);
-    } finally {
-      setTimeout(() => setRebuilding(false), 2000);
+      const result = await api.rebuildLinks();
+      const now = new Date().toISOString();
+      setIngestionJob({
+        job_id: result.job_id, repo_id: "__linker__", status: "queued",
+        progress: 0, message: "Link rebuild queued", error: null,
+        created_at: now, updated_at: now,
+      });
+    } catch(err: any) {
+      setError(err.message);
     }
   };
 
   const isStale = linkerStatus?.warnings.some(w => w.kind === 'links_stale');
 
-  const scopedServices = useMemo(() => {
-    if (!serviceMapData) return 0;
-    const services = serviceMapData.nodes.filter((n: any) => n.kind === "service");
-    if (scopeRepoIds.length === 0) return services.length;
-    return services.filter((n: any) =>
-      (n.repo_ids ?? []).some((id: string) => scopeRepoIds.includes(id))).length;
-  }, [serviceMapData, scopeRepoIds]);
-
-  const scopedLinks = useMemo(() => {
-    if (!serviceMapData) return 0;
-    return serviceMapData.edges.filter((e: any) => {
-      if (e.type === "BUILT_FROM" || !mapEdgeTypes.includes(e.type)) return false;
-      if (scopeRepoIds.length === 0) return true;
-      const src: string = e.source_repo_id || "";
-      return src ? scopeRepoIds.includes(src) : true;
-    }).length;
-  }, [mapEdgeTypes, serviceMapData, scopeRepoIds]);
+  const scopedProjection = useMemo(
+    () => projectServiceMap(serviceMapData, mapEdgeTypes, scopeRepoIds),
+    [mapEdgeTypes, serviceMapData, scopeRepoIds],
+  );
+  const scopedServices = scopedProjection.nodes.filter(
+    (node) => node.kind === "service").length;
+  const scopedLinks = scopedProjection.links.length;
 
   return (
     <SidebarPanel label="Service map">
@@ -68,20 +65,26 @@ export default function ServiceMapSidebar({ minConf, setMinConf }: { minConf: nu
           </p>
         </div>
 
-        {isStale && (
+        {(isStale || rebuilding) && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
             <div className="flex items-start gap-2">
               <ShieldAlert className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-semibold text-amber-600">Links are stale</p>
-                <p className="text-2xs text-amber-600 mt-1 mb-2">New code was ingested since the map was last built. Some relationships might be missing.</p>
+                <p className="text-xs font-semibold text-amber-600">
+                  {rebuilding ? "Rebuilding links" : "Links are stale"}
+                </p>
+                <p className="text-2xs text-amber-600 mt-1 mb-2">
+                  {rebuilding
+                    ? "TraceKite is rebuilding relationships automatically. The map updates when it completes."
+                    : "New code was ingested since the map was last built. Some relationships might be missing."}
+                </p>
                 <button 
                   onClick={handleRebuild}
                   disabled={rebuilding}
                   className="text-2xs font-medium bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
                 >
-                  {rebuilding ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} 
-                  Rebuild Links
+                  {rebuilding ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                  {rebuilding ? "Rebuilding…" : "Rebuild Links"}
                 </button>
               </div>
             </div>
@@ -140,9 +143,8 @@ export default function ServiceMapSidebar({ minConf, setMinConf }: { minConf: nu
             {MAP_EDGE_LEGEND.map(({ type, label }) => {
               const on = mapEdgeTypes.includes(type);
               const lit = highlightedEdgeTypes.includes(type);
-              const count = serviceMapData?.edges.filter((edge: any) =>
-                edge.type === type && (scopeRepoIds.length === 0 ||
-                  !edge.source_repo_id || scopeRepoIds.includes(edge.source_repo_id))).length ?? 0;
+              const count = scopedProjection.links.filter(
+                (edge) => edge.type === type).length;
               return (
                 <div key={type} className="flex items-center gap-1">
                   <button

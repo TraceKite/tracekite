@@ -7,7 +7,7 @@ import {
 
 interface Options {
   onSelect: (node: GraphNode) => void;
-  onOpenNode: (nodeId: string) => void;
+  onOpenNode: (node: GraphNode) => void;
   onOpenGroup: (groupKey: string) => void;
 }
 
@@ -24,7 +24,7 @@ export function useGraphNodeClick({ onSelect, onOpenNode, onOpenGroup }: Options
   const openNode = useCallback((node: GraphNode) => {
     const target = openTarget(node);
     if (target.kind === "group") onOpenGroup(target.groupKey);
-    else onOpenNode(target.nodeId);
+    else onOpenNode(node);
   }, [onOpenGroup, onOpenNode]);
 
   const handleNodeClick = useCallback((node: GraphNode, event: { timeStamp: number }) => {
@@ -39,7 +39,7 @@ export function useGraphNodeClick({ onSelect, onOpenNode, onOpenGroup }: Options
       return;
     }
     onSelect(node);
-    if (gesture.kind === "select-and-open") onOpenNode(node.id);
+    if (gesture.kind === "select-and-open") onOpenNode(node);
   }, [onOpenGroup, onOpenNode, onSelect]);
 
   return { handleNodeClick, openNode };

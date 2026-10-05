@@ -536,6 +536,7 @@ worth knowing:
 | `AUTH_ENABLED` | `false` | token required on every route when true |
 | `MAX_SCOPE_REPOS` | `20` | repositories selectable at once in the UI |
 | `GRAPH_DETAIL_NODE_LIMIT` | `80` | exact nodes shown in bounded Module, Focus and Impact canvases |
+| `WRITE_BATCH_SIZE` | `500` | rows per Neo4j write transaction; timed-out batches split and retry |
 | `GITHUB_TOKEN` | *(empty)* | needed only for private repositories |
 
 **Security posture.** Ports bind to `127.0.0.1` and authentication is off,

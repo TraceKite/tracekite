@@ -147,6 +147,10 @@ class TestHealthRoute:
                 patch.object(settings, "auth_enabled", False):
             assert client.get("/api/config").json()["max_scope_repos"] == 7
 
+    def test_write_batches_default_below_the_live_timeout_threshold(self):
+        from tracekite.config import Settings
+        assert Settings.model_fields["write_batch_size"].default == 500
+
     def test_health_degraded(self):
         with patch("tracekite.routes.health.check_neo4j_health", return_value=False):
             body = client.get("/health").json()

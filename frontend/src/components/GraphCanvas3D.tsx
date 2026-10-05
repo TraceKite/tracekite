@@ -22,7 +22,7 @@ import Graph3DHud from "@/components/Graph3DHud";
 import Graph3DTools from "@/components/Graph3DTools";
 import GraphContextBar from "@/components/GraphContextBar";
 import GraphCanvasMessage from "@/components/GraphCanvasMessage";
-import { cameraSceneKey, effectiveRepoIds } from "@/lib/graphNavigation";
+import { cameraSceneKey, effectiveRepoIds, nodeFocusTarget } from "@/lib/graphNavigation";
 import { useGraphBackNavigation } from "@/hooks/useGraphBackNavigation";
 export default function GraphCanvas3D() {
   const {
@@ -51,7 +51,7 @@ export default function GraphCanvas3D() {
     loadingGraph,
     error,
     clientConfig,
-    focusNodeId,
+    focusNodeId, setFocusNode,
   } = useGraphStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const physicsNodesRef = useRef<Node3DPhysicsState[]>([]);
@@ -128,10 +128,13 @@ export default function GraphCanvas3D() {
   // camera and the selection. Reading a node leaves the cloud alone.
   const openNode = useCallback((node: typeof sceneNodes[number]) => {
     const target = openTarget(node);
-    if (target.kind === "node") return setExpandedNode(target.nodeId);
+    if (target.kind === "node") {
+      const focus = nodeFocusTarget(node, selectedRepo?.id ?? null);
+      setExpandedNode(focus.nodeId); return setFocusNode(focus.nodeId, focus.repoId);
+    }
     setExpandedGroup(target.groupKey);
     setHudMode3d("FOCUS");
-  }, [setExpandedGroup, setExpandedNode, setHudMode3d]);
+  }, [selectedRepo?.id, setExpandedGroup, setExpandedNode, setFocusNode, setHudMode3d]);
   const navigateOnActivate = useCallback(
     (node: typeof sceneNodes[number], open: boolean) => {
       if (open) openNode(node);

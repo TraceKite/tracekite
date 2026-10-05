@@ -213,3 +213,16 @@ def test_query_budget_is_carried_by_the_answer_envelope():
     assert envelope.scope.truncation.truncated is True
     assert envelope.scope.truncation.omitted_count == 2
     assert envelope.scope.truncation.budget == 1
+
+
+def test_empty_collection_tools_are_known_empty():
+    tools = _tools()
+    tools._snapshot = SnapshotIdentity(engine_version="2.0.0")
+
+    for request_id, tool_name in enumerate(("services", "deprecations"), 1):
+        response = handle({
+            "jsonrpc": "2.0", "id": request_id, "method": "tools/call",
+            "params": {"name": tool_name, "arguments": {}},
+        }, tools)
+        payload = json.loads(response["result"]["content"][0]["text"])
+        assert AnswerEnvelope(**payload).status == AnswerStatus.KNOWN_EMPTY
