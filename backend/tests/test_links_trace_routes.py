@@ -188,6 +188,35 @@ class TestServiceMap:
         assert body["truncated"] is False
 
 
+class TestCodeBridges:
+    def test_frontend_calls_are_returned_with_their_real_type(
+            self, auth_headers):
+        row = {
+            "a_id": "web:File:1", "a_name": "OwnersPage.tsx",
+            "a_type": "File", "a_path": "apps/web/OwnersPage.tsx",
+            "a_repo": "web", "b_id": "api:Method:1",
+            "b_name": "get_owner", "b_type": "Method",
+            "b_path": "services/api/routes.py", "b_repo": "api",
+            "c_id": "global:Http:api:GET:/owners", "c_label": "HttpContract",
+            "c_name": "GET /owners", "invoke_type": "UI_CALLS",
+            "in_conf": 0.95, "in_ev": ["apps/web/OwnersPage.tsx:4"],
+            "ex_conf": 0.95, "ex_ev": ["services/api/routes.py:8"],
+        }
+        session = MagicMock()
+        result = MagicMock()
+        result.data.return_value = [row]
+        session.run.return_value = result
+
+        with patch("tracekite.db.impact_reader.get_session",
+                   return_value=_session_ctx(session)):
+            response = client.get(
+                "/api/v2/code-bridges?repos=web,api", headers=auth_headers)
+
+        assert response.status_code == 200
+        assert response.json()["links"][0]["type"] == "UI_CALLS"
+        assert "INVOKES|UI_CALLS" in session.run.call_args.args[0]
+
+
 def _resolve_rows():
     return [
         {"id": "svc-1", "name": "Alpha"},

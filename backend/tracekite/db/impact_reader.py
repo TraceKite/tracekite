@@ -48,7 +48,8 @@ def read_code_bridges(repo_ids: list[str], limit: int) -> dict:
     """Return both cited halves of cross-repository contract joins."""
     with get_session() as session:
         rows = session.run(
-            "MATCH (a:GraphNode)-[i:INVOKES]->(c)<-[e:EXPOSES]-(b:GraphNode) "
+            "MATCH (a:GraphNode)-[i:INVOKES|UI_CALLS]->(c)"
+            "<-[e:EXPOSES]-(b:GraphNode) "
             "WHERE a.repo_id IN $repos AND b.repo_id IN $repos "
             "RETURN a.id AS a_id, a.name AS a_name, a.type AS a_type, "
             "a.path AS a_path, a.repo_id AS a_repo, "
@@ -56,7 +57,8 @@ def read_code_bridges(repo_ids: list[str], limit: int) -> dict:
             "b.path AS b_path, b.repo_id AS b_repo, "
             "c.id AS c_id, labels(c)[0] AS c_label, "
             "coalesce(c.method + ' ' + c.path_template, c.rpc, c.name, c.id) "
-            "AS c_name, i.confidence AS in_conf, i.evidence AS in_ev, "
+            "AS c_name, type(i) AS invoke_type, "
+            "i.confidence AS in_conf, i.evidence AS in_ev, "
             "e.confidence AS ex_conf, e.evidence AS ex_ev "
             "LIMIT $limit",
             repos=repo_ids, limit=limit,

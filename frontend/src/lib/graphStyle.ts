@@ -42,11 +42,12 @@ export const EDGE_COLORS: Record<string, string> = {
   CONSUMES_FROM: "#315b47",
   FANS_OUT_TO: "#9b7a31",
   INVOKES: "#a45138",
+  UI_CALLS: "#a45138",
   EXPOSES: "#a45138",
 };
 
 /** Edge types that cross a repository boundary. */
-export const CROSSING_EDGE_TYPES = new Set(["INVOKES", "EXPOSES"]);
+export const CROSSING_EDGE_TYPES = new Set(["INVOKES", "UI_CALLS", "EXPOSES"]);
 
 export function isCrossingEdge(edgeType: string): boolean {
   return CROSSING_EDGE_TYPES.has(edgeType);

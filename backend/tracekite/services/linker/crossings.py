@@ -10,7 +10,7 @@ from tracekite.services.linker.modules import module_of
 
 
 def assemble_crossings(rows: list[dict]) -> dict:
-    """INVOKES/EXPOSES row pairs into a nodes+links view.
+    """INVOKES or UI_CALLS plus EXPOSES rows into a nodes+links view.
 
     The boundary is the module, not the repository. Requiring different
     repo ids discarded every crossing inside a monorepo — on one estate
@@ -40,7 +40,8 @@ def assemble_crossings(rows: list[dict]) -> dict:
             # for details it does not have.
             "repo_id": None, "is_rendezvous": True, "metadata": {},
         })
-        links.append({"source": row["a_id"], "target": row["c_id"], "type": "INVOKES",
+        links.append({"source": row["a_id"], "target": row["c_id"],
+                      "type": row.get("invoke_type") or "INVOKES",
                       "confidence": row["in_conf"], "evidence": row["in_ev"] or []})
         links.append({"source": row["b_id"], "target": row["c_id"], "type": "EXPOSES",
                       "confidence": row["ex_conf"], "evidence": row["ex_ev"] or []})
