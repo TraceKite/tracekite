@@ -262,8 +262,8 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
       date-fns:
-        specifier: ^3.6.0
-        version: 3.6.0
+        specifier: ^4.4.0
+        version: 4.4.0
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@19.3.0)
@@ -2337,9 +2337,6 @@ packages:
 
   date-fns-jalali@4.1.0-0:
     resolution: {integrity: sha512-hTIP/z+t+qKwBDcmmsnmjWTduxCg+5KfdqWQvb2X/8C9+knYY6epN/pfxdDuyVlSVeFz0sM5eEfwIUQ70U4ckg==}
-
-  date-fns@3.6.0:
-    resolution: {integrity: sha512-fRHTG8g/Gif+kSh50gaGEdToemgfj74aRX3swtiouboip5JDLAyDE9F11nHMIcvOaXeOC6D7SpNhi7uFyB7Uww==}
 
   date-fns@4.4.0:
     resolution: {integrity: sha512-+1UMbeh68lH1SegH83CGWwpb6OHHbpSgr3+s5Eww5M4CAgswBpoWS0AjTOfEJ33HiYKz1hdj/KTFprzXHmq/6w==}
@@ -5576,8 +5573,6 @@ snapshots:
       d3-transition: 3.0.1(d3-selection@3.0.0)
 
   date-fns-jalali@4.1.0-0: {}
-
-  date-fns@3.6.0: {}
 
   date-fns@4.4.0: {}
 
