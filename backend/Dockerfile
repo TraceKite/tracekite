@@ -12,7 +12,7 @@
 # supports. `requirements.txt` is gone; it existed only because it pinned
 # pydantic 2.5.3, which has no wheel for 3.13+ and forced the old base
 # image.
-FROM python:3.14-slim
+FROM python:3.15-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
